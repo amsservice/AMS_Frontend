@@ -1,7 +1,5 @@
 
 
-
-
 "use client";
 
 import Link from "next/link";
@@ -29,7 +27,7 @@ export default function LoginPage() {
   });
 
   /* ------------------------------------
-     Redirect if already logged in
+     Redirect AFTER user is available
   ------------------------------------ */
   useEffect(() => {
     if (!loading && user) {
@@ -52,13 +50,14 @@ export default function LoginPage() {
     try {
       setSubmitting(true);
 
+      // ✅ wait for login to fully complete
       await login(role, {
         email: form.email,
         password: form.password
       });
 
-      alert("✅ Login successful");
-      router.replace(getDashboardPath(role));
+      // ❌ DO NOT redirect here
+      // Redirect is handled by useEffect
     } catch (err: any) {
       alert(err.message || "Login failed");
     } finally {
@@ -66,8 +65,11 @@ export default function LoginPage() {
     }
   }
 
+  /* ------------------------------------
+     UI
+  ------------------------------------ */
   return (
-    <div className="min-h-screen bg-gradient-to-br from-background via-secondary/20 to-background flex items-center justify-center p-3 sm:p-4 md:p-6">
+    <div className="min-h-screen bg-gradient-to-br from-background via-secondary/20 to-background flex items-center justify-center p-4">
 
       {/* Back */}
       <Link
@@ -163,7 +165,10 @@ export default function LoginPage() {
           {/* Register */}
           <p className="text-center text-sm text-muted-foreground mt-6">
             Don&apos;t have an account?{" "}
-            <Link href="/auth/register" className="text-primary font-semibold hover:underline">
+            <Link
+              href="/auth/register"
+              className="text-primary font-semibold hover:underline"
+            >
               Register your school
             </Link>
           </p>
@@ -172,3 +177,4 @@ export default function LoginPage() {
     </div>
   );
 }
+
