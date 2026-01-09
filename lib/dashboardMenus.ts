@@ -29,7 +29,7 @@ export const DASHBOARD_MENUS: Record<Role, {
   teacher: [
     { icon: Home, text: "Overview", path: "/dashboard/teacher" },
     { icon: BookOpen, text: "My Class", path: "/dashboard/teacher/classes" },
-    { icon: Users, text: "Students", path: "/dashboard/teacher/students" },
+    { icon: Users, text: "Students", path: "/dashboard/teacher/student" },
     { icon: ClipboardList, text: "Attendance", path: "/dashboard/teacher/attendance" }
   ],
 

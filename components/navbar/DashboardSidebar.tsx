@@ -47,22 +47,7 @@ export default function DashboardSidebar({ isOpen, onClose }: Props) {
         <span className="text-xl font-bold text-white">Vidyarthii</span>
       </div>
 
-      {/* User Card */}
-      {/* <div className="mx-4 mb-6 p-4 rounded-xl nav-bg-lighter nav-border border">
-        <div className="flex items-center gap-3">
-          <div className="w-10 h-10 rounded-full bg-[var(--accent-blue)] flex items-center justify-center text-white font-semibold">
-            {user?.name?.charAt(0) || "U"}
-          </div>
-          <div className="min-w-0">
-            <div className="text-sm font-semibold text-white truncate">
-              {user?.name}
-            </div>
-            <div className="text-xs nav-text capitalize">
-              {role}
-            </div>
-          </div>
-        </div>
-      </div> */}
+      
       <div className="mx-4 mb-6 p-4 rounded-xl nav-bg-lighter nav-border border">
   <div className="flex items-center gap-3">
     <div className="w-10 h-10 rounded-full bg-[var(--accent-blue)] flex items-center justify-center text-white font-semibold">

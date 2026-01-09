@@ -192,11 +192,24 @@ export interface User {
   email: string;
   role: Role;
 }
+interface RegisterSchoolPayload {
+  schoolName: string;
+  schoolEmail: string;
+  phone: string;
+  address: string;
+  pincode: string;
+  principalName: string;
+  principalEmail: string;
+  principalPassword: string;
+  orderId:string;
+  paymentId: string;
+}
 
 interface AuthContextType {
   user: User | null;
   loading: boolean;
   login: (role: Role, data: { email: string; password: string }) => Promise<void>;
+   registerSchool: (data: RegisterSchoolPayload) => Promise<void>;
   logout: () => Promise<void>;
   refetchUser: () => Promise<void>;
 }
@@ -250,6 +263,19 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }
 }
 
+/* ------------------------------------
+//      Register School
+//   ------------------------------------ */
+  async function registerSchool(data: RegisterSchoolPayload) {
+    const res = await apiFetch("/api/auth/register-school", {
+      method: "POST",
+      body: JSON.stringify(data)
+    });
+
+    localStorage.setItem("accessToken", res.accessToken);
+    setUser(res.user);
+  }
+
 
   /* -------- Login -------- */
   async function login(
@@ -301,7 +327,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         loading,
         login,
         logout,
-        refetchUser
+        registerSchool,
+        refetchUser,
+        
       }}
     >
       {children}

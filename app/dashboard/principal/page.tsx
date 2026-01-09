@@ -31,7 +31,7 @@ import SchoolCalendar from "@/components/holidays/SchoolCalendar";
 
 export default function PrincipalDashboard() {
   const { user, loading } = useAuth();
-;
+
   const [billableStudents, setBillableStudents] = useState<number>(0);
   const [activeTeachers, setActiveTeachers] = useState<number>(0);
   
