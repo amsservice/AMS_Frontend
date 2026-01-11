@@ -1,4 +1,6 @@
-@import "tailwindcss";
+/* 
+
+ @import "tailwindcss";
 @import "tw-animate-css";
 
 @custom-variant dark (&:is(.dark *));
@@ -78,11 +80,13 @@
   --sidebar-border: oklch(0.929 0.013 255.508);
   --sidebar-ring: oklch(0.704 0.04 256.788);
 
-   /* AttendEase Custom Colors */
+   /* AttendEase Custom Colors 
   --primary-blue: #1e3a8a;
   --primary-dark: #0f172a;
+  --primary-light: 214 40% 70%;
   --sidebar-bg: #1e3a8a;
   --teal: #14b8a6;
+  --amber: 38 92% 50%;
   --teal-dark: #0d9488;
   --navy: #1e40af;
   --green: #22c55e;
@@ -91,6 +95,8 @@
   --gray-200: #e5e7eb;
   --gray-600: #4b5563;
   --gray-700: #374151;
+  --card: 0 0% 100%;
+  --card-foreground: 222 47% 11%;
 }
 
 .dark {
@@ -127,7 +133,7 @@
   --sidebar-ring: oklch(0.551 0.027 264.364);
 
 
-   /* AttendEase Dark Mode Colors (optional) */
+   /* AttendEase Dark Mode Colors (optional) 
   --primary-blue: #1e40af;
   --sidebar-bg: #1e293b;
   --teal: #2dd4bf;
@@ -145,3 +151,546 @@
 }
 
 
+ */
+
+@import "tailwindcss";
+@import "tw-animate-css";
+
+@custom-variant dark (&:is(.dark *));
+
+@theme inline {
+  --radius-sm: calc(var(--radius) - 4px);
+  --radius-md: calc(var(--radius) - 2px);
+  --radius-lg: var(--radius);
+  --radius-xl: calc(var(--radius) + 4px);
+  --radius-2xl: calc(var(--radius) + 8px);
+  --radius-3xl: calc(var(--radius) + 12px);
+  --radius-4xl: calc(var(--radius) + 16px);
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --color-card: var(--card);
+  --color-card-foreground: var(--card-foreground);
+  --color-popover: var(--popover);
+  --color-popover-foreground: var(--popover-foreground);
+  --color-primary: var(--primary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-secondary: var(--secondary);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-muted: var(--muted);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-accent: var(--accent);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-destructive: var(--destructive);
+  --color-border: var(--border);
+  --color-input: var(--input);
+  --color-ring: var(--ring);
+  --color-chart-1: var(--chart-1);
+  --color-chart-2: var(--chart-2);
+  --color-chart-3: var(--chart-3);
+  --color-chart-4: var(--chart-4);
+  --color-chart-5: var(--chart-5);
+  --color-sidebar: var(--sidebar);
+  --color-sidebar-foreground: var(--sidebar-foreground);
+  --color-sidebar-primary: var(--sidebar-primary);
+  --color-sidebar-primary-foreground: var(--sidebar-primary-foreground);
+  --color-sidebar-accent: var(--sidebar-accent);
+  --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
+  --color-sidebar-border: var(--sidebar-border);
+  --color-sidebar-ring: var(--sidebar-ring);
+}
+
+:root {
+  --radius: 0.75rem;
+  
+  /* Base Colors - Light Mode */
+  --background: #f3f4f6;
+  --foreground: #111827;
+  --card: #ffffff;
+  --card-foreground: #111827;
+  --popover: #ffffff;
+  --popover-foreground: #111827;
+  --primary: #2563eb;
+  --primary-foreground: #ffffff;
+  --secondary: #f3f4f6;
+  --secondary-foreground: #111827;
+  --muted: #f3f4f6;
+  --muted-foreground: #6b7280;
+  --accent: #f3f4f6;
+  --accent-foreground: #111827;
+  --destructive: #ef4444;
+  --border: #e5e7eb;
+  --input: #e5e7eb;
+  --ring: #2563eb;
+  --chart-1: oklch(0.646 0.222 41.116);
+  --chart-2: oklch(0.6 0.118 184.704);
+  --chart-3: oklch(0.398 0.07 227.392);
+  --chart-4: oklch(0.828 0.189 84.429);
+  --chart-5: oklch(0.769 0.188 70.08);
+  --sidebar: #ffffff;
+  --sidebar-foreground: #111827;
+  --sidebar-primary: #2563eb;
+  --sidebar-primary-foreground: #ffffff;
+  --sidebar-accent: #f3f4f6;
+  --sidebar-accent-foreground: #111827;
+  --sidebar-border: #e5e7eb;
+  --sidebar-ring: #2563eb;
+
+  /* AttendEase Light Mode Theme Variables */
+  --nav-bg: #0f1623;
+  --nav-bg-lighter: #1a2332;
+  --nav-border: #252d3d;
+  --nav-text: #9ca3af;
+  --nav-text-hover: #e5e7eb;
+  --nav-active-bg: #2563eb;
+  --nav-active-text: #ffffff;
+  --nav-icon-bg: #2563eb;
+  --nav-icon-bg-secondary: #1e40af;
+  --nav-card-bg: #161d2b;
+  --nav-card-border: #1e293b;
+  
+  /* Dashboard Light Mode */
+  --dashboard-bg: #f3f4f6;
+  --dashboard-card-bg: #ffffff;
+  --dashboard-card-border: #e5e7eb;
+  --dashboard-text: #111827;
+  --dashboard-text-muted: #6b7280;
+  --dashboard-header-bg: #ffffff;
+  
+  /* Accent Colors */
+  --accent-blue: #2563eb;
+  --accent-blue-dark: #1e40af;
+  --accent-blue-light: #3b82f6;
+  --accent-teal: #14b8a6;
+  --accent-cyan: #06b6d4;
+  --accent-teal-dark: #0d9488;
+  --accent-green: #22c55e;
+  --accent-purple: #a855f7;
+  --accent-amber: #f59e0b;
+  --accent-orange: #f97316;
+  
+  /* Status Colors */
+  --status-success: #22c55e;
+  --status-success-bg: #dcfce7;
+  --status-warning: #f59e0b;
+  --status-warning-bg: #fef3c7;
+  --status-error: #ef4444;
+  --status-error-bg: #fee2e2;
+  --status-info: #3b82f6;
+  --status-info-bg: #dbeafe;
+  
+  /* Gray Scale */
+  --gray-50: #f9fafb;
+  --gray-100: #f3f4f6;
+  --gray-200: #e5e7eb;
+  --gray-300: #d1d5db;
+  --gray-400: #9ca3af;
+  --gray-500: #6b7280;
+  --gray-600: #4b5563;
+  --gray-700: #374151;
+  --gray-800: #1f2937;
+  --gray-900: #111827;
+}
+
+.dark {
+  /* Base Colors - Dark Mode */
+  --background: #0f1623;
+  --foreground: #f3f4f6;
+  --card: #1a2332;
+  --card-foreground: #f3f4f6;
+  --popover: #1a2332;
+  --popover-foreground: #f3f4f6;
+  --primary: #2563eb;
+  --primary-foreground: #ffffff;
+  --secondary: #1f2937;
+  --secondary-foreground: #f3f4f6;
+  --muted: #1f2937;
+  --muted-foreground: #9ca3af;
+  --accent: #1f2937;
+  --accent-foreground: #f3f4f6;
+  --destructive: #ef4444;
+  --border: #252d3d;
+  --input: #252d3d;
+  --ring: #2563eb;
+  --chart-1: oklch(0.488 0.243 264.376);
+  --chart-2: oklch(0.696 0.17 162.48);
+  --chart-3: oklch(0.769 0.188 70.08);
+  --chart-4: oklch(0.627 0.265 303.9);
+  --chart-5: oklch(0.645 0.246 16.439);
+  --sidebar: #1a2332;
+  --sidebar-foreground: #f3f4f6;
+  --sidebar-primary: #2563eb;
+  --sidebar-primary-foreground: #ffffff;
+  --sidebar-accent: #1f2937;
+  --sidebar-accent-foreground: #f3f4f6;
+  --sidebar-border: #252d3d;
+  --sidebar-ring: #2563eb;
+
+  /* AttendEase Dark Mode */
+  --nav-bg: #0f1623;
+  --nav-bg-lighter: #1a2332;
+  --nav-border: #252d3d;
+  --nav-text: #9ca3af;
+  --nav-text-hover: #e5e7eb;
+  --nav-active-bg: #2563eb;
+  --nav-active-text: #ffffff;
+  
+  /* Dashboard Dark Mode */
+  /* #1a2332; */
+  --dashboard-bg: #060613;
+  --dashboard-card-bg: #101826;
+  --dashboard-card-border: #475267;
+  --dashboard-text: #f3f4f6;
+  --dashboard-text-muted: #9ca3af;
+  --dashboard-header-bg: #0f1623;
+}
+
+@layer base {
+  * {
+    @apply border-border outline-ring/50;
+  }
+  body {
+    @apply bg-background text-foreground;
+  }
+}
+
+/* Custom Utility Classes for AttendEase Theme */
+@layer utilities {
+  /* Navigation */
+  .nav-bg {
+    background-color: var(--nav-bg);
+  }
+  .nav-bg-lighter {
+    background-color: var(--nav-bg-lighter);
+  }
+  .nav-border {
+    border-color: var(--nav-border);
+  }
+  .nav-text {
+    color: var(--nav-text);
+  }
+  .nav-text-hover {
+    color: var(--nav-text-hover);
+  }
+  .nav-active-bg {
+    background-color: var(--nav-active-bg);
+  }
+  .nav-active-text {
+    color: var(--nav-active-text);
+  }
+  
+  /* Dashboard */
+  .dashboard-bg {
+    background-color: var(--dashboard-bg);
+  }
+  .dashboard-card {
+    background-color: var(--dashboard-card-bg);
+    border-color: var(--dashboard-card-border);
+  }
+  .dashboard-text {
+    color: var(--dashboard-text);
+  }
+  .dashboard-text-muted {
+    color: var(--dashboard-text-muted);
+  }
+  .dashboard-header-bg {
+    background-color: var(--dashboard-header-bg);
+  }
+  
+  /* Accent Colors */
+  .accent-blue {
+    background-color: var(--accent-blue);
+  }
+  .accent-teal {
+    background-color: var(--accent-teal);
+  }
+  .accent-cyan {
+    background-color: var(--accent-cyan);
+  }
+  .accent-green {
+    background-color: var(--accent-green);
+  }
+  .accent-purple {
+    background-color: var(--accent-purple);
+  }
+  .accent-orange {
+    background-color: var(--accent-orange);
+  }
+
+  /* Card Utilities */
+  .dashboard-card-border {
+    border-color: var(--dashboard-card-border);
+  }
+  
+  /* Hover States */
+  .hover-dashboard-card:hover {
+    background-color: var(--dashboard-card-bg);
+  }
+  
+  /* Input/Select Styling */
+  input.dashboard-input,
+  select.dashboard-input,
+  textarea.dashboard-input {
+    background-color: var(--dashboard-card-bg);
+    border-color: var(--dashboard-card-border);
+    color: var(--dashboard-text);
+  }
+  
+  input.dashboard-input:focus,
+  select.dashboard-input:focus,
+  textarea.dashboard-input:focus {
+    outline: none;
+    border-color: var(--accent-blue);
+    ring: 2px solid var(--accent-blue);
+  }
+  
+  input.dashboard-input::placeholder {
+    color: var(--dashboard-text-muted);
+  }
+  
+  /* Button Utilities */
+  .btn-primary {
+    background-color: var(--accent-blue);
+    color: white;
+    font-weight: 600;
+    padding: 0.625rem 1.5rem;
+    border-radius: 0.5rem;
+    transition: opacity 0.2s;
+  }
+  
+  .btn-primary:hover {
+    opacity: 0.9;
+  }
+  
+  .btn-secondary {
+    background-color: var(--dashboard-card-bg);
+    border: 1px solid var(--dashboard-card-border);
+    color: var(--dashboard-text);
+    font-weight: 600;
+    padding: 0.625rem 1.5rem;
+    border-radius: 0.5rem;
+    transition: background-color 0.2s;
+  }
+  
+  .btn-secondary:hover {
+    background-color: var(--gray-100);
+  }
+  
+  .dark .btn-secondary:hover {
+    background-color: var(--gray-800);
+  }
+  
+  /* Shadow Utilities */
+  .shadow-dashboard {
+    box-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.1), 0 1px 2px -1px rgba(0, 0, 0, 0.1);
+  }
+  
+  .dark .shadow-dashboard {
+    box-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.3), 0 1px 2px -1px rgba(0, 0, 0, 0.3);
+  }
+  
+  .shadow-dashboard-lg {
+    box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -4px rgba(0, 0, 0, 0.1);
+  }
+  
+  .dark .shadow-dashboard-lg {
+    box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.3), 0 4px 6px -4px rgba(0, 0, 0, 0.3);
+  }
+  
+  /* Gradient Backgrounds */
+  .gradient-blue {
+    background: linear-gradient(135deg, var(--accent-blue) 0%, var(--accent-blue-dark) 100%);
+  }
+  
+  .gradient-teal {
+    background: linear-gradient(135deg, var(--accent-teal) 0%, var(--accent-teal-dark) 100%);
+  }
+  
+  .gradient-purple {
+    background: linear-gradient(135deg, var(--accent-purple) 0%, #7c3aed 100%);
+  }
+  
+  /* Text Utilities */
+  .text-accent-blue {
+    color: var(--accent-blue);
+  }
+  
+  .text-accent-teal {
+    color: var(--accent-teal);
+  }
+  
+  .text-accent-cyan {
+    color: var(--accent-cyan);
+  }
+  
+  .text-accent-green {
+    color: var(--accent-green);
+  }
+  
+  .text-accent-purple {
+    color: var(--accent-purple);
+  }
+  
+  .text-accent-orange {
+    color: var(--accent-orange);
+  }
+  
+  /* Border Utilities */
+  .border-accent-blue {
+    border-color: var(--accent-blue);
+  }
+  
+  .border-accent-teal {
+    border-color: var(--accent-teal);
+  }
+  
+  .border-accent-green {
+    border-color: var(--accent-green);
+  }
+  
+  /* Status Badge Utilities */
+  .badge-success {
+    background-color: var(--status-success-bg);
+    color: var(--status-success);
+    padding: 0.25rem 0.75rem;
+    border-radius: 9999px;
+    font-size: 0.75rem;
+    font-weight: 600;
+  }
+  
+  .badge-warning {
+    background-color: var(--status-warning-bg);
+    color: var(--status-warning);
+    padding: 0.25rem 0.75rem;
+    border-radius: 9999px;
+    font-size: 0.75rem;
+    font-weight: 600;
+  }
+  
+  .badge-error {
+    background-color: var(--status-error-bg);
+    color: var(--status-error);
+    padding: 0.25rem 0.75rem;
+    border-radius: 9999px;
+    font-size: 0.75rem;
+    font-weight: 600;
+  }
+  
+  .badge-info {
+    background-color: var(--status-info-bg);
+    color: var(--status-info);
+    padding: 0.25rem 0.75rem;
+    border-radius: 9999px;
+    font-size: 0.75rem;
+    font-weight: 600;
+  }
+  
+  /* Scrollbar Styling */
+  .scrollbar-thin::-webkit-scrollbar {
+    width: 6px;
+    height: 6px;
+  }
+  
+  .scrollbar-thin::-webkit-scrollbar-track {
+    background-color: var(--dashboard-card-bg);
+  }
+  
+  .scrollbar-thin::-webkit-scrollbar-thumb {
+    background-color: var(--dashboard-text-muted);
+    border-radius: 3px;
+  }
+  
+  .scrollbar-thin::-webkit-scrollbar-thumb:hover {
+    background-color: var(--dashboard-text);
+  }
+  
+  /* Modal/Overlay Backdrop */
+  .backdrop-blur-sm {
+    backdrop-filter: blur(4px);
+  }
+  
+  /* Transition Utilities */
+  .transition-dashboard {
+    transition-property: background-color, border-color, color, fill, stroke, opacity, box-shadow, transform;
+    transition-timing-function: cubic-bezier(0.4, 0, 0.2, 1);
+    transition-duration: 200ms;
+  }
+  
+  /* Loading States */
+  .skeleton {
+    background: linear-gradient(
+      90deg,
+      var(--gray-200) 25%,
+      var(--gray-300) 50%,
+      var(--gray-200) 75%
+    );
+    background-size: 200% 100%;
+    animation: loading 1.5s ease-in-out infinite;
+  }
+  
+  .dark .skeleton {
+    background: linear-gradient(
+      90deg,
+      var(--gray-800) 25%,
+      var(--gray-700) 50%,
+      var(--gray-800) 75%
+    );
+    background-size: 200% 100%;
+  }
+  
+  @keyframes loading {
+    0% {
+      background-position: 200% 0;
+    }
+    100% {
+      background-position: -200% 0;
+    }
+  }
+  
+  /* Card Hover Effects */
+  .card-hover {
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  }
+  
+  .card-hover:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 8px 10px -6px rgba(0, 0, 0, 0.1);
+  }
+  
+  .dark .card-hover:hover {
+    box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.4), 0 8px 10px -6px rgba(0, 0, 0, 0.4);
+  }
+  
+  /* Focus Visible Utilities */
+  .focus-ring:focus-visible {
+    outline: 2px solid var(--accent-blue);
+    outline-offset: 2px;
+  }
+}
+
+/* Base Component Overrides */
+@layer base {
+  /* Ensure smooth transitions for theme changes */
+  * {
+    transition-property: background-color, border-color, color;
+    transition-duration: 200ms;
+    transition-timing-function: ease-in-out;
+  }
+  
+  /* Remove transitions for elements that shouldn't animate */
+  *:where(:not(.transition-dashboard)) {
+    transition-property: none;
+  }
+  
+  /* Apply transitions only where needed */
+  .transition-dashboard,
+  .dashboard-card,
+  .dashboard-bg,
+  button,
+  input,
+  select,
+  textarea {
+    transition-property: background-color, border-color, color, opacity, transform, box-shadow;
+    transition-duration: 200ms;
+    transition-timing-function: ease-in-out;
+  }
+}
