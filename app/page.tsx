@@ -2,7 +2,10 @@
 
 import React, { useEffect, useState } from "react";
 import Link from "next/link";
-import { BarChart3, Calendar, Moon, Shield, Sparkles, Sun, Users, Zap } from "lucide-react";
+import { BarChart3, Calendar, Shield, Sparkles, Users, Zap } from "lucide-react";
+import MainNavbar from "@/components/main/MainNavbar";
+import MainFooter from "@/components/main/MainFooter";
+import PricingCards from "@/components/pricing/PricingCards";
 
 const AttendEaseLanding = () => {
   const [isDark, setIsDark] = useState(false);
@@ -11,18 +14,19 @@ const AttendEaseLanding = () => {
   useEffect(() => {
     setMounted(true);
     const savedTheme = window.localStorage.getItem("vidyarthii-theme");
-    if (savedTheme) {
-      setIsDark(savedTheme === "dark");
-    } else {
-      const isDarkMode = window.matchMedia("(prefers-color-scheme: dark)").matches;
-      setIsDark(isDarkMode);
-    }
+    const initialIsDark = savedTheme
+      ? savedTheme === "dark"
+      : window.matchMedia("(prefers-color-scheme: dark)").matches;
+
+    setIsDark(initialIsDark);
+    document.documentElement.classList.toggle("dark", initialIsDark);
   }, []);
 
   const toggleTheme = () => {
     const newTheme = !isDark;
     setIsDark(newTheme);
     window.localStorage.setItem("vidyarthii-theme", newTheme ? "dark" : "light");
+    document.documentElement.classList.toggle("dark", newTheme);
   };
 
   if (!mounted) {
@@ -79,12 +83,6 @@ const AttendEaseLanding = () => {
     { num: "04", title: "Start Tracking", desc: "Teachers mark attendance daily" },
   ];
 
-  const pricingPlans = [
-    { duration: "1 Year", price: "₹8", originalPrice: "₹10", period: "per student/month", savings: null as string | null, highlighted: false },
-    { duration: "2 Years", price: "₹6", originalPrice: "₹8", period: "per student/month", savings: "Save 25%", highlighted: true },
-    { duration: "3 Years", price: "₹5", originalPrice: "₹6", period: "per student/month", savings: "Save 37.5%", highlighted: false },
-  ];
-
   const includedFeatures = [
     { icon: "✨", title: "Unlimited Access", desc: "No limits on students, teachers, or classes" },
     { icon: "📊", title: "Advanced Analytics", desc: "Real-time insights and custom reports" },
@@ -122,87 +120,15 @@ const AttendEaseLanding = () => {
         <div className={`absolute -bottom-28 -right-12 h-72 w-72 rounded-full blur-3xl ${isDark ? "bg-indigo-500/10" : "bg-indigo-500/12"}`} />
       </div>
 
-      <nav
-        className={`fixed top-0 w-full z-50 transition-all duration-300 ${
-          isDark ? "bg-gray-950/70 border-white/10" : "bg-white/70 border-gray-200/70"
-        } backdrop-blur-xl border-b`}
-      >
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 py-4">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-3">
-              <div
-                className={`w-10 h-10 rounded-2xl flex items-center justify-center shadow-lg ring-1 ${
-                  isDark
-                    ? "bg-linear-to-br from-indigo-400/25 via-sky-400/20 to-cyan-300/20 ring-white/10"
-                    : "bg-linear-to-br from-indigo-600 via-sky-600 to-cyan-500 ring-black/5"
-                } `}
-              >
-                <Calendar className={`w-6 h-6 ${isDark ? "text-white" : "text-white"}`} />
-              </div>
-
-              <div className="flex flex-col leading-tight">
-                <span className={`text-lg font-semibold tracking-tight ${isDark ? "text-white" : "text-gray-900"}`}>Vidyarthii</span>
-                <span className={`hidden sm:block text-xs ${isDark ? "text-gray-400" : "text-gray-500"}`}>School management, simplified</span>
-              </div>
-            </div>
-
-            <div className="hidden md:flex items-center gap-8">
-              <a
-                href="#features"
-                className={`text-sm font-medium ${isDark ? "text-gray-300 hover:text-white" : "text-gray-600 hover:text-gray-900"} transition-colors`}
-              >
-                Features
-              </a>
-              <a
-                href="#pricing"
-                className={`text-sm font-medium ${isDark ? "text-gray-300 hover:text-white" : "text-gray-600 hover:text-gray-900"} transition-colors`}
-              >
-                Pricing
-              </a>
-              <a
-                href="#contact"
-                className={`text-sm font-medium ${isDark ? "text-gray-300 hover:text-white" : "text-gray-600 hover:text-gray-900"} transition-colors`}
-              >
-                Contact
-              </a>
-            </div>
-
-            <div className="flex items-center gap-4">
-              <button
-                onClick={toggleTheme}
-                aria-label="Toggle theme"
-                className={`p-2 rounded-xl transition-all duration-300 focus:outline-none focus:ring-2 focus:ring-blue-500/60 focus:ring-offset-2 ${
-                  isDark
-                    ? "bg-white/5 hover:bg-white/10 ring-1 ring-white/10 focus:ring-offset-gray-950"
-                    : "bg-gray-100 hover:bg-gray-200 ring-1 ring-gray-200 focus:ring-offset-white"
-                }`}
-              >
-                {isDark ? <Sun className="w-5 h-5 text-yellow-400" /> : <Moon className="w-5 h-5 text-gray-600" />}
-              </button>
-              <Link href="/auth/login">
-                <button
-                  className={`hidden sm:inline-flex px-4 py-2 rounded-xl text-sm font-medium transition-all focus:outline-none focus:ring-2 focus:ring-blue-500/60 focus:ring-offset-2 ${
-                    isDark ? "text-gray-300 hover:text-white focus:ring-offset-gray-950" : "text-gray-600 hover:text-gray-900 focus:ring-offset-white"
-                  }`}
-                >
-                  Login
-                </button>
-              </Link>
-              <Link href="/subscription/payment?plan=1Y">
-                <button
-                  className={`px-4 sm:px-6 py-2.5 text-white rounded-xl font-semibold text-sm transition-all duration-300 transform hover:scale-[1.02] active:scale-[0.98] shadow-lg focus:outline-none focus:ring-2 focus:ring-blue-500/60 focus:ring-offset-2 ${
-                    isDark
-                      ? "bg-linear-to-r from-indigo-500 via-sky-500 to-cyan-500 shadow-sky-500/25 focus:ring-offset-gray-950"
-                      : "bg-linear-to-r from-indigo-600 via-sky-600 to-cyan-500 shadow-sky-500/30 focus:ring-offset-white"
-                  }`}
-                >
-                  Register School
-                </button>
-              </Link>
-            </div>
-          </div>
-        </div>
-      </nav>
+      <MainNavbar
+        isDark={isDark}
+        onToggleTheme={toggleTheme}
+        navLinks={[
+          { label: "Home", href: "/" },
+          { label: "Pricing", href: "/pricing" },
+          { label: "Contact", href: "/contact" },
+        ]}
+      />
 
       <section className="pt-28 sm:pt-32 pb-20 px-4 sm:px-6">
         <div className="max-w-7xl mx-auto">
@@ -260,7 +186,7 @@ const AttendEaseLanding = () => {
               ].map((stat, idx) => (
                 <div
                   key={idx}
-                  className={`p-5 sm:p-6 rounded-2xl transition-all duration-300 hover:-translate-y-0.5 hover:shadow-xl ${
+                  className={`p-5 sm:p-6 rounded-2xl transition-all duration-300 ${
                     isDark ? "bg-white/5 ring-1 ring-white/10 hover:bg-white/7 hover:shadow-blue-500/10" : "bg-white ring-1 ring-gray-200/70 hover:shadow-blue-500/10"
                   }`}
                 >
@@ -276,12 +202,8 @@ const AttendEaseLanding = () => {
       <section id="features" className="py-20 px-4 sm:px-6">
         <div className="max-w-7xl mx-auto">
           <div className="text-center mb-12 sm:mb-16">
-            <h2 className={`text-3xl sm:text-4xl md:text-5xl font-semibold tracking-tight mb-4 ${isDark ? "text-white" : "text-gray-900"}`}>
-              Everything You Need
-            </h2>
-            <p className={`text-base sm:text-lg ${isDark ? "text-gray-400" : "text-gray-600"}`}>
-              A complete school management solution designed for modern institutions
-            </p>
+            <h2 className={`text-3xl sm:text-4xl md:text-5xl font-semibold tracking-tight mb-4 ${isDark ? "text-white" : "text-gray-900"}`}>Everything You Need</h2>
+            <p className={`text-base sm:text-lg ${isDark ? "text-gray-400" : "text-gray-600"}`}>A complete school management solution designed for modern institutions</p>
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
@@ -388,140 +310,7 @@ const AttendEaseLanding = () => {
             <p className={`mt-3 text-sm ${isDark ? "text-gray-500" : "text-gray-500"}`}>No setup fees. Cancel anytime. Taxes may apply.</p>
           </div>
 
-          <div className="max-w-6xl mx-auto mb-16">
-            <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-8">
-              {pricingPlans.map((plan, idx) => {
-                const perStudent = Number.parseInt(plan.price.replace("₹", ""), 10);
-                const monthlyFor500 = Number.isFinite(perStudent) ? perStudent * 500 : 0;
-                const yearlyFor500 = monthlyFor500 * 12;
-
-                return (
-                  <div
-                    key={idx}
-                    className={`relative rounded-3xl p-8 transition-all duration-300 ${
-                      plan.highlighted
-                        ? isDark
-                          ? "bg-linear-to-br from-indigo-500/10 via-sky-500/10 to-cyan-500/10 ring-2 ring-cyan-400/50 shadow-2xl shadow-cyan-500/20 scale-105 hover:scale-[1.07]"
-                          : "bg-linear-to-br from-indigo-50 via-sky-50 to-cyan-50 ring-2 ring-indigo-400/50 shadow-2xl shadow-indigo-500/20 scale-105 hover:scale-[1.07]"
-                        : isDark
-                          ? "bg-white/5 ring-1 ring-white/10 hover:bg-white/7 hover:shadow-xl hover:-translate-y-1"
-                          : "bg-white ring-1 ring-gray-200 hover:shadow-xl hover:-translate-y-1"
-                    }`}
-                  >
-                    {plan.highlighted && (
-                      <div
-                        className={`absolute -top-4 left-1/2 -translate-x-1/2 px-6 py-2 rounded-full text-sm font-bold shadow-lg ${
-                          isDark
-                            ? "bg-linear-to-r from-cyan-500 to-indigo-500 text-white"
-                            : "bg-linear-to-r from-indigo-600 to-cyan-500 text-white"
-                        }`}
-                      >
-                        ⭐ Best Value
-                      </div>
-                    )}
-
-                    {plan.savings && (
-                      <div
-                        className={`absolute top-6 right-6 px-3 py-1 rounded-full text-xs font-semibold ${
-                          isDark
-                            ? plan.highlighted
-                              ? "bg-green-400/30 text-green-200 ring-1 ring-green-400/40"
-                              : "bg-green-500/20 text-green-300 ring-1 ring-green-500/30"
-                            : plan.highlighted
-                              ? "bg-green-200 text-green-800 ring-1 ring-green-300"
-                              : "bg-green-100 text-green-700 ring-1 ring-green-200"
-                        }`}
-                      >
-                        {plan.savings}
-                      </div>
-                    )}
-
-                    <div className="text-center mt-6">
-                      <h3
-                        className={`text-2xl font-bold mb-2 ${
-                          plan.highlighted ? (isDark ? "text-cyan-300" : "text-indigo-700") : isDark ? "text-white" : "text-gray-900"
-                        }`}
-                      >
-                        {plan.duration}
-                      </h3>
-
-                      <div className="flex items-baseline justify-center mb-2">
-                        {"originalPrice" in plan && plan.originalPrice ? (
-                          <span className={`mr-3 text-lg font-semibold line-through ${isDark ? "text-gray-500" : "text-gray-400"}`}>
-                            {plan.originalPrice}
-                          </span>
-                        ) : null}
-                        <span
-                          className={`text-5xl sm:text-6xl font-extrabold ${
-                            plan.highlighted ? (isDark ? "text-white" : "text-gray-900") : isDark ? "text-white" : "text-gray-900"
-                          }`}
-                        >
-                          {plan.price}
-                        </span>
-                      </div>
-
-                      <p className={`text-sm mb-6 ${plan.highlighted ? (isDark ? "text-cyan-200" : "text-indigo-600") : isDark ? "text-gray-400" : "text-gray-600"}`}>
-                        {plan.period}
-                      </p>
-
-                      <div
-                        className={`p-4 rounded-2xl mb-6 ${
-                          plan.highlighted ? (isDark ? "bg-white/5" : "bg-white/60") : isDark ? "bg-white/5" : "bg-gray-50"
-                        }`}
-                      >
-                        <p className={`text-xs mb-1 ${isDark ? "text-gray-400" : "text-gray-500"}`}>For 500 students:</p>
-                        <p
-                          className={`text-2xl font-bold ${
-                            plan.highlighted ? (isDark ? "text-cyan-300" : "text-indigo-700") : isDark ? "text-white" : "text-gray-900"
-                          }`}
-                        >
-                          ₹{monthlyFor500}/month
-                        </p>
-                        <p className={`text-xs mt-1 ${isDark ? "text-gray-500" : "text-gray-400"}`}>Only ₹{yearlyFor500}/year</p>
-                      </div>
-
-                      <Link href={`/subscription/payment?plan=${idx === 0 ? "1Y" : idx === 1 ? "2Y" : "3Y"}`} className="block">
-                        <button
-                          className={`w-full py-4 rounded-2xl font-bold text-base transition-all duration-300 transform hover:scale-[1.03] active:scale-[0.98] focus:outline-none focus:ring-2 focus:ring-offset-2 shadow-lg ${
-                            plan.highlighted
-                              ? isDark
-                                ? "bg-linear-to-r from-cyan-500 to-indigo-500 text-white hover:from-cyan-400 hover:to-indigo-400 shadow-cyan-500/30 focus:ring-cyan-500 focus:ring-offset-gray-950"
-                                : "bg-linear-to-r from-indigo-600 to-cyan-500 text-white hover:from-indigo-500 hover:to-cyan-400 shadow-indigo-500/30 focus:ring-indigo-500 focus:ring-offset-white"
-                              : isDark
-                                ? "bg-white/10 text-white hover:bg-white/15 ring-1 ring-white/20 focus:ring-white/50 focus:ring-offset-gray-950"
-                                : "bg-gray-900 text-white hover:bg-gray-800 focus:ring-gray-900 focus:ring-offset-white"
-                          }`}
-                        >
-                          Choose {plan.duration}
-                        </button>
-                      </Link>
-                    </div>
-                  </div>
-                );
-              })}
-            </div>
-
-            <div className={`text-center p-6 rounded-2xl ${isDark ? "bg-white/5 ring-1 ring-white/10" : "bg-gray-50 ring-1 ring-gray-200"}`}>
-              <div className="flex flex-wrap items-center justify-center gap-6 text-sm">
-                <div className="flex items-center gap-2">
-                  <span className="text-2xl">✓</span>
-                  <span className={isDark ? "text-gray-300" : "text-gray-700"}>14-day free trial</span>
-                </div>
-                <div className="flex items-center gap-2">
-                  <span className="text-2xl">✓</span>
-                  <span className={isDark ? "text-gray-300" : "text-gray-700"}>Cancel anytime</span>
-                </div>
-                <div className="flex items-center gap-2">
-                  <span className="text-2xl">✓</span>
-                  <span className={isDark ? "text-gray-300" : "text-gray-700"}>No setup fees</span>
-                </div>
-                <div className="flex items-center gap-2">
-                  <span className="text-2xl">✓</span>
-                  <span className={isDark ? "text-gray-300" : "text-gray-700"}>Money-back guarantee</span>
-                </div>
-              </div>
-            </div>
-          </div>
+          <PricingCards isDark={isDark} />
 
           <div
             className={`rounded-3xl p-8 sm:p-12 ${
@@ -537,7 +326,7 @@ const AttendEaseLanding = () => {
               {includedFeatures.map((feature, idx) => (
                 <div
                   key={idx}
-                  className={`p-5 rounded-2xl transition-all duration-300 hover:-translate-y-1 ${
+                  className={`p-5 rounded-2xl transition-all duration-300 ${
                     isDark ? "bg-white/5 hover:bg-white/10 ring-1 ring-white/10" : "bg-white hover:bg-gray-50 ring-1 ring-gray-200 shadow-sm hover:shadow-md"
                   }`}
                 >
@@ -642,83 +431,7 @@ const AttendEaseLanding = () => {
         </div>
       </section>
 
-      <footer className={`py-12 px-4 sm:px-6 border-t ${isDark ? "bg-gray-950 border-white/10" : "bg-white border-gray-200/70"}`}>
-        <div className="max-w-7xl mx-auto">
-          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-8 mb-8">
-            <div>
-              <div className="flex items-center gap-2 mb-4">
-                <div
-                  className={`w-10 h-10 rounded-2xl flex items-center justify-center ring-1 ${
-                    isDark ? "bg-linear-to-br from-indigo-400/25 via-sky-400/20 to-cyan-300/20 ring-white/10" : "bg-linear-to-br from-indigo-600 via-sky-600 to-cyan-500 ring-black/5"
-                  }`}
-                >
-                  <Calendar className="w-6 h-6 text-white" />
-                </div>
-                <div className="flex flex-col leading-tight">
-                  <span className={`text-lg font-semibold ${isDark ? "text-white" : "text-gray-900"}`}>Vidyarthii</span>
-                  <span className={`hidden sm:block text-xs ${isDark ? "text-gray-400" : "text-gray-500"}`}>School management, simplified</span>
-                </div>
-              </div>
-              <p className={isDark ? "text-gray-400" : "text-gray-600"}>Making school management simple and efficient for institutions across India.</p>
-            </div>
-
-            <div>
-              <h4 className={`font-semibold mb-4 ${isDark ? "text-white" : "text-gray-900"}`}>Product</h4>
-              <ul className={`space-y-2 ${isDark ? "text-gray-400" : "text-gray-600"}`}>
-                <li>
-                  <a href="#features" className="hover:text-blue-600 transition">
-                    Features
-                  </a>
-                </li>
-                <li>
-                  <a href="#pricing" className="hover:text-blue-600 transition">
-                    Pricing
-                  </a>
-                </li>
-                <li>
-                  <a href="/auth/login" className="hover:text-blue-600 transition">
-                    Login
-                  </a>
-                </li>
-              </ul>
-            </div>
-
-            <div>
-              <h4 className={`font-semibold mb-4 ${isDark ? "text-white" : "text-gray-900"}`}>Support</h4>
-              <ul className={`space-y-2 ${isDark ? "text-gray-400" : "text-gray-600"}`}>
-                <li>
-                  <a href="#" className="hover:text-blue-600 transition">
-                    Help Center
-                  </a>
-                </li>
-                <li>
-                  <a href="#" className="hover:text-blue-600 transition">
-                    Documentation
-                  </a>
-                </li>
-                <li>
-                  <a href="#" className="hover:text-blue-600 transition">
-                    Contact Us
-                  </a>
-                </li>
-              </ul>
-            </div>
-
-            <div>
-              <h4 className={`font-semibold mb-4 ${isDark ? "text-white" : "text-gray-900"}`}>Contact</h4>
-              <ul className={`space-y-2 ${isDark ? "text-gray-400" : "text-gray-600"}`}>
-                <li>support@vidyarthii.com</li>
-                <li>+91 98765 43210</li>
-                <li>Mumbai, India</li>
-              </ul>
-            </div>
-          </div>
-
-          <div className={`border-t pt-8 text-center ${isDark ? "border-white/10 text-gray-400" : "border-gray-200/70 text-gray-600"}`}>
-            <p>&copy; 2025 Vidyarthii. All rights reserved.</p>
-          </div>
-        </div>
-      </footer>
+      <MainFooter isDark={isDark} />
     </div>
   );
 };

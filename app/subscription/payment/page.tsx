@@ -1,16 +1,69 @@
 "use client";
 
 import { motion, AnimatePresence } from "framer-motion";
-import Link from "next/link";
 import { useEffect, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
-import { Calendar, Moon, Sparkles, Sun } from "lucide-react";
+import MainNavbar from "@/components/main/MainNavbar";
+import MainFooter from "@/components/main/MainFooter";
+import { PRICING_PLANS } from "@/lib/pricing";
 
 type PlanId = "1Y" | "2Y" | "3Y";
 
+type PricePreview = {
+  planId: PlanId;
+  enteredStudents: number;
+  futureStudents: number;
+  billableStudents: number;
+  pricePerStudentPerMonth: number;
+  totalMonths: number;
+  monthlyCost: number;
+  originalAmount: number;
+  discountMonths: number;
+  discountAmount: number;
+  paidAmount: number;
+};
+
+type CreatePaymentResponse = {
+  orderId: string;
+  amount: number;
+  currency: string;
+  originalAmount: number;
+  discountAmount: number;
+  paidAmount: number;
+};
+
+type VerifyPaymentResponse = {
+  success: boolean;
+  orderId: string;
+  paymentId: string;
+};
+
+type RazorpayHandlerResponse = {
+  razorpay_order_id: string;
+  razorpay_payment_id: string;
+  razorpay_signature: string;
+};
+
+type RazorpayOptions = {
+  key: string;
+  amount: number;
+  currency: string;
+  order_id: string;
+  name: string;
+  description: string;
+  handler: (response: RazorpayHandlerResponse) => void | Promise<void>;
+  theme?: { color?: string };
+};
+
+type RazorpayInstance = {
+  open: () => void;
+};
+
+type RazorpayConstructor = new (options: RazorpayOptions) => RazorpayInstance;
+
 declare global {
   interface Window {
-    Razorpay: any;
+    Razorpay?: RazorpayConstructor;
   }
 }
 
@@ -25,7 +78,7 @@ export default function PaymentPage() {
 const [enteredStudents, setEnteredStudents] = useState<number | "">("");
 const [futureStudents, setFutureStudents] = useState<number | "">("");
   const [couponCode, setCouponCode] = useState("");
-  const [price, setPrice] = useState<any>(null);
+  const [price, setPrice] = useState<PricePreview | null>(null);
   const [loading, setLoading] = useState(false);
 
   const [isDark, setIsDark] = useState(false);
@@ -33,6 +86,33 @@ const [futureStudents, setFutureStudents] = useState<number | "">("");
   const [currentError, setCurrentError] = useState<string | null>(null);
   const [futureError, setFutureError] = useState<string | null>(null);
   const [shake, setShake] = useState(false);
+
+  useEffect(() => {
+    setPrice(null);
+  }, [planId, enteredStudents, futureStudents, couponCode]);
+
+  const previewPlanId = price?.planId ?? planId;
+  const frontendPlan = PRICING_PLANS.find((p) => p.id === previewPlanId);
+
+  const billableStudentsUI =
+    price?.billableStudents ??
+    (enteredStudents === "" ? 0 : enteredStudents) +
+      (futureStudents === "" ? 0 : futureStudents);
+
+  const uiRate = frontendPlan?.pricePerStudentPerMonth ?? 0;
+  const uiMonths = frontendPlan?.durationMonths ?? 0;
+  const uiMonthlyCost = billableStudentsUI * uiRate;
+  const uiOriginalAmount = uiMonthlyCost * uiMonths;
+  const uiDiscountMonths = price?.discountMonths ?? 0;
+  const uiDiscountAmount = uiMonthlyCost * uiDiscountMonths;
+  const uiPayable = uiOriginalAmount - uiDiscountAmount;
+
+  const hasBackendMismatch =
+    price
+      ? price.pricePerStudentPerMonth !== uiRate ||
+        price.totalMonths !== uiMonths ||
+        Math.abs(price.paidAmount - uiPayable) > 0.5
+      : false;
 
   useEffect(() => {
     const planParam = searchParams.get("plan");
@@ -94,17 +174,6 @@ const validateStudents = () => {
     window.localStorage.setItem("vidyarthii-theme", next ? "dark" : "light");
   };
 
-  const clampToStep = (
-    value: number,
-    min: number,
-    max: number,
-    step: number
-  ) => {
-    const clamped = Math.min(max, Math.max(min, value));
-    const stepped = Math.round((clamped - min) / step) * step + min;
-    return Math.min(max, Math.max(min, stepped));
-  };
-
   /* ===============================
      LOAD RAZORPAY SCRIPT
   =============================== */
@@ -138,12 +207,18 @@ const validateStudents = () => {
         }),
       });
 
-      const data = await res.json();
-      if (!res.ok) throw new Error(data.message);
+      const data: unknown = await res.json();
+      if (!res.ok) {
+        const message =
+          typeof data === "object" && data !== null && "message" in data
+            ? String((data as { message: unknown }).message)
+            : "Failed to preview price";
+        throw new Error(message);
+      }
 
-      setPrice(data);
-    } catch (err: any) {
-      alert(err.message);
+      setPrice(data as PricePreview);
+    } catch (err: unknown) {
+      alert(err instanceof Error ? err.message : "Failed to preview price");
     } finally {
       setLoading(false);
     }
@@ -179,8 +254,16 @@ const validateStudents = () => {
         }),
       });
 
-      const order = await res.json();
-      if (!res.ok) throw new Error(order.message);
+      const orderData: unknown = await res.json();
+      if (!res.ok) {
+        const message =
+          typeof orderData === "object" && orderData !== null && "message" in orderData
+            ? String((orderData as { message: unknown }).message)
+            : "Failed to create payment";
+        throw new Error(message);
+      }
+
+      const order = orderData as CreatePaymentResponse;
 
       /* 1️⃣.5️⃣ Create PaymentIntent (CRITICAL STEP) */
       await fetch(`${API_URL}/api/payment/create-intent`, {
@@ -195,11 +278,16 @@ const validateStudents = () => {
         }),
       });
 
-      const paidAmount =
-        typeof order.paidAmount === "number" ? order.paidAmount : order.amount;
+      const paidAmount = order.paidAmount;
 
       /* 2️⃣ Open Razorpay Checkout */
-      const rzp = new window.Razorpay({
+      const RazorpayCtor = window.Razorpay;
+      if (!RazorpayCtor) {
+        alert("Failed to load Razorpay");
+        return;
+      }
+
+      const rzp = new RazorpayCtor({
         key: RAZORPAY_KEY,
         amount: paidAmount * 100,
         currency: "INR",
@@ -207,7 +295,7 @@ const validateStudents = () => {
         name: "Attendance SaaS",
         description: "School Subscription",
 
-        handler: async function (response: any) {
+        handler: async function (response: RazorpayHandlerResponse) {
           /* 3️⃣ Verify payment */
           const verifyRes = await fetch(`${API_URL}/api/payment/verify`, {
             method: "POST",
@@ -219,16 +307,17 @@ const validateStudents = () => {
             }),
           });
 
-          const verifyData = await verifyRes.json();
+          const verifyData: unknown = await verifyRes.json();
+          const parsed = verifyData as VerifyPaymentResponse;
 
-          if (!verifyRes.ok || !verifyData.success) {
+          if (!verifyRes.ok || !parsed.success) {
             alert("Payment verification failed");
             return;
           }
 
           /* 4️⃣ Redirect to registration */
           router.push(
-            `/auth/register?orderId=${verifyData.orderId}&paymentId=${verifyData.paymentId}`
+            `/auth/register?orderId=${parsed.orderId}&paymentId=${parsed.paymentId}`
           );
         },
 
@@ -236,8 +325,8 @@ const validateStudents = () => {
       });
 
       rzp.open();
-    } catch (err: any) {
-      alert(err.message);
+    } catch (err: unknown) {
+      alert(err instanceof Error ? err.message : "Payment failed");
     } finally {
       setLoading(false);
     }
@@ -275,44 +364,17 @@ const validateStudents = () => {
         <div className="absolute -bottom-28 -right-12 h-72 w-72 rounded-full blur-3xl bg-indigo-500/12 dark:bg-indigo-500/10" />
       </div>
 
-      <nav className="fixed top-0 w-full z-50 backdrop-blur-xl border-b bg-white/70 border-gray-200/70 dark:bg-gray-950/70 dark:border-white/10">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 py-4">
-          <div className="flex items-center justify-between">
-            <Link href="/" className="flex items-center gap-3">
-              <div className="w-10 h-10 rounded-2xl flex items-center justify-center shadow-lg ring-1 bg-linear-to-br from-indigo-600 via-sky-600 to-cyan-500 ring-black/5 dark:from-indigo-400/25 dark:via-sky-400/20 dark:to-cyan-300/20 dark:ring-white/10">
-                <Calendar className="w-6 h-6 text-white" />
-              </div>
-              <div className="flex flex-col leading-tight">
-                <span className="text-lg sm:text-xl font-semibold tracking-tight text-gray-900 dark:text-white">
-                  Vidyarthii
-                </span>
-                <span className="hidden sm:block text-xs text-gray-500 dark:text-gray-400">
-                  School management, simplified
-                </span>
-              </div>
-            </Link>
-
-            <div className="flex items-center gap-4">
-              <div className="hidden sm:flex items-center gap-2 text-xs text-gray-500 dark:text-gray-400">
-                <Sparkles className="w-4 h-4 text-indigo-600 dark:text-cyan-300" />
-                Secure checkout
-              </div>
-
-              <button
-                onClick={toggleTheme}
-                aria-label="Toggle theme"
-                className="p-2 rounded-xl transition-all duration-300 focus:outline-none focus:ring-2 focus:ring-indigo-500/60 focus:ring-offset-2 bg-gray-100 hover:bg-gray-200 ring-1 ring-gray-200 focus:ring-offset-white dark:bg-white/5 dark:hover:bg-white/10 dark:ring-white/10 dark:focus:ring-cyan-500/60 dark:focus:ring-offset-gray-950"
-              >
-                {isDark ? (
-                  <Sun className="w-5 h-5 text-yellow-400" />
-                ) : (
-                  <Moon className="w-5 h-5 text-gray-700" />
-                )}
-              </button>
-            </div>
-          </div>
-        </div>
-      </nav>
+      <MainNavbar
+        isDark={isDark}
+        onToggleTheme={toggleTheme}
+        showAuthButtons={false}
+        hintText="Secure checkout"
+        navLinks={[
+          { label: "Home", href: "/" },
+          { label: "Pricing", href: "/pricing" },
+          { label: "Contact", href: "/contact" },
+        ]}
+      />
 
       <main className="pt-28 sm:pt-32 pb-16 px-4 sm:px-6">
         <div className="max-w-7xl mx-auto">
@@ -514,6 +576,18 @@ const validateStudents = () => {
                         </span>
                       </div>
                       <div className="flex items-center justify-between">
+                        <span>Rate</span>
+                        <span className="font-medium text-gray-900 dark:text-white">
+                          ₹{uiRate}/student/month
+                        </span>
+                      </div>
+                      <div className="flex items-center justify-between">
+                        <span>Duration</span>
+                        <span className="font-medium text-gray-900 dark:text-white">
+                          {uiMonths} months
+                        </span>
+                      </div>
+                      <div className="flex items-center justify-between">
                         <span>Current students</span>
                         <span className="font-medium text-gray-900 dark:text-white">
                           {enteredStudents}
@@ -523,6 +597,12 @@ const validateStudents = () => {
                         <span>Future students</span>
                         <span className="font-medium text-gray-900 dark:text-white">
                           {futureStudents}
+                        </span>
+                      </div>
+                      <div className="flex items-center justify-between">
+                        <span>Billable students</span>
+                        <span className="font-medium text-gray-900 dark:text-white">
+                          {billableStudentsUI}
                         </span>
                       </div>
                     </div>
@@ -536,19 +616,36 @@ const validateStudents = () => {
                       className="space-y-2 text-sm"
                     >
                       <div className="flex items-center justify-between text-gray-700 dark:text-gray-300">
-                        <span>Original</span>
-                        <span>₹{price.originalAmount}</span>
+                        <span>Monthly cost</span>
+                        <span>
+                          {billableStudentsUI} × ₹{uiRate} = ₹{uiMonthlyCost}
+                        </span>
                       </div>
 
                       <div className="flex items-center justify-between text-gray-700 dark:text-gray-300">
-                        <span>Discount</span>
-                        <span>₹{price.discountAmount}</span>
+                        <span>Original</span>
+                        <span>
+                          ₹{uiMonthlyCost} × {uiMonths} = ₹{uiOriginalAmount}
+                        </span>
+                      </div>
+
+                      <div className="flex items-center justify-between text-gray-700 dark:text-gray-300">
+                        <span>
+                          Discount{uiDiscountMonths ? ` (${uiDiscountMonths} months)` : ""}
+                        </span>
+                        <span>₹{uiDiscountAmount}</span>
                       </div>
 
                       <div className="flex items-center justify-between font-semibold text-base text-gray-900 dark:text-white">
                         <span>Payable</span>
-                        <span>₹{price.paidAmount}</span>
+                        <span>₹{uiPayable}</span>
                       </div>
+
+                      {hasBackendMismatch ? (
+                        <div className="mt-2 rounded-xl px-3 py-2 text-xs ring-1 ring-amber-300/40 bg-amber-500/10 text-amber-700 dark:text-amber-200 dark:ring-amber-400/30">
+                          Pricing mismatch detected. UI uses `lib/pricing.ts` rates; backend preview returned a different value.
+                        </div>
+                      ) : null}
                     </motion.div>
 
                     <div className="mt-4 mb-4 rounded-2xl p-4 ring-1 ring-gray-200/70 bg-white/60 dark:bg-white/5 dark:ring-white/10">
@@ -575,18 +672,7 @@ const validateStudents = () => {
         </div>
       </main>
 
-      <footer className="py-10 px-4 sm:px-6 border-t bg-white border-gray-200/70 dark:bg-gray-950 dark:border-white/10">
-        <div className="max-w-7xl mx-auto">
-          <div className="flex flex-col sm:flex-row items-center justify-between gap-3">
-            <div className="text-sm text-gray-600 dark:text-gray-400">
-              support@vidyarthii.com
-            </div>
-            <div className="text-sm text-gray-600 dark:text-gray-400">
-              &copy; 2025 Vidyarthii. All rights reserved.
-            </div>
-          </div>
-        </div>
-      </footer>
+      <MainFooter isDark={isDark} />
     </div>
   );
 }

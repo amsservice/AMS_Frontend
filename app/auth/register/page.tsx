@@ -181,13 +181,14 @@
 "use client";
 
 import { Button } from "@/components/ui/button";
-import Link from "next/link";
-import { Calendar, GraduationCap, Sparkles } from "lucide-react";
+import { GraduationCap } from "lucide-react";
 import { motion } from "framer-motion";
 import { useEffect, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useAuth } from "@/app/context/AuthContext";
 import { getDashboardPath } from "@/lib/roleRedirect";
+import MainNavbar from "@/components/main/MainNavbar";
+import MainFooter from "@/components/main/MainFooter";
 
 export default function RegisterPage() {
   const router = useRouter();
@@ -199,6 +200,9 @@ export default function RegisterPage() {
   const paymentId = searchParams.get("paymentId");
 
   const [submitting, setSubmitting] = useState(false);
+
+  const [isDark, setIsDark] = useState(false);
+  const [mounted, setMounted] = useState(false);
 
   const [form, setForm] = useState({
     schoolName: "",
@@ -230,6 +234,24 @@ export default function RegisterPage() {
       router.replace(getDashboardPath(user.role));
     }
   }, [user, loading, router]);
+
+  useEffect(() => {
+    setMounted(true);
+    const savedTheme = window.localStorage.getItem("vidyarthii-theme");
+    const initialIsDark = savedTheme
+      ? savedTheme === "dark"
+      : window.matchMedia("(prefers-color-scheme: dark)").matches;
+
+    setIsDark(initialIsDark);
+    document.documentElement.classList.toggle("dark", initialIsDark);
+  }, []);
+
+  const toggleTheme = () => {
+    const next = !isDark;
+    setIsDark(next);
+    document.documentElement.classList.toggle("dark", next);
+    window.localStorage.setItem("vidyarthii-theme", next ? "dark" : "light");
+  };
 
   function handleChange(e: React.ChangeEvent<HTMLInputElement>) {
     setForm({ ...form, [e.target.name]: e.target.value });
@@ -275,6 +297,19 @@ export default function RegisterPage() {
     }
   }
 
+  if (!mounted) {
+    return (
+      <div className="min-h-screen bg-gray-50 dark:bg-slate-950">
+        <div className="flex items-center justify-center min-h-screen">
+          <div className="flex flex-col items-center gap-4">
+            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600" />
+            <div className="text-sm text-gray-500 dark:text-gray-400">Loading...</div>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="relative isolate min-h-screen bg-linear-to-b from-white via-slate-50 to-slate-100 dark:from-slate-950 dark:via-slate-950 dark:to-slate-900">
       <div className="pointer-events-none absolute inset-0 overflow-hidden">
@@ -284,26 +319,15 @@ export default function RegisterPage() {
         <div className="absolute -bottom-28 -right-12 h-72 w-72 rounded-full blur-3xl bg-indigo-500/12 dark:bg-indigo-500/10" />
       </div>
 
-      <nav className="fixed top-0 w-full z-50 backdrop-blur-xl border-b bg-white/70 border-gray-200/70 dark:bg-gray-950/70 dark:border-white/10">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 py-4">
-          <div className="flex items-center justify-between">
-            <Link href="/" className="flex items-center gap-3">
-              <div className="w-10 h-10 rounded-2xl flex items-center justify-center shadow-lg ring-1 bg-linear-to-br from-indigo-600 via-sky-600 to-cyan-500 ring-black/5 dark:from-indigo-400/25 dark:via-sky-400/20 dark:to-cyan-300/20 dark:ring-white/10">
-                <Calendar className="w-6 h-6 text-white" />
-              </div>
-              <div className="flex flex-col leading-tight">
-                <span className="text-lg sm:text-xl font-semibold tracking-tight text-gray-900 dark:text-white">Vidyarthii</span>
-                <span className="hidden sm:block text-xs text-gray-500 dark:text-gray-400">School management, simplified</span>
-              </div>
-            </Link>
-
-            <div className="hidden sm:flex items-center gap-2 text-xs text-gray-500 dark:text-gray-400">
-              <Sparkles className="w-4 h-4 text-indigo-600 dark:text-cyan-300" />
-              Secure registration
-            </div>
-          </div>
-        </div>
-      </nav>
+      <MainNavbar
+        isDark={isDark}
+        onToggleTheme={toggleTheme}
+        hintText="Secure registration"
+        navLinks={[
+          { label: "Home", href: "/" },
+          { label: "Contact", href: "/contact" },
+        ]}
+      />
 
       <main className="pt-28 sm:pt-32 pb-16 px-4 sm:px-6">
         <div className="max-w-7xl mx-auto">
@@ -398,14 +422,7 @@ export default function RegisterPage() {
         </div>
       </main>
 
-      <footer className="py-10 px-4 sm:px-6 border-t bg-white border-gray-200/70 dark:bg-gray-950 dark:border-white/10">
-        <div className="max-w-7xl mx-auto">
-          <div className="flex flex-col sm:flex-row items-center justify-between gap-3">
-            <div className="text-sm text-gray-600 dark:text-gray-400">support@vidyarthii.com</div>
-            <div className="text-sm text-gray-600 dark:text-gray-400">&copy; 2025 Vidyarthii. All rights reserved.</div>
-          </div>
-        </div>
-      </footer>
+      <MainFooter isDark={isDark} />
     </div>
   );
 }
