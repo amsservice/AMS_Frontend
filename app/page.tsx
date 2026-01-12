@@ -84,18 +84,14 @@ const AttendEaseLanding = () => {
   ];
 
   const includedFeatures = [
-    { icon: "✨", title: "Unlimited Access", desc: "No limits on students, teachers, or classes" },
+    { icon: "🎯", title: "Custom Reports", desc: "Generate reports tailored to your needs" },
+    { icon: "📤", title: "Data Export", desc: "Export to CSV, Excel, PDF anytime" },
     { icon: "📊", title: "Advanced Analytics", desc: "Real-time insights and custom reports" },
-    { icon: "🔒", title: "Bank-Level Security", desc: "Enterprise encryption & daily backups" },
     { icon: "🏫", title: "Multi-School Support", desc: "Manage multiple branches seamlessly" },
-    { icon: "📱", title: "Mobile Apps", desc: "iOS & Android apps for on-the-go access" },
     { icon: "⚡", title: "Lightning Fast", desc: "99.9% uptime with instant sync" },
     { icon: "👥", title: "Role-Based Access", desc: "Custom permissions for every user" },
     { icon: "📧", title: "Priority Support", desc: "Email & chat support with quick response" },
-    { icon: "📤", title: "Data Export", desc: "Export to CSV, Excel, PDF anytime" },
-    { icon: "🔄", title: "Auto Backups", desc: "Your data is safe and recoverable" },
     { icon: "📈", title: "Attendance Trends", desc: "Identify patterns and at-risk students" },
-    { icon: "🎯", title: "Custom Reports", desc: "Generate reports tailored to your needs" },
   ];
 
   return (
@@ -200,66 +196,6 @@ const AttendEaseLanding = () => {
                   </div>
                   <h3 className="text-xl font-bold text-gray-900 dark:text-white mb-3">{feature.title}</h3>
                   <p className="leading-relaxed text-gray-600 dark:text-gray-400">{feature.description}</p>
-                </div>
-              </div>
-            ))}
-          </div>
-        </div>
-      </section>
-
-      {/* Testimonials Section */}
-      <section className="relative py-20 px-4 sm:px-6">
-        <div className="max-w-7xl mx-auto">
-          <div className="text-center mb-12 sm:mb-16">
-            <h2 className="text-3xl sm:text-4xl md:text-5xl font-bold text-gray-900 dark:text-white tracking-tight mb-4">
-              Loved by Schools Nationwide
-            </h2>
-            <p className="text-base sm:text-lg text-gray-600 dark:text-gray-400">
-              See what principals and teachers are saying about Vidyarthii
-            </p>
-          </div>
-
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-            {[
-              {
-                quote:
-                  "Vidyarthii has transformed how we manage attendance. What used to take hours now takes minutes. The real-time analytics help us identify students who need support immediately.",
-                author: "Dr. Priya Sharma",
-                role: "Principal, Delhi Public School",
-                rating: 5,
-              },
-              {
-                quote:
-                  "The interface is so intuitive that our teachers were up and running within a day. No lengthy training needed. The mobile app is a game-changer for marking attendance on the go.",
-                author: "Rajesh Kumar",
-                role: "Academic Head, Mount Litera School",
-                rating: 5,
-              },
-              {
-                quote:
-                  "We manage 5 branches with over 3,000 students. Vidyarthii's multi-school support and centralized dashboard give us complete visibility. Best investment we've made.",
-                author: "Anita Desai",
-                role: "Director, Greenwood High",
-                rating: 5,
-              },
-            ].map((testimonial, idx) => (
-              <div
-                key={idx}
-                className="p-8 rounded-2xl transition-all duration-300 bg-white/80 dark:bg-gray-800/80 backdrop-blur-sm border border-gray-200/50 dark:border-gray-700/50 shadow-xl hover:shadow-2xl"
-              >
-                <div className="flex mb-4">
-                  {[...Array(testimonial.rating)].map((_, i) => (
-                    <svg key={i} className="w-5 h-5 text-yellow-500" fill="currentColor" viewBox="0 0 20 20">
-                      <path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z" />
-                    </svg>
-                  ))}
-                </div>
-                <p className="mb-6 leading-relaxed text-gray-600 dark:text-gray-300">
-                  "{testimonial.quote}"
-                </p>
-                <div>
-                  <div className="font-bold text-gray-900 dark:text-white">{testimonial.author}</div>
-                  <div className="text-sm text-gray-600 dark:text-gray-400">{testimonial.role}</div>
                 </div>
               </div>
             ))}
