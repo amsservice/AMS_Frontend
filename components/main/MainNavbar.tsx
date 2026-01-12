@@ -143,9 +143,9 @@ export default function MainNavbar({
                       <motion.div
                         key="sun"
                         className="absolute"
-                        initial={{ rotate: -90, opacity: 0, scale: 0.5 }}
+                        initial={{ rotate: -180, opacity: 0, scale: 0.5 }}
                         animate={{ rotate: 0, opacity: 1, scale: 1 }}
-                        exit={{ rotate: 90, opacity: 0, scale: 0.5 }}
+                        exit={{ rotate: 180, opacity: 0, scale: 0.5 }}
                         transition={{ duration: 0.55, ease: "easeOut" }}
                       >
                         <Sun className="w-5 h-5 text-yellow-400" />
@@ -154,9 +154,9 @@ export default function MainNavbar({
                       <motion.div
                         key="moon"
                         className="absolute"
-                        initial={{ rotate: 270, opacity: 0, scale: 0.5 }}
+                        initial={{ rotate: -180, opacity: 0, scale: 0.5 }}
                         animate={{ rotate: 0, opacity: 1, scale: 1 }}
-                        exit={{ rotate: -270, opacity: 0, scale: 0.5 }}
+                        exit={{ rotate: 180, opacity: 0, scale: 0.5 }}
                         transition={{ duration: 0.55, ease: "easeOut" }}
                       >
                         <Moon className="w-5 h-5 text-gray-600" />
