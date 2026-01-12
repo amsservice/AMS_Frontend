@@ -30,11 +30,11 @@ export default function PricingPage() {
 
   if (!mounted) {
     return (
-      <div className="min-h-screen bg-gray-50 dark:bg-slate-950">
+      <div className="min-h-screen bg-gradient-to-br from-gray-50 to-gray-100 dark:from-gray-900 dark:to-gray-800">
         <div className="flex items-center justify-center min-h-screen">
           <div className="flex flex-col items-center gap-4">
             <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600" />
-            <div className="text-sm text-gray-500 dark:text-gray-400">Loading...</div>
+            <div className="text-sm text-gray-600 dark:text-gray-400">Loading...</div>
           </div>
         </div>
       </div>
@@ -42,18 +42,13 @@ export default function PricingPage() {
   }
 
   return (
-    <div
-      className={`relative isolate min-h-screen transition-colors duration-300 ${
-        isDark
-          ? "bg-linear-to-b from-slate-950 via-slate-950 to-slate-900"
-          : "bg-linear-to-b from-white via-slate-50 to-slate-100"
-      }`}
-    >
+    <div className="relative min-h-screen bg-gradient-to-br from-gray-50 to-gray-100 dark:from-gray-900 dark:to-gray-800">
+      {/* Background Blur Effects */}
       <div className="pointer-events-none absolute inset-0 overflow-hidden">
-        <div className={`absolute -top-28 -left-28 h-80 w-80 rounded-full blur-3xl ${isDark ? "bg-violet-500/8" : "bg-violet-500/14"}`} />
-        <div className={`absolute top-1/3 -right-32 h-96 w-96 rounded-full blur-3xl ${isDark ? "bg-cyan-500/10" : "bg-cyan-500/16"}`} />
-        <div className={`absolute bottom-0 left-1/3 h-80 w-80 rounded-full blur-3xl ${isDark ? "bg-sky-500/10" : "bg-sky-500/14"}`} />
-        <div className={`absolute -bottom-28 -right-12 h-72 w-72 rounded-full blur-3xl ${isDark ? "bg-indigo-500/10" : "bg-indigo-500/12"}`} />
+        <div className="absolute -top-28 -left-28 h-80 w-80 rounded-full blur-3xl bg-violet-500/20 dark:bg-violet-500/10" />
+        <div className="absolute top-1/3 -right-32 h-96 w-96 rounded-full blur-3xl bg-cyan-500/20 dark:bg-cyan-500/10" />
+        <div className="absolute bottom-0 left-1/3 h-80 w-80 rounded-full blur-3xl bg-sky-500/20 dark:bg-sky-500/10" />
+        <div className="absolute -bottom-28 -right-12 h-72 w-72 rounded-full blur-3xl bg-indigo-500/20 dark:bg-indigo-500/10" />
       </div>
 
       <MainNavbar
@@ -66,42 +61,36 @@ export default function PricingPage() {
         ]}
       />
 
-      <main className="pt-28 sm:pt-32 pb-20 px-4 sm:px-6">
+      <main className="relative pt-28 sm:pt-32 pb-20 px-4 sm:px-6">
         <div className="max-w-7xl mx-auto">
           <div className="text-center mb-12 sm:mb-16">
-            <h1 className={`text-3xl sm:text-4xl md:text-5xl font-semibold tracking-tight mb-4 ${isDark ? "text-white" : "text-gray-900"}`}>
+            <h1 className="text-3xl sm:text-4xl md:text-5xl font-bold text-gray-900 dark:text-white tracking-tight mb-4">
               <span className="inline-flex items-center justify-center gap-3">
-                <Sparkles className={`w-7 h-7 ${isDark ? "text-cyan-300" : "text-indigo-600"}`} />
+                <Sparkles className="w-7 h-7 text-blue-600 dark:text-cyan-400" />
                 Pick your plan. Flex the savings.
               </span>
             </h1>
-            <p className={`text-base sm:text-lg max-w-3xl mx-auto ${isDark ? "text-gray-400" : "text-gray-600"}`}>
+            <p className="text-base sm:text-lg max-w-3xl mx-auto text-gray-600 dark:text-gray-400">
               Pay per student, lock a longer plan for bigger savings, and keep your school running smooth.
             </p>
-            <p className="mt-3 text-sm text-gray-500">No setup fees. Cancel anytime. Taxes may apply.</p>
+            <p className="mt-3 text-sm text-gray-500 dark:text-gray-500">No setup fees. Cancel anytime. Taxes may apply.</p>
           </div>
 
           <PricingCards isDark={isDark} />
 
           <section className="mt-8">
-            <div
-              className={`rounded-3xl p-8 sm:p-12 relative overflow-hidden ring-1 ${
-                isDark
-                  ? "bg-linear-to-br from-slate-900/50 to-slate-800/50 ring-white/10"
-                  : "bg-linear-to-br from-white to-gray-50 ring-gray-200 shadow-xl"
-              }`}
-            >
+            <div className="rounded-3xl p-8 sm:p-12 relative overflow-hidden bg-white/80 dark:bg-gray-800/80 backdrop-blur-sm border border-gray-200/50 dark:border-gray-700/50 shadow-2xl">
               <div className="pointer-events-none absolute inset-0">
-                <div className={`absolute -top-16 -right-16 h-56 w-56 rounded-full blur-3xl ${isDark ? "bg-cyan-500/10" : "bg-cyan-500/12"}`} />
-                <div className={`absolute -bottom-20 -left-20 h-64 w-64 rounded-full blur-3xl ${isDark ? "bg-violet-500/10" : "bg-violet-500/10"}`} />
+                <div className="absolute -top-16 -right-16 h-56 w-56 rounded-full blur-3xl bg-cyan-500/20 dark:bg-cyan-500/10" />
+                <div className="absolute -bottom-20 -left-20 h-64 w-64 rounded-full blur-3xl bg-violet-500/20 dark:bg-violet-500/10" />
               </div>
 
               <div className="relative">
                 <div className="text-center mb-10">
-                  <h2 className={`text-2xl sm:text-3xl md:text-4xl font-bold mb-3 ${isDark ? "text-white" : "text-gray-900"}`}>
+                  <h2 className="text-2xl sm:text-3xl md:text-4xl font-bold text-gray-900 dark:text-white mb-3">
                     Everything you need to run attendance — without the busy work.
                   </h2>
-                  <p className={`text-base sm:text-lg max-w-3xl mx-auto ${isDark ? "text-gray-300" : "text-gray-600"}`}>
+                  <p className="text-base sm:text-lg max-w-3xl mx-auto text-gray-600 dark:text-gray-300">
                     Every plan includes the full platform. No feature locks — just smoother operations, cleaner records, and faster follow-ups.
                   </p>
                 </div>
@@ -135,21 +124,17 @@ export default function PricingPage() {
                   ].map((f, idx) => (
                     <div
                       key={idx}
-                      className={`rounded-2xl p-6 transition-all duration-300 ring-1 ${
-                        isDark
-                          ? "bg-white/5 ring-white/10 hover:bg-white/7"
-                          : "bg-white ring-gray-200 hover:shadow-lg"
-                      }`}
+                      className="rounded-xl p-6 transition-all duration-300 bg-gray-50 dark:bg-gray-700/50 border border-gray-200 dark:border-gray-600 hover:shadow-lg"
                     >
-                      <h3 className={`text-lg font-semibold mb-2 ${isDark ? "text-white" : "text-gray-900"}`}>{f.title}</h3>
-                      <p className={`text-sm leading-relaxed ${isDark ? "text-gray-300" : "text-gray-600"}`}>{f.desc}</p>
+                      <h3 className="text-lg font-bold text-gray-900 dark:text-white mb-2">{f.title}</h3>
+                      <p className="text-sm leading-relaxed text-gray-600 dark:text-gray-300">{f.desc}</p>
                     </div>
                   ))}
                 </div>
 
                 <div className="mt-10 text-center">
-                  <p className={`text-sm ${isDark ? "text-gray-400" : "text-gray-600"}`}>
-                    Want a clean start? Choose a plan, set your student count, and you’re ready to go.
+                  <p className="text-sm text-gray-600 dark:text-gray-400">
+                    Want a clean start? Choose a plan, set your student count, and you're ready to go.
                   </p>
                 </div>
               </div>

@@ -40,29 +40,19 @@ export default function MainNavbar({
   };
 
   return (
-    <nav
-      className={`fixed top-0 w-full z-50 transition-all duration-300 ${
-        isDark ? "bg-gray-950/70 border-white/10" : "bg-white/70 border-gray-200/70"
-      } backdrop-blur-xl border-b`}
-    >
+    <nav className="fixed top-0 w-full z-50 bg-white/80 dark:bg-gray-800/80 backdrop-blur-sm border-b border-gray-200/50 dark:border-gray-700/50 shadow-lg">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 py-4">
         <div className="flex items-center justify-between">
           <Link href="/" className="flex items-center gap-3">
-            <div
-              className={`w-10 h-10 rounded-2xl flex items-center justify-center shadow-lg ring-1 ${
-                isDark
-                  ? "bg-linear-to-br from-indigo-400/25 via-sky-400/20 to-cyan-300/20 ring-white/10"
-                  : "bg-linear-to-br from-indigo-600 via-sky-600 to-cyan-500 ring-black/5"
-              }`}
-            >
+            <div className="w-10 h-10 rounded-xl flex items-center justify-center shadow-lg bg-gradient-to-br from-blue-600 to-indigo-600">
               <Calendar className="w-6 h-6 text-white" />
             </div>
 
             <div className="flex flex-col leading-tight">
-              <span className={`text-lg font-semibold tracking-tight ${isDark ? "text-white" : "text-gray-900"}`}>
+              <span className="text-lg font-bold text-gray-900 dark:text-white tracking-tight">
                 Vidyarthii
               </span>
-              <span className={`hidden sm:block text-xs ${isDark ? "text-gray-400" : "text-gray-500"}`}>
+              <span className="hidden sm:block text-xs text-gray-600 dark:text-gray-400">
                 School management, simplified
               </span>
             </div>
@@ -75,9 +65,7 @@ export default function MainNavbar({
                   <a
                     key={`${l.label}-${l.href}`}
                     href={l.href}
-                    className={`text-sm font-medium ${
-                      isDark ? "text-gray-300 hover:text-white" : "text-gray-600 hover:text-gray-900"
-                    } transition-colors`}
+                    className="text-sm font-medium text-gray-700 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white transition-colors"
                   >
                     {l.label}
                   </a>
@@ -87,12 +75,8 @@ export default function MainNavbar({
                     href={l.href}
                     className={`text-sm font-medium transition-colors ${
                       isActiveHref(l.href)
-                        ? isDark
-                          ? "text-white"
-                          : "text-gray-900"
-                        : isDark
-                          ? "text-gray-300 hover:text-white"
-                          : "text-gray-600 hover:text-gray-900"
+                        ? "text-gray-900 dark:text-white font-semibold"
+                        : "text-gray-700 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white"
                     }`}
                   >
                     {l.label}
@@ -104,8 +88,8 @@ export default function MainNavbar({
 
           <div className="flex items-center gap-4">
             {hintText ? (
-              <div className="hidden sm:flex items-center gap-2 text-xs text-gray-500 dark:text-gray-400">
-                <Sparkles className="w-4 h-4 text-indigo-600 dark:text-cyan-300" />
+              <div className="hidden sm:flex items-center gap-2 text-xs text-gray-600 dark:text-gray-400">
+                <Sparkles className="w-4 h-4 text-blue-600 dark:text-cyan-400" />
                 {hintText}
               </div>
             ) : null}
@@ -114,11 +98,7 @@ export default function MainNavbar({
               <button
                 onClick={onToggleTheme}
                 aria-label="Toggle theme"
-                className={`p-2 rounded-xl transition-all duration-300 focus:outline-none focus:ring-2 focus:ring-blue-500/60 focus:ring-offset-2 ${
-                  isDark
-                    ? "bg-white/5 hover:bg-white/10 ring-1 ring-white/10 focus:ring-offset-gray-950"
-                    : "bg-gray-100 hover:bg-gray-200 ring-1 ring-gray-200 focus:ring-offset-white"
-                }`}
+                className="p-2 rounded-xl transition-colors bg-gray-100 dark:bg-gray-700 hover:bg-gray-200 dark:hover:bg-gray-600 border border-gray-200 dark:border-gray-600"
               >
                 {isDark ? <Sun className="w-5 h-5 text-yellow-400" /> : <Moon className="w-5 h-5 text-gray-600" />}
               </button>
@@ -127,24 +107,12 @@ export default function MainNavbar({
             {showAuthButtons && (
               <>
                 <Link href="/auth/login">
-                  <button
-                    className={`px-4 py-2 rounded-xl text-sm font-medium transition-all focus:outline-none focus:ring-2 focus:ring-blue-500/60 focus:ring-offset-2 ${
-                      isDark
-                        ? "text-gray-300 hover:text-white focus:ring-offset-gray-950"
-                        : "text-gray-600 hover:text-gray-900 focus:ring-offset-white"
-                    }`}
-                  >
+                  <button className="px-4 py-2 rounded-xl text-sm font-medium text-gray-700 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white transition-colors">
                     Login
                   </button>
                 </Link>
                 <Link href="/subscription/payment?plan=1Y">
-                  <button
-                    className={`px-4 sm:px-6 py-2.5 text-white rounded-xl font-semibold text-sm transition-all duration-300 transform hover:scale-[1.02] active:scale-[0.98] shadow-lg focus:outline-none focus:ring-2 focus:ring-blue-500/60 focus:ring-offset-2 ${
-                      isDark
-                        ? "bg-linear-to-r from-indigo-500 via-sky-500 to-cyan-500 shadow-sky-500/25 focus:ring-offset-gray-950"
-                        : "bg-linear-to-r from-indigo-600 via-sky-600 to-cyan-500 shadow-sky-500/30 focus:ring-offset-white"
-                    }`}
-                  >
+                  <button className="px-4 sm:px-6 py-2.5 text-white rounded-xl font-semibold text-sm transition-all duration-300 transform hover:scale-[1.02] active:scale-[0.98] shadow-lg bg-gradient-to-r from-blue-600 via-indigo-600 to-purple-600 hover:opacity-90">
                     Register School
                   </button>
                 </Link>

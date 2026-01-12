@@ -1,5 +1,3 @@
-
-
 "use client";
 
 import Link from "next/link";
@@ -31,9 +29,6 @@ export default function LoginPage() {
     password: ""
   });
 
-  /* ------------------------------------
-     Redirect AFTER user is available
-  ------------------------------------ */
   useEffect(() => {
     if (!loading && user) {
       router.replace(getDashboardPath(user.role));
@@ -72,15 +67,10 @@ export default function LoginPage() {
 
     try {
       setSubmitting(true);
-
-      // ✅ wait for login to fully complete
       await login(role, {
         email: form.email,
         password: form.password
       });
-
-      // ❌ DO NOT redirect here
-      // Redirect is handled by useEffect
     } catch (err: any) {
       alert(err.message || "Login failed");
     } finally {
@@ -88,16 +78,13 @@ export default function LoginPage() {
     }
   }
 
-  /* ------------------------------------
-     UI
-  ------------------------------------ */
   if (!mounted) {
     return (
-      <div className="min-h-screen bg-gray-50 dark:bg-slate-950">
+      <div className="min-h-screen bg-gradient-to-br from-gray-50 to-gray-100 dark:from-gray-900 dark:to-gray-800">
         <div className="flex items-center justify-center min-h-screen">
           <div className="flex flex-col items-center gap-4">
             <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600" />
-            <div className="text-sm text-gray-500 dark:text-gray-400">Loading...</div>
+            <div className="text-sm text-gray-600 dark:text-gray-400">Loading...</div>
           </div>
         </div>
       </div>
@@ -105,12 +92,13 @@ export default function LoginPage() {
   }
 
   return (
-    <div className="relative isolate min-h-screen bg-linear-to-b from-white via-slate-50 to-slate-100 dark:from-slate-950 dark:via-slate-950 dark:to-slate-900">
+    <div className="relative min-h-screen bg-gradient-to-br from-gray-50 to-gray-100 dark:from-gray-900 dark:to-gray-800">
+      {/* Background Blur Effects */}
       <div className="pointer-events-none absolute inset-0 overflow-hidden">
-        <div className="absolute -top-28 -left-28 h-80 w-80 rounded-full blur-3xl bg-violet-500/10 dark:bg-violet-500/8" />
-        <div className="absolute top-1/3 -right-32 h-96 w-96 rounded-full blur-3xl bg-cyan-500/14 dark:bg-cyan-500/10" />
-        <div className="absolute bottom-0 left-1/3 h-80 w-80 rounded-full blur-3xl bg-sky-500/12 dark:bg-sky-500/10" />
-        <div className="absolute -bottom-28 -right-12 h-72 w-72 rounded-full blur-3xl bg-indigo-500/12 dark:bg-indigo-500/10" />
+        <div className="absolute -top-28 -left-28 h-80 w-80 rounded-full blur-3xl bg-violet-500/20 dark:bg-violet-500/10" />
+        <div className="absolute top-1/3 -right-32 h-96 w-96 rounded-full blur-3xl bg-cyan-500/20 dark:bg-cyan-500/10" />
+        <div className="absolute bottom-0 left-1/3 h-80 w-80 rounded-full blur-3xl bg-sky-500/20 dark:bg-sky-500/10" />
+        <div className="absolute -bottom-28 -right-12 h-72 w-72 rounded-full blur-3xl bg-indigo-500/20 dark:bg-indigo-500/10" />
       </div>
 
       <MainNavbar
@@ -129,17 +117,16 @@ export default function LoginPage() {
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.5 }}
-        className="w-full max-w-md mx-auto pt-32 pb-16 px-4 sm:px-6"
+        className="relative w-full max-w-md mx-auto pt-32 pb-16 px-4 sm:px-6"
       >
-        <div className="rounded-3xl p-8 ring-1 ring-gray-200/70 bg-white/80 backdrop-blur-sm shadow-2xl dark:bg-white/5 dark:ring-white/10">
-
+        <div className="bg-white/80 dark:bg-gray-800/80 backdrop-blur-sm rounded-3xl shadow-2xl border border-gray-200/50 dark:border-gray-700/50 p-8 sm:p-10">
           {/* Header */}
-          <div className="text-center mb-6">
-            <div className="w-16 h-16 mx-auto mb-4 rounded-2xl bg-linear-to-br from-indigo-600 via-sky-600 to-cyan-500 flex items-center justify-center shadow-lg ring-1 ring-black/5 dark:from-indigo-400/25 dark:via-sky-400/20 dark:to-cyan-300/20 dark:ring-white/10">
+          <div className="text-center mb-8">
+            <div className="w-16 h-16 mx-auto mb-4 rounded-2xl bg-gradient-to-br from-blue-600 to-indigo-600 flex items-center justify-center shadow-lg">
               <GraduationCap className="w-8 h-8 text-white" />
             </div>
             <h1 className="text-3xl font-bold text-gray-900 dark:text-white">Welcome Back</h1>
-            <p className="text-gray-600 dark:text-gray-300 text-sm mt-1">
+            <p className="text-gray-600 dark:text-gray-400 text-sm mt-2">
               Login to your dashboard
             </p>
           </div>
@@ -151,14 +138,10 @@ export default function LoginPage() {
                 key={r}
                 type="button"
                 onClick={() => setRole(r)}
-                className={`py-2 rounded-xl font-medium transition ring-1 ${
+                className={`py-3 rounded-xl border font-semibold transition-all duration-200 transform hover:scale-105 ${
                   role === r
-                    ? isDark
-                      ? "ring-cyan-400/40 bg-cyan-500/10 text-cyan-200"
-                      : "ring-indigo-500/30 bg-indigo-500/10 text-indigo-700"
-                    : isDark
-                      ? "ring-white/10 text-gray-300 hover:bg-white/5"
-                      : "ring-gray-200 text-gray-600 hover:bg-white"
+                    ? "border-blue-500 bg-gradient-to-r from-blue-600 to-indigo-600 text-white shadow-lg"
+                    : "border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 bg-white dark:bg-gray-700 hover:border-blue-400 dark:hover:border-blue-500"
                 }`}
               >
                 {r.charAt(0).toUpperCase() + r.slice(1)}
@@ -167,37 +150,40 @@ export default function LoginPage() {
           </div>
 
           {/* Login Form */}
-          <form onSubmit={handleSubmit} className="space-y-4">
-
+          <form onSubmit={handleSubmit} className="space-y-5">
             <div>
-              <label className="text-sm font-medium text-gray-700 dark:text-gray-200">Email</label>
+              <label className="text-sm font-semibold text-gray-700 dark:text-gray-300 block mb-2">
+                Email
+              </label>
               <input
                 type="email"
                 name="email"
                 value={form.email}
                 onChange={handleChange}
                 placeholder="you@school.edu"
-                className="w-full mt-1 px-4 py-3 rounded-xl ring-1 ring-gray-200 bg-white text-gray-900 focus:outline-none focus:ring-2 focus:ring-indigo-500/60 dark:bg-white/5 dark:text-white dark:ring-white/10 dark:focus:ring-cyan-500/60"
+                className="w-full px-4 py-3 rounded-xl border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-white placeholder:text-gray-500 dark:placeholder:text-gray-400 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-all"
               />
             </div>
 
             <div>
-              <label className="text-sm font-medium text-gray-700 dark:text-gray-200">Password</label>
-              <div className="relative mt-1">
+              <label className="text-sm font-semibold text-gray-700 dark:text-gray-300 block mb-2">
+                Password
+              </label>
+              <div className="relative">
                 <input
                   type={showPassword ? "text" : "password"}
                   name="password"
                   value={form.password}
                   onChange={handleChange}
                   placeholder="••••••••"
-                  className="w-full px-4 py-3 rounded-xl ring-1 ring-gray-200 bg-white text-gray-900 focus:outline-none focus:ring-2 focus:ring-indigo-500/60 pr-12 dark:bg-white/5 dark:text-white dark:ring-white/10 dark:focus:ring-cyan-500/60"
+                  className="w-full px-4 py-3 rounded-xl border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-white placeholder:text-gray-500 dark:placeholder:text-gray-400 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none pr-12 transition-all"
                 />
                 <button
                   type="button"
                   onClick={() => setShowPassword(!showPassword)}
-                  className="absolute right-4 top-1/2 -translate-y-1/2 text-gray-500 hover:text-gray-800 dark:text-gray-400 dark:hover:text-white"
+                  className="absolute right-4 top-1/2 -translate-y-1/2 text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 transition-colors"
                 >
-                  {showPassword ? <EyeOff /> : <Eye />}
+                  {showPassword ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
                 </button>
               </div>
             </div>
@@ -205,26 +191,26 @@ export default function LoginPage() {
             <Button
               type="submit"
               disabled={submitting}
-              className="w-full h-12 rounded-2xl font-semibold text-white bg-linear-to-r from-indigo-600 via-sky-600 to-cyan-500 hover:opacity-95"
+              className="w-full h-12 bg-gradient-to-r from-blue-600 via-indigo-600 to-purple-600 hover:opacity-90 text-white font-semibold rounded-xl transition-all shadow-lg disabled:opacity-50 disabled:cursor-not-allowed"
             >
               {submitting ? "Logging in..." : "Login"}
             </Button>
           </form>
 
-          {/* Register */}
-          <p className="text-center text-sm text-muted-foreground mt-6">
+          {/* Register Link */}
+          <p className="text-center text-sm text-gray-600 dark:text-gray-400 mt-6">
             Don&apos;t have an account?{" "}
             <Link
               href="/auth/register"
-              className="text-primary font-semibold hover:underline"
+              className="text-blue-600 dark:text-cyan-400 font-semibold hover:underline"
             >
               Register your school
             </Link>
           </p>
         </div>
       </motion.div>
+      
       <MainFooter isDark={isDark} />
     </div>
   );
 }
-
