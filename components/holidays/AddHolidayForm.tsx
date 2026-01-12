@@ -3,6 +3,8 @@
 import { useState } from 'react';
 import { Calendar, Pencil, Plus, X } from 'lucide-react';
 import { useHolidays, useCreateHoliday, useUpdateHoliday, useDeleteHoliday, Holiday } from '@/app/querry/useHolidays';
+import { useSessions } from '@/app/querry/useSessions';
+import { toast } from 'sonner';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -29,10 +31,29 @@ export default function AddHolidayForm() {
     description: ''
   });
 
+  const { data: holidays = [] } = useHolidays();
+  const { data: sessions = [] } = useSessions();
   const { mutate: createHoliday, isPending } = useCreateHoliday();
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
+    const hasActive = sessions.some((s: any) => s.isActive);
+    if (!hasActive) {
+      toast.error('Make a new session first');
+      return;
+    }
+    if (!form.date) {
+      toast.error('Please select a date for the holiday');
+      return;
+    }
+
+    const formDate = new Date(form.date).toDateString();
+    const exists = holidays.some((h: any) => new Date(h.date).toDateString() === formDate);
+    if (exists) {
+      toast.error('A holiday already exists on this date');
+      return;
+    }
+
     createHoliday(form);
     setForm({
       name: '',
