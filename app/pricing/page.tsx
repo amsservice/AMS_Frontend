@@ -41,6 +41,17 @@ export default function PricingPage() {
     );
   }
 
+    const includedFeatures = [
+    { icon: "🎯", title: "Custom Reports", desc: "Generate reports tailored to your needs" },
+    { icon: "📤", title: "Data Export", desc: "Export to CSV, Excel, PDF anytime" },
+    { icon: "📊", title: "Advanced Analytics", desc: "Real-time insights and custom reports" },
+    { icon: "🏫", title: "Multi-School Support", desc: "Manage multiple branches seamlessly" },
+    { icon: "⚡", title: "Lightning Fast", desc: "99.9% uptime with instant sync" },
+    { icon: "👥", title: "Role-Based Access", desc: "Custom permissions for every user" },
+    { icon: "📧", title: "Priority Support", desc: "Email & chat support with quick response" },
+    { icon: "📈", title: "Attendance Trends", desc: "Identify patterns and at-risk students" },
+  ];
+
   return (
     <div className="relative min-h-screen bg-gradient-to-br from-gray-50 to-gray-100 dark:from-gray-900 dark:to-gray-800">
       {/* Background Blur Effects */}
@@ -78,68 +89,33 @@ export default function PricingPage() {
 
           <PricingCards isDark={isDark} />
 
-          <section className="mt-8">
-            <div className="rounded-3xl p-8 sm:p-12 relative overflow-hidden bg-white/80 dark:bg-gray-800/80 backdrop-blur-sm border border-gray-200/50 dark:border-gray-700/50 shadow-2xl">
-              <div className="pointer-events-none absolute inset-0">
-                <div className="absolute -top-16 -right-16 h-56 w-56 rounded-full blur-3xl bg-cyan-500/20 dark:bg-cyan-500/10" />
-                <div className="absolute -bottom-20 -left-20 h-64 w-64 rounded-full blur-3xl bg-violet-500/20 dark:bg-violet-500/10" />
-              </div>
-
-              <div className="relative">
-                <div className="text-center mb-10">
-                  <h2 className="text-2xl sm:text-3xl md:text-4xl font-bold text-gray-900 dark:text-white mb-3">
-                    Everything you need to run attendance — without the busy work.
-                  </h2>
-                  <p className="text-base sm:text-lg max-w-3xl mx-auto text-gray-600 dark:text-gray-300">
-                    Every plan includes the full platform. No feature locks — just smoother operations, cleaner records, and faster follow-ups.
-                  </p>
-                </div>
-
-                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
-                  {[
-                    {
-                      title: "Attendance that takes seconds",
-                      desc: "Mark daily attendance quickly with a layout teachers actually enjoy using. Less clicking, fewer mistakes.",
-                    },
-                    {
-                      title: "Clear dashboards for every role",
-                      desc: "Principals get high-level clarity, teachers get daily flow, and students stay informed — all from the same system.",
-                    },
-                    {
-                      title: "Reports that feel instant",
-                      desc: "Generate attendance summaries and class insights whenever you need them — perfect for reviews and follow-ups.",
-                    },
-                    {
-                      title: "Reliable data, always backed up",
-                      desc: "Your attendance records stay consistent and protected, so you never have to rebuild history.",
-                    },
-                    {
-                      title: "Designed for growing schools",
-                      desc: "Add students over time and keep everything organized. Your workflow stays simple even as the numbers grow.",
-                    },
-                    {
-                      title: "Support that helps, not redirects",
-                      desc: "If you get stuck, we help you move forward. Quick answers, clear guidance, and practical fixes.",
-                    },
-                  ].map((f, idx) => (
-                    <div
-                      key={idx}
-                      className="rounded-xl p-6 transition-all duration-300 bg-gray-50 dark:bg-gray-700/50 border border-gray-200 dark:border-gray-600 hover:shadow-lg"
-                    >
-                      <h3 className="text-lg font-bold text-gray-900 dark:text-white mb-2">{f.title}</h3>
-                      <p className="text-sm leading-relaxed text-gray-600 dark:text-gray-300">{f.desc}</p>
-                    </div>
-                  ))}
-                </div>
-
-                <div className="mt-10 text-center">
-                  <p className="text-sm text-gray-600 dark:text-gray-400">
-                    Want a clean start? Choose a plan, set your student count, and you're ready to go.
-                  </p>
-                </div>
-              </div>
+          <div className="rounded-3xl p-8 sm:p-12 bg-white/80 dark:bg-gray-800/80 backdrop-blur-sm border border-gray-200/50 dark:border-gray-700/50 shadow-2xl">
+            <div className="text-center mb-10">
+              <h3 className="text-2xl sm:text-3xl font-bold text-gray-900 dark:text-white mb-3">
+                Everything Included in All Plans
+              </h3>
+              <p className="text-base text-gray-600 dark:text-gray-400">
+                No feature restrictions. Every plan gets full access to our complete platform.
+              </p>
             </div>
-          </section>
+
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+              {includedFeatures.map((feature, idx) => (
+                <div
+                  key={idx}
+                  className="p-5 rounded-xl transition-all duration-300 bg-gray-50 dark:bg-gray-700/50 border border-gray-200 dark:border-gray-600 hover:shadow-lg"
+                >
+                  <div className="flex items-start gap-3">
+                    <span className="text-3xl shrink-0">{feature.icon}</span>
+                    <div>
+                      <h4 className="font-bold text-gray-900 dark:text-white mb-1">{feature.title}</h4>
+                      <p className="text-sm leading-relaxed text-gray-600 dark:text-gray-400">{feature.desc}</p>
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
         </div>
       </main>
 
