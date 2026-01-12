@@ -141,7 +141,7 @@ export default function ContactPage() {
       }
 
       setStatus("success");
-      setStatusMessage("Thanks! We received your message. We’ll reach out soon.");
+      setStatusMessage("Thanks! We received your message. We'll reach out soon.");
       setForm({ name: "", email: "", phone: "", subject: "", message: "" });
       setErrors({});
     } catch (err: unknown) {
@@ -154,11 +154,11 @@ export default function ContactPage() {
 
   if (!mounted) {
     return (
-      <div className="min-h-screen bg-gray-50 dark:bg-slate-950">
+      <div className="min-h-screen bg-gradient-to-br from-gray-50 to-gray-100 dark:from-gray-900 dark:to-gray-800">
         <div className="flex items-center justify-center min-h-screen">
           <div className="flex flex-col items-center gap-4">
             <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600" />
-            <div className="text-sm text-gray-500 dark:text-gray-400">Loading...</div>
+            <div className="text-sm text-gray-600 dark:text-gray-400">Loading...</div>
           </div>
         </div>
       </div>
@@ -166,12 +166,13 @@ export default function ContactPage() {
   }
 
   return (
-    <div className="relative isolate min-h-screen bg-linear-to-b from-white via-slate-50 to-slate-100 dark:from-slate-950 dark:via-slate-950 dark:to-slate-900">
+    <div className="relative min-h-screen bg-gradient-to-br from-gray-50 to-gray-100 dark:from-gray-900 dark:to-gray-800">
+      {/* Background Blur Effects */}
       <div className="pointer-events-none absolute inset-0 overflow-hidden">
-        <div className={`absolute -top-28 -left-28 h-80 w-80 rounded-full blur-3xl ${isDark ? "bg-violet-500/8" : "bg-violet-500/14"}`} />
-        <div className={`absolute top-1/3 -right-32 h-96 w-96 rounded-full blur-3xl ${isDark ? "bg-cyan-500/10" : "bg-cyan-500/16"}`} />
-        <div className={`absolute bottom-0 left-1/3 h-80 w-80 rounded-full blur-3xl ${isDark ? "bg-sky-500/10" : "bg-sky-500/14"}`} />
-        <div className={`absolute -bottom-28 -right-12 h-72 w-72 rounded-full blur-3xl ${isDark ? "bg-indigo-500/10" : "bg-indigo-500/12"}`} />
+        <div className="absolute -top-28 -left-28 h-80 w-80 rounded-full blur-3xl bg-violet-500/20 dark:bg-violet-500/10" />
+        <div className="absolute top-1/3 -right-32 h-96 w-96 rounded-full blur-3xl bg-cyan-500/20 dark:bg-cyan-500/10" />
+        <div className="absolute bottom-0 left-1/3 h-80 w-80 rounded-full blur-3xl bg-sky-500/20 dark:bg-sky-500/10" />
+        <div className="absolute -bottom-28 -right-12 h-72 w-72 rounded-full blur-3xl bg-indigo-500/20 dark:bg-indigo-500/10" />
       </div>
 
       <MainNavbar
@@ -184,32 +185,32 @@ export default function ContactPage() {
         ]}
       />
 
-      <main className="pt-28 sm:pt-32 pb-20 px-4 sm:px-6">
+      <main className="relative pt-28 sm:pt-32 pb-20 px-4 sm:px-6">
         <div className="max-w-7xl mx-auto">
           <div className="text-center mb-10">
-            <h1 className="text-3xl sm:text-4xl md:text-5xl font-semibold tracking-tight text-gray-900 dark:text-white">
-              Let’s connect
+            <h1 className="text-3xl sm:text-4xl md:text-5xl font-bold text-gray-900 dark:text-white tracking-tight">
+              Let's connect
             </h1>
             <p className="mt-3 text-base sm:text-lg text-gray-600 dark:text-gray-300 max-w-3xl mx-auto">
-              Ask a question, request a demo, or get setup help. Send a message — we’ll get back quickly.
+              Ask a question, request a demo, or get setup help. Send a message — we'll get back quickly.
             </p>
           </div>
 
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 items-start">
-            <div className="lg:col-span-2 rounded-3xl p-6 sm:p-8 ring-1 ring-gray-200/70 bg-white/80 backdrop-blur-sm shadow-xl dark:bg-white/5 dark:ring-white/10">
+            <div className="lg:col-span-2 rounded-3xl p-6 sm:p-8 bg-white/80 dark:bg-gray-800/80 backdrop-blur-sm border border-gray-200/50 dark:border-gray-700/50 shadow-2xl">
               <form onSubmit={handleSubmit} className="space-y-4">
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-200">
+                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
                       Name{required.name ? <span className="text-red-500"> *</span> : null}
                     </label>
                     <input
                       value={form.name}
                       onChange={(e) => handleChange("name", e.target.value)}
-                      className={`mt-1 w-full rounded-xl px-4 py-3 ring-1 bg-white text-gray-900 focus:outline-none focus:ring-2 dark:bg-white/5 dark:text-white dark:ring-white/10 ${
+                      className={`mt-1 w-full rounded-xl px-4 py-3 bg-white dark:bg-gray-700 border text-gray-900 dark:text-white placeholder:text-gray-500 dark:placeholder:text-gray-400 focus:outline-none focus:ring-2 transition-all ${
                         errors.name
-                          ? "ring-red-400 focus:ring-red-500/50"
-                          : "ring-gray-200 focus:ring-indigo-500/60 dark:focus:ring-cyan-500/60"
+                          ? "border-red-400 focus:ring-red-500 focus:border-red-500"
+                          : "border-gray-300 dark:border-gray-600 focus:ring-blue-500 focus:border-blue-500"
                       }`}
                       placeholder="Your name"
                     />
@@ -217,16 +218,16 @@ export default function ContactPage() {
                   </div>
 
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-200">
+                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
                       Email{required.email ? <span className="text-red-500"> *</span> : null}
                     </label>
                     <input
                       value={form.email}
                       onChange={(e) => handleChange("email", e.target.value)}
-                      className={`mt-1 w-full rounded-xl px-4 py-3 ring-1 bg-white text-gray-900 focus:outline-none focus:ring-2 dark:bg-white/5 dark:text-white dark:ring-white/10 ${
+                      className={`mt-1 w-full rounded-xl px-4 py-3 bg-white dark:bg-gray-700 border text-gray-900 dark:text-white placeholder:text-gray-500 dark:placeholder:text-gray-400 focus:outline-none focus:ring-2 transition-all ${
                         errors.email
-                          ? "ring-red-400 focus:ring-red-500/50"
-                          : "ring-gray-200 focus:ring-indigo-500/60 dark:focus:ring-cyan-500/60"
+                          ? "border-red-400 focus:ring-red-500 focus:border-red-500"
+                          : "border-gray-300 dark:border-gray-600 focus:ring-blue-500 focus:border-blue-500"
                       }`}
                       placeholder="you@school.edu"
                       type="email"
@@ -235,16 +236,16 @@ export default function ContactPage() {
                   </div>
 
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-200">
+                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
                       Phone
                     </label>
                     <input
                       value={form.phone}
                       onChange={(e) => handleChange("phone", e.target.value)}
-                      className={`mt-1 w-full rounded-xl px-4 py-3 ring-1 bg-white text-gray-900 focus:outline-none focus:ring-2 dark:bg-white/5 dark:text-white dark:ring-white/10 ${
+                      className={`mt-1 w-full rounded-xl px-4 py-3 bg-white dark:bg-gray-700 border text-gray-900 dark:text-white placeholder:text-gray-500 dark:placeholder:text-gray-400 focus:outline-none focus:ring-2 transition-all ${
                         errors.phone
-                          ? "ring-red-400 focus:ring-red-500/50"
-                          : "ring-gray-200 focus:ring-indigo-500/60 dark:focus:ring-cyan-500/60"
+                          ? "border-red-400 focus:ring-red-500 focus:border-red-500"
+                          : "border-gray-300 dark:border-gray-600 focus:ring-blue-500 focus:border-blue-500"
                       }`}
                       placeholder="+91 98765 43210"
                     />
@@ -252,42 +253,42 @@ export default function ContactPage() {
                   </div>
 
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-200">
+                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
                       Subject
                     </label>
                     <input
                       value={form.subject}
                       onChange={(e) => handleChange("subject", e.target.value)}
-                      className="mt-1 w-full rounded-xl px-4 py-3 ring-1 ring-gray-200 bg-white text-gray-900 focus:outline-none focus:ring-2 focus:ring-indigo-500/60 dark:bg-white/5 dark:text-white dark:ring-white/10 dark:focus:ring-cyan-500/60"
+                      className="mt-1 w-full rounded-xl px-4 py-3 bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 text-gray-900 dark:text-white placeholder:text-gray-500 dark:placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all"
                       placeholder="Demo / Billing / Support"
                     />
                   </div>
                 </div>
 
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-200">
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
                     Message{required.message ? <span className="text-red-500"> *</span> : null}
                   </label>
                   <textarea
                     value={form.message}
                     onChange={(e) => handleChange("message", e.target.value)}
                     rows={6}
-                    className={`mt-1 w-full rounded-xl px-4 py-3 ring-1 bg-white text-gray-900 focus:outline-none focus:ring-2 dark:bg-white/5 dark:text-white dark:ring-white/10 ${
+                    className={`mt-1 w-full rounded-xl px-4 py-3 bg-white dark:bg-gray-700 border text-gray-900 dark:text-white placeholder:text-gray-500 dark:placeholder:text-gray-400 focus:outline-none focus:ring-2 transition-all ${
                       errors.message
-                        ? "ring-red-400 focus:ring-red-500/50"
-                        : "ring-gray-200 focus:ring-indigo-500/60 dark:focus:ring-cyan-500/60"
+                        ? "border-red-400 focus:ring-red-500 focus:border-red-500"
+                        : "border-gray-300 dark:border-gray-600 focus:ring-blue-500 focus:border-blue-500"
                     }`}
-                    placeholder="Tell us what you’re looking for..."
+                    placeholder="Tell us what you're looking for..."
                   />
                   {errors.message ? <p className="mt-1 text-xs text-red-500">{errors.message}</p> : null}
                 </div>
 
                 {status !== "idle" ? (
                   <div
-                    className={`rounded-2xl px-4 py-3 text-sm ring-1 ${
+                    className={`rounded-xl px-4 py-3 text-sm border ${
                       status === "success"
-                        ? "bg-emerald-500/10 ring-emerald-400/30 text-emerald-700 dark:text-emerald-200"
-                        : "bg-rose-500/10 ring-rose-400/30 text-rose-700 dark:text-rose-200"
+                        ? "bg-green-50 dark:bg-green-900/20 border-green-200 dark:border-green-800 text-green-700 dark:text-green-300"
+                        : "bg-red-50 dark:bg-red-900/20 border-red-200 dark:border-red-800 text-red-700 dark:text-red-300"
                     }`}
                   >
                     {statusMessage}
@@ -297,7 +298,7 @@ export default function ContactPage() {
                 <button
                   type="submit"
                   disabled={submitting}
-                  className="w-full inline-flex items-center justify-center gap-2 px-6 py-4 rounded-2xl font-semibold text-white transition-all duration-300 transform hover:scale-[1.01] active:scale-[0.99] shadow-lg focus:outline-none focus:ring-2 focus:ring-indigo-500/60 focus:ring-offset-2 bg-linear-to-r from-indigo-600 via-sky-600 to-cyan-500 focus:ring-offset-white disabled:opacity-60 disabled:cursor-not-allowed dark:from-indigo-500 dark:via-sky-500 dark:to-cyan-500 dark:focus:ring-cyan-500/60 dark:focus:ring-offset-gray-950"
+                  className="w-full inline-flex items-center justify-center gap-2 px-6 py-4 rounded-xl font-semibold text-white transition-all duration-300 transform hover:scale-[1.01] active:scale-[0.99] shadow-lg bg-gradient-to-r from-blue-600 via-indigo-600 to-purple-600 hover:opacity-90 disabled:opacity-60 disabled:cursor-not-allowed"
                 >
                   <Send className="w-5 h-5" />
                   {submitting ? "Sending..." : "Send message"}
@@ -305,8 +306,8 @@ export default function ContactPage() {
               </form>
             </div>
 
-            <aside className="rounded-3xl p-6 sm:p-8 ring-1 ring-gray-200/70 bg-white shadow-xl dark:bg-white/5 dark:ring-white/10">
-              <h2 className="text-xl font-semibold text-gray-900 dark:text-white">
+            <aside className="rounded-3xl p-6 sm:p-8 bg-white/80 dark:bg-gray-800/80 backdrop-blur-sm border border-gray-200/50 dark:border-gray-700/50 shadow-2xl">
+              <h2 className="text-xl font-bold text-gray-900 dark:text-white">
                 Quick contact
               </h2>
               <p className="mt-2 text-sm text-gray-600 dark:text-gray-300">
@@ -315,32 +316,32 @@ export default function ContactPage() {
 
               <div className="mt-6 space-y-4 text-sm">
                 <div className="flex items-start gap-3">
-                  <Mail className="w-5 h-5 text-indigo-600 dark:text-cyan-300 mt-0.5" />
+                  <Mail className="w-5 h-5 text-blue-600 dark:text-cyan-400 mt-0.5" />
                   <div>
-                    <div className="font-medium text-gray-900 dark:text-white">Email</div>
+                    <div className="font-bold text-gray-900 dark:text-white">Email</div>
                     <div className="text-gray-600 dark:text-gray-300">support@vidyarthii.com</div>
                   </div>
                 </div>
 
                 <div className="flex items-start gap-3">
-                  <Phone className="w-5 h-5 text-indigo-600 dark:text-cyan-300 mt-0.5" />
+                  <Phone className="w-5 h-5 text-blue-600 dark:text-cyan-400 mt-0.5" />
                   <div>
-                    <div className="font-medium text-gray-900 dark:text-white">Phone</div>
+                    <div className="font-bold text-gray-900 dark:text-white">Phone</div>
                     <div className="text-gray-600 dark:text-gray-300">+91 98765 43210</div>
                   </div>
                 </div>
 
                 <div className="flex items-start gap-3">
-                  <MapPin className="w-5 h-5 text-indigo-600 dark:text-cyan-300 mt-0.5" />
+                  <MapPin className="w-5 h-5 text-blue-600 dark:text-cyan-400 mt-0.5" />
                   <div>
-                    <div className="font-medium text-gray-900 dark:text-white">Location</div>
+                    <div className="font-bold text-gray-900 dark:text-white">Location</div>
                     <div className="text-gray-600 dark:text-gray-300">Mumbai, India</div>
                   </div>
                 </div>
               </div>
 
-              <div className="mt-8 rounded-2xl p-4 ring-1 ring-gray-200/70 bg-white/60 dark:bg-white/5 dark:ring-white/10">
-                <div className="font-medium text-gray-900 dark:text-white">Fast tip</div>
+              <div className="mt-8 rounded-xl p-4 bg-gray-50 dark:bg-gray-700/50 border border-gray-200 dark:border-gray-600">
+                <div className="font-bold text-gray-900 dark:text-white">Fast tip</div>
                 <div className="mt-1 text-xs text-gray-600 dark:text-gray-300">
                   Include your student count and preferred plan — we can give you an exact estimate.
                 </div>
