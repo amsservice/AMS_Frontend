@@ -188,7 +188,7 @@ const AttendEaseLanding = () => {
                   Login
                 </button>
               </Link>
-              <Link href="/subscription/payment?plan=1Y">
+              <Link href="/auth/register">
                 <button
                   className={`px-4 sm:px-6 py-2.5 text-white rounded-xl font-semibold text-sm transition-all duration-300 transform hover:scale-[1.02] active:scale-[0.98] shadow-lg focus:outline-none focus:ring-2 focus:ring-blue-500/60 focus:ring-offset-2 ${
                     isDark

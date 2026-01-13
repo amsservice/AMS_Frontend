@@ -1,20 +1,26 @@
+
+
 'use client';
 
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { apiFetch } from '@/lib/api';
 
 /* =====================================================
-   📅 Get Sessions (GET /api/sessions)
-   ===================================================== */
+   📅 GET SESSIONS
+   GET /api/session
+===================================================== */
 export const useSessions = () =>
   useQuery({
     queryKey: ['sessions'],
-    queryFn: () => apiFetch('/api/session'),
+    queryFn: async () => {
+      const res = await apiFetch('/api/session');
+      return res.data; // ✅ FIX (ARRAY)
+    },
   });
 
 /* =====================================================
-   ➕ Create Session (POST /api/sessions)
-   ===================================================== */
+   ➕ CREATE SESSION
+===================================================== */
 export const useCreateSession = () => {
   const queryClient = useQueryClient();
 
@@ -36,21 +42,45 @@ export const useCreateSession = () => {
 };
 
 /* =====================================================
-   ✏️ Update Session (PUT /api/sessions/:id)
-   ===================================================== */
-export const useUpdateSession = (id: number | string) => {
+   ✏️ UPDATE SESSION
+===================================================== */
+export const useUpdateSession = () => {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: (data: {
-      name?: string;
-      startDate?: string;
-      endDate?: string;
-      isActive?: boolean;
+    mutationFn: ({
+      id,
+      data,
+    }: {
+      id: string;
+      data: {
+        name?: string;
+        startDate?: string;
+        endDate?: string;
+        isActive?: boolean;
+      };
     }) =>
       apiFetch(`/api/session/${id}`, {
         method: 'PUT',
         body: JSON.stringify(data),
+      }),
+
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['sessions'] });
+    },
+  });
+};
+
+/* =====================================================
+   🗑️ DELETE SESSION
+===================================================== */
+export const useDeleteSession = () => {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: (id: string) =>
+      apiFetch(`/api/session/${id}`, {
+        method: 'DELETE',
       }),
 
     onSuccess: () => {
