@@ -144,7 +144,7 @@ export default function AddHolidayForm() {
             onChange={(e) => setForm({ ...form, name: e.target.value })}
             required
             placeholder="Holiday name"
-            className="bg-white dark:bg-gray-700 border-gray-300 dark:border-gray-600 text-gray-900 dark:text-white rounded-xl"
+            className="w-full bg-white dark:bg-gray-700 border-gray-300 dark:border-gray-600 text-gray-900 dark:text-white rounded-xl"
           />
         </div>
         <div className="space-y-2">
@@ -152,7 +152,34 @@ export default function AddHolidayForm() {
             Date
           </Label>
 
-          <div className="flex items-center gap-3 mb-2">
+          {form.mode === 'single' ? (
+            <Input
+              type="date"
+              value={form.startDate}
+              onChange={(e) => setForm({ ...form, startDate: e.target.value })}
+              required
+              className="w-full bg-white dark:bg-gray-700 border-gray-300 dark:border-gray-600 text-gray-900 dark:text-white rounded-xl"
+            />
+          ) : (
+            <div className="flex gap-2">
+              <Input
+                type="date"
+                value={form.startDate}
+                onChange={(e) => setForm({ ...form, startDate: e.target.value })}
+                required
+                className="w-full bg-white dark:bg-gray-700 border-gray-300 dark:border-gray-600 text-gray-900 dark:text-white rounded-xl"
+              />
+              <Input
+                type="date"
+                value={form.endDate}
+                onChange={(e) => setForm({ ...form, endDate: e.target.value })}
+                required
+                className="w-full bg-white dark:bg-gray-700 border-gray-300 dark:border-gray-600 text-gray-900 dark:text-white rounded-xl"
+              />
+            </div>
+          )}
+
+          <div className="flex items-center gap-3 mt-2">
             <label className="inline-flex items-center gap-2">
               <input
                 type="radio"
@@ -172,33 +199,6 @@ export default function AddHolidayForm() {
               <span className="text-sm">Range</span>
             </label>
           </div>
-
-          {form.mode === 'single' ? (
-            <Input
-              type="date"
-              value={form.startDate}
-              onChange={(e) => setForm({ ...form, startDate: e.target.value })}
-              required
-              className="bg-white dark:bg-gray-700 border-gray-300 dark:border-gray-600 text-gray-900 dark:text-white rounded-xl"
-            />
-          ) : (
-            <div className="flex gap-2">
-              <Input
-                type="date"
-                value={form.startDate}
-                onChange={(e) => setForm({ ...form, startDate: e.target.value })}
-                required
-                className="bg-white dark:bg-gray-700 border-gray-300 dark:border-gray-600 text-gray-900 dark:text-white rounded-xl"
-              />
-              <Input
-                type="date"
-                value={form.endDate}
-                onChange={(e) => setForm({ ...form, endDate: e.target.value })}
-                required
-                className="bg-white dark:bg-gray-700 border-gray-300 dark:border-gray-600 text-gray-900 dark:text-white rounded-xl"
-              />
-            </div>
-          )}
         </div>
 
         <div className="space-y-2">
@@ -206,7 +206,7 @@ export default function AddHolidayForm() {
             Category
           </Label>
           <select
-            className="w-full bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 p-3 rounded-xl text-gray-900 dark:text-white focus:ring-2 focus:ring-teal-500 focus:border-teal-500"
+            className="w-full bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 p-1.5 rounded-xl text-gray-900 dark:text-white focus:ring-2 focus:ring-teal-500 focus:border-teal-500"
             value={form.category}
             onChange={(e) =>
               setForm({
@@ -236,7 +236,7 @@ export default function AddHolidayForm() {
               })
             }
             placeholder="Optional description"
-            className="bg-white dark:bg-gray-700 border-gray-300 dark:border-gray-600 text-gray-900 dark:text-white rounded-xl"
+            className="w-full bg-white dark:bg-gray-700 border-gray-300 dark:border-gray-600 text-gray-900 dark:text-white rounded-xl"
           />
         </div>
       </div>
