@@ -4,19 +4,22 @@
 "use client";
 
 import { Button } from "@/components/ui/button";
-import Link from "next/link";
-import { Calendar, GraduationCap, Sparkles } from "lucide-react";
+import { GraduationCap } from "lucide-react";
 import { motion } from "framer-motion";
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { useAuth } from "@/app/context/AuthContext";
 import { getDashboardPath } from "@/lib/roleRedirect";
+import MainNavbar from "@/components/main/MainNavbar";
+import MainFooter from "@/components/main/MainFooter";
 
 export default function RegisterPage() {
   const router = useRouter();
   const { registerSchool, user, loading } = useAuth();
 
   const [submitting, setSubmitting] = useState(false);
+  const [isDark, setIsDark] = useState(false);
+  const [mounted, setMounted] = useState(false);
 
   const [form, setForm] = useState({
     schoolName: "",
@@ -38,6 +41,24 @@ export default function RegisterPage() {
       router.replace(getDashboardPath(user.role));
     }
   }, [user, loading, router]);
+
+  useEffect(() => {
+    setMounted(true);
+    const savedTheme = window.localStorage.getItem("vidyarthii-theme");
+    const initialIsDark = savedTheme
+      ? savedTheme === "dark"
+      : window.matchMedia("(prefers-color-scheme: dark)").matches;
+
+    setIsDark(initialIsDark);
+    document.documentElement.classList.toggle("dark", initialIsDark);
+  }, []);
+
+  const toggleTheme = () => {
+    const next = !isDark;
+    setIsDark(next);
+    document.documentElement.classList.toggle("dark", next);
+    window.localStorage.setItem("vidyarthii-theme", next ? "dark" : "light");
+  };
 
   function handleChange(e: React.ChangeEvent<HTMLInputElement>) {
     setForm({ ...form, [e.target.name]: e.target.value });
@@ -74,6 +95,19 @@ export default function RegisterPage() {
     }
   }
 
+  if (!mounted) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-gray-50 to-gray-100 dark:from-gray-900 dark:to-gray-800">
+        <div className="flex items-center justify-center min-h-screen">
+          <div className="flex flex-col items-center gap-4">
+            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600" />
+            <div className="text-sm text-gray-600 dark:text-gray-400">Loading...</div>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="relative isolate min-h-screen bg-linear-to-b from-white via-slate-50 to-slate-100 dark:from-slate-950 dark:via-slate-950 dark:to-slate-900">
       <nav className="fixed top-0 w-full z-50 backdrop-blur-xl border-b bg-white/70 border-gray-200/70 dark:bg-gray-950/70 dark:border-white/10">
@@ -103,6 +137,7 @@ export default function RegisterPage() {
 
       <main className="pt-28 sm:pt-32 pb-16 px-4 sm:px-6">
         <div className="max-w-7xl mx-auto">
+          {/* Header */}
           <div className="text-center mb-10">
             <h1 className="text-3xl sm:text-4xl font-semibold text-gray-900 dark:text-white">
               Register your school
@@ -112,7 +147,9 @@ export default function RegisterPage() {
             </p>
           </div>
 
-          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+          {/* Grid Layout */}
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 sm:gap-8">
+            {/* Registration Form */}
             <div className="lg:col-span-2">
               <motion.div
                 initial={{ opacity: 0, y: 30 }}
@@ -121,6 +158,7 @@ export default function RegisterPage() {
               >
                 <div className="rounded-3xl p-6 sm:p-8 ring-1 ring-gray-200/70 bg-white/80 backdrop-blur-sm shadow-xl dark:bg-white/5 dark:ring-white/10">
                   <div className="space-y-6">
+                    {/* School Information */}
                     <div>
                       <h2 className="text-lg font-semibold mb-4">
                         School Information
@@ -162,6 +200,7 @@ export default function RegisterPage() {
                       />
                     </div>
 
+                    {/* Principal Account */}
                     <div>
                       <h2 className="text-lg font-semibold mb-4">
                         Principal Account
@@ -199,6 +238,7 @@ export default function RegisterPage() {
                       </div>
                     </div>
 
+                    {/* Submit Button */}
                     <Button
                       onClick={handleSubmit}
                       disabled={submitting}

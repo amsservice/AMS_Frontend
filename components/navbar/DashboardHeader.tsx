@@ -21,13 +21,13 @@ export default function DashboardHeader({
   return (
     <>
       {/* ================= MOBILE HEADER ================= */}
-      <div className="lg:hidden fixed top-0 left-0 right-0 z-40 bg-white/80 dark:bg-gray-800/80 backdrop-blur-md border-b border-gray-200/50 dark:border-gray-700/50 shadow-lg">
+      <div className="lg:hidden fixed top-0 left-0 right-0 z-40 bg-white/80 dark:bg-gray-800/80 backdrop-blur-sm border-b border-gray-200/50 dark:border-gray-700/50 shadow-xl">
         <div className="flex items-center justify-between px-4 py-3">
           <div className="flex items-center gap-3">
             {onMenuClick && (
               <button
                 onClick={onMenuClick}
-                className="p-2 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-xl transition-all duration-200 transform hover:scale-105"
+                className="p-2 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-xl transition-colors"
               >
                 <Menu className="w-5 h-5 text-gray-900 dark:text-white" />
               </button>
@@ -38,7 +38,7 @@ export default function DashboardHeader({
           <div className="flex items-center gap-2">
             <button
               onClick={() => setDarkMode(!darkMode)}
-              className="p-2 rounded-xl hover:bg-gray-100 dark:hover:bg-gray-700 transition-all duration-200 transform hover:scale-105"
+              className="p-2 rounded-xl hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
             >
               {darkMode ? (
                 <Sun className="w-5 h-5 text-gray-900 dark:text-white" />
@@ -55,14 +55,14 @@ export default function DashboardHeader({
       </div>
 
       {/* ================= DESKTOP HEADER ================= */}
-      <div className="hidden lg:block bg-white/80 dark:bg-gray-800/80 backdrop-blur-md border-b border-gray-200/50 dark:border-gray-700/50 sticky top-0 z-10 shadow-lg">
+      <div className="hidden lg:block bg-white/80 dark:bg-gray-800/80 backdrop-blur-sm border-b border-gray-200/50 dark:border-gray-700/50 sticky top-0 z-10 shadow-xl">
         <div className="flex items-center justify-between px-6 py-4">
           <h1 className="text-xl font-bold text-gray-900 dark:text-white">{title}</h1>
 
           <div className="flex items-center gap-4">
             <button
               onClick={() => setDarkMode(!darkMode)}
-              className="p-2 rounded-xl hover:bg-gray-100 dark:hover:bg-gray-700 transition-all duration-200 transform hover:scale-105 shadow-sm cursor-pointer"
+              className="p-2 rounded-xl hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors cursor-pointer"
             >
               {darkMode ? (
                 <Sun className="w-5 h-5 text-gray-900 dark:text-white" />
@@ -71,7 +71,7 @@ export default function DashboardHeader({
               )}
             </button>
 
-            <div className="flex items-center gap-3 p-2 rounded-xl hover:bg-gray-50 dark:hover:bg-gray-700/50 transition-all duration-200">
+            <div className="flex items-center gap-3 p-2 rounded-xl hover:bg-gray-50 dark:hover:bg-gray-700/50 transition-colors">
               <div className="text-right">
                 <div className="text-sm font-semibold text-gray-900 dark:text-white">
                   {user?.name}
