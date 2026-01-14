@@ -6,6 +6,7 @@ import { useRouter, useSearchParams } from "next/navigation";
 import MainNavbar from "@/components/main/MainNavbar";
 import MainFooter from "@/components/main/MainFooter";
 import { PRICING_PLANS } from "@/lib/pricing";
+// import { verify } from "crypto";
 
 type PlanId = "1Y" | "2Y" | "3Y";
 
@@ -74,6 +75,8 @@ export default function PaymentPage() {
   const API_URL = process.env.NEXT_PUBLIC_API_URL!;
   const RAZORPAY_KEY = process.env.NEXT_PUBLIC_RAZORPAY_KEY!;
 
+
+  const schoolEmail = searchParams.get("email");
   const [planId, setPlanId] = useState<PlanId>("1Y");
   const [enteredStudents, setEnteredStudents] = useState<number | "">("");
   const [futureStudents, setFutureStudents] = useState<number | "">("");
@@ -86,6 +89,14 @@ export default function PaymentPage() {
   const [currentError, setCurrentError] = useState<string | null>(null);
   const [futureError, setFutureError] = useState<string | null>(null);
   const [shake, setShake] = useState(false);
+
+   /* 🔐 BLOCK ACCESS WITHOUT OTP */
+  useEffect(() => {
+    if (!schoolEmail) {
+      alert("Please verify email before payment");
+      router.replace("/auth/register");
+    }
+  }, [schoolEmail, router]);
 
   useEffect(() => {
     setPrice(null);
@@ -263,6 +274,7 @@ export default function PaymentPage() {
       const order = orderData as CreatePaymentResponse;
 
       /* 1️⃣.5️⃣ Create PaymentIntent (CRITICAL STEP) */
+
       await fetch(`${API_URL}/api/payment/create-intent`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -291,6 +303,9 @@ export default function PaymentPage() {
         order_id: order.orderId,
         name: "Attendance SaaS",
         description: "School Subscription",
+     
+
+
 
         handler: async function (response: RazorpayHandlerResponse) {
           /* 3️⃣ Verify payment */
@@ -301,21 +316,23 @@ export default function PaymentPage() {
               razorpay_order_id: response.razorpay_order_id,
               razorpay_payment_id: response.razorpay_payment_id,
               razorpay_signature: response.razorpay_signature,
+              schoolEmail
             }),
           });
 
-          const verifyData: unknown = await verifyRes.json();
-          const parsed = verifyData as VerifyPaymentResponse;
+        
 
-          if (!verifyRes.ok || !parsed.success) {
+          const verifyData = await verifyRes.json();
+          // const parsed = verifyData as VerifyPaymentResponse;
+
+          if (!verifyRes.ok || !verifyData.success) {
             alert("Payment verification failed");
             return;
           }
 
           /* 4️⃣ Redirect to registration */
-          router.push(
-            `/auth/register?orderId=${parsed.orderId}&paymentId=${parsed.paymentId}`
-          );
+          alert("✅ Payment successful. Please login.");
+          router.replace("/auth/login");
         },
 
         theme: { color: "#2563eb" },
