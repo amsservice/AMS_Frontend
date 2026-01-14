@@ -6,11 +6,20 @@ import { GraduationCap, Eye, EyeOff } from "lucide-react";
 import { motion } from "framer-motion";
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
+import { toast } from "sonner";
 import { useAuth } from "@/app/context/AuthContext";
 import { getDashboardPath } from "@/lib/roleRedirect";
 import MainNavbar from "@/components/main/MainNavbar";
 import MainFooter from "@/components/main/MainFooter";
+import dynamic from "next/dynamic";
 
+const UpasthitiPageLoader = dynamic(
+  () =>
+    import("@/components/loader/UpasthitiPageLoader").then(
+      (m) => m.UpasthitiPageLoader
+    ),
+  { ssr: false }
+);
 type Role = "principal" | "teacher" | "student";
 
 export default function LoginPage() {
@@ -23,6 +32,8 @@ export default function LoginPage() {
 
   const [isDark, setIsDark] = useState(false);
   const [mounted, setMounted] = useState(false);
+  const [showLoader, setShowLoader] = useState(true);
+
 
   const [form, setForm] = useState({
     email: "",
@@ -35,21 +46,33 @@ export default function LoginPage() {
     }
   }, [user, loading, router]);
 
-  useEffect(() => {
-    setMounted(true);
-    const savedTheme = window.localStorage.getItem("vidyarthii-theme");
-    const initialIsDark = savedTheme
-      ? savedTheme === "dark"
-      : window.matchMedia("(prefers-color-scheme: dark)").matches;
+useEffect(() => {
+  const start = Date.now();
 
-    setIsDark(initialIsDark);
-    document.documentElement.classList.toggle("dark", initialIsDark);
-  }, []);
+  const savedTheme = window.localStorage.getItem("Upasthiti-theme");
+  const initialIsDark = savedTheme
+    ? savedTheme === "dark"
+    : window.matchMedia("(prefers-color-scheme: dark)").matches;
+
+  setIsDark(initialIsDark);
+  document.documentElement.classList.toggle("dark", initialIsDark);
+
+  const elapsed = Date.now() - start;
+  const remaining = Math.max(500 - elapsed, 0); // minimum 0.5s
+
+  const timer = setTimeout(() => {
+    setMounted(true);
+    setShowLoader(false);
+  }, remaining);
+
+  return () => clearTimeout(timer);
+}, []);
+
 
   const toggleTheme = () => {
     const next = !isDark;
     setIsDark(next);
-    window.localStorage.setItem("vidyarthii-theme", next ? "dark" : "light");
+    window.localStorage.setItem("Upasthiti-theme", next ? "dark" : "light");
     document.documentElement.classList.toggle("dark", next);
   };
 
@@ -61,34 +84,33 @@ export default function LoginPage() {
     e.preventDefault();
 
     if (!form.email || !form.password) {
-      alert("Email and password are required");
+      toast.error("Email and password are required");
       return;
     }
 
     try {
       setSubmitting(true);
-      await login(role, {
+      const loginPromise = login(role, {
         email: form.email,
-        password: form.password
+        password: form.password,
       });
+
+      toast.promise(loginPromise, {
+        loading: "Logging in...",
+        success: "Logged in successfully",
+        error: (err) => (err instanceof Error ? err.message : "Login failed"),
+      });
+
+      await loginPromise;
     } catch (err: any) {
-      alert(err.message || "Login failed");
+      // toast.promise handles UI; keep catch to avoid unhandled rejections
     } finally {
       setSubmitting(false);
     }
   }
 
-  if (!mounted) {
-    return (
-      <div className="min-h-screen bg-gradient-to-br from-gray-50 to-gray-100 dark:from-gray-900 dark:to-gray-800">
-        <div className="flex items-center justify-center min-h-screen">
-          <div className="flex flex-col items-center gap-4">
-            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600" />
-            <div className="text-sm text-gray-600 dark:text-gray-400">Loading...</div>
-          </div>
-        </div>
-      </div>
-    );
+  if (showLoader  ) {
+    return <UpasthitiPageLoader />
   }
 
   return (

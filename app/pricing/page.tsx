@@ -1,47 +1,56 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import dynamic from "next/dynamic";
 import { Sparkles } from "lucide-react";
 import MainNavbar from "@/components/main/MainNavbar";
 import MainFooter from "@/components/main/MainFooter";
 import PricingCards from "@/components/pricing/PricingCards";
 
+const UpasthitiPageLoader = dynamic(
+  () =>
+    import("@/components/loader/UpasthitiPageLoader").then((m) => m.UpasthitiPageLoader),
+  { ssr: false }
+);
+
 export default function PricingPage() {
   const [isDark, setIsDark] = useState(false);
-  const [mounted, setMounted] = useState(false);
+  const [showLoader, setShowLoader] = useState(true);
 
   useEffect(() => {
-    setMounted(true);
-    const savedTheme = window.localStorage.getItem("vidyarthii-theme");
+    const start = Date.now();
+    const savedTheme = window.localStorage.getItem("Upasthiti-theme");
     const initialIsDark = savedTheme
       ? savedTheme === "dark"
       : window.matchMedia("(prefers-color-scheme: dark)").matches;
 
     setIsDark(initialIsDark);
     document.documentElement.classList.toggle("dark", initialIsDark);
+
+    const elapsed = Date.now() - start;
+    const remaining = Math.max(500 - elapsed, 0);
+
+    const timer = setTimeout(() => {
+      setShowLoader(false);
+    }, remaining);
+
+    return () => {
+      clearTimeout(timer);
+    };
   }, []);
 
   const toggleTheme = () => {
     const next = !isDark;
     setIsDark(next);
-    window.localStorage.setItem("vidyarthii-theme", next ? "dark" : "light");
+    window.localStorage.setItem("Upasthiti-theme", next ? "dark" : "light");
     document.documentElement.classList.toggle("dark", next);
   };
 
-  if (!mounted) {
-    return (
-      <div className="min-h-screen bg-gradient-to-br from-gray-50 to-gray-100 dark:from-gray-900 dark:to-gray-800">
-        <div className="flex items-center justify-center min-h-screen">
-          <div className="flex flex-col items-center gap-4">
-            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600" />
-            <div className="text-sm text-gray-600 dark:text-gray-400">Loading...</div>
-          </div>
-        </div>
-      </div>
-    );
+  if (showLoader) {
+    return <UpasthitiPageLoader />;
   }
 
-    const includedFeatures = [
+  const includedFeatures = [
     { icon: "🎯", title: "Custom Reports", desc: "Generate reports tailored to your needs" },
     { icon: "📤", title: "Data Export", desc: "Export to CSV, Excel, PDF anytime" },
     { icon: "📊", title: "Advanced Analytics", desc: "Real-time insights and custom reports" },
