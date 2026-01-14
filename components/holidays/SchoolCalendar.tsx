@@ -213,7 +213,7 @@ export default function SchoolCalendar() {
                   <Clock className="w-5 h-5 text-white" />
                 </div>
                 <h4 className="text-lg font-bold text-gray-900 dark:text-white">
-                  Upcoming Holidays
+                  Upcoming Events
                 </h4>
               </div>
 
