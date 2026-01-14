@@ -144,7 +144,7 @@ const AttendEaseLanding = () => {
             </p>
 
             <div className="flex flex-col sm:flex-row gap-4 justify-center mb-16">
-              <Link href="/subscription/payment?plan=1Y">
+              <Link href="/auth/register">
                 <button className="group px-8 py-4 bg-gradient-to-r from-purple-600 to-blue-600 text-white rounded-full font-semibold text-lg shadow-2xl shadow-purple-500/30 dark:shadow-purple-500/50 hover:shadow-purple-500/50 dark:hover:shadow-purple-500/70 transition-all duration-300 transform hover:scale-105">
                   Get Started
                   <span className="ml-2 transition-transform group-hover:translate-x-1 inline-block">→</span>
@@ -228,7 +228,7 @@ const AttendEaseLanding = () => {
                 Transform your educational institution with powerful tools designed for modern school administration. Track attendance, manage students, and generate insights effortlessly.
               </p>
               <div className="flex gap-4">
-                <Link href="/subscription/payment?plan=1Y">
+                <Link href="/auth/register">
                   <button className="px-6 py-3 bg-gradient-to-r from-purple-600 to-blue-600 text-white rounded-full font-semibold shadow-lg hover:shadow-xl transition-all">
                     Learn More
                   </button>
@@ -386,7 +386,7 @@ const AttendEaseLanding = () => {
               <p className="text-lg text-gray-600 dark:text-gray-300 mb-8">
                 Comprehensive tools to track student progress, manage attendance, and generate actionable insights. Everything you need in one powerful platform.
               </p>
-              <Link href="/subscription/payment?plan=1Y">
+              <Link href="/auth/register">
                 <button className="px-6 py-3 bg-gradient-to-r from-purple-600 to-blue-600 text-white rounded-full font-semibold shadow-lg hover:shadow-xl transition-all">
                   Explore More
                 </button>
@@ -558,7 +558,7 @@ const AttendEaseLanding = () => {
               </p>
               
               <div className="flex flex-col sm:flex-row gap-4 justify-center">
-                <Link href="/subscription/payment?plan=1Y">
+                <Link href="/auth/register">
                   <button className="px-8 py-4 bg-gradient-to-r from-purple-600 to-blue-600 text-white rounded-full font-semibold shadow-2xl shadow-purple-500/30 dark:shadow-purple-500/50 hover:shadow-purple-500/50 dark:hover:shadow-purple-500/70 transition-all duration-300 transform hover:scale-105">
                     Create Account
                   </button>

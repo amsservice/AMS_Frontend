@@ -12,11 +12,11 @@ import MainFooter from "@/components/main/MainFooter";
 
 export default function RegisterPage() {
   const router = useRouter();
-  const searchParams = useSearchParams();
+  // const searchParams = useSearchParams();
   const { registerSchool, user, loading } = useAuth();
 
-  const orderId = searchParams.get("orderId");
-  const paymentId = searchParams.get("paymentId");
+  // const orderId = searchParams.get("orderId");
+  // const paymentId = searchParams.get("paymentId");
 
   const [submitting, setSubmitting] = useState(false);
   const [isDark, setIsDark] = useState(false);
@@ -34,13 +34,15 @@ export default function RegisterPage() {
     confirmPassword: ""
   });
 
-  useEffect(() => {
-    if (!orderId || !paymentId) {
-      alert("❌ Payment required before registration");
-      router.replace("/subscription/payment");
-    }
-  }, [orderId, paymentId, router]);
+  // useEffect(() => {
+  //   if (!orderId || !paymentId) {
+  //     alert("❌ Payment required before registration");
+  //     router.replace("/subscription/payment");
+  //   }
+  // }, [orderId, paymentId, router]);
 
+
+  //Redirect if already logged in
   useEffect(() => {
     if (!loading && user) {
       router.replace(getDashboardPath(user.role));
@@ -75,10 +77,10 @@ export default function RegisterPage() {
       return;
     }
 
-    if (!orderId || !paymentId) {
-      alert("Payment details missing");
-      return;
-    }
+    // if (!orderId || !paymentId) {
+    //   alert("Payment details missing");
+    //   return;
+    // }
 
     try {
       setSubmitting(true);
@@ -91,13 +93,13 @@ export default function RegisterPage() {
         pincode: form.pincode,
         principalName: form.principalName,
         principalEmail: form.principalEmail,
-        principalPassword: form.principalPassword,
-        orderId,
-        paymentId
+        principalPassword: form.principalPassword
       });
 
-      alert("🎉 School registered successfully!");
-      router.replace("/dashboard/principal");
+      alert("📩 OTP sent to your email. Please verify.");
+      router.replace(
+        `/auth/verify-otp?email=${encodeURIComponent(form.schoolEmail)}`
+      );
     } catch (err: any) {
       alert(err.message || "Registration failed");
     } finally {
