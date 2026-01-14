@@ -17,7 +17,7 @@ export default function MainFooter({ isDark }: MainFooterProps) {
                 <Calendar className="w-6 h-6 text-white" />
               </div>
               <div className="flex flex-col leading-tight">
-                <span className="text-lg font-bold text-gray-900 dark:text-white">Vidyarthii</span>
+                <span className="text-lg font-bold text-gray-900 dark:text-white">Upastithi</span>
                 <span className="hidden sm:block text-xs text-gray-600 dark:text-gray-400">
                   School management, simplified
                 </span>
@@ -73,15 +73,15 @@ export default function MainFooter({ isDark }: MainFooterProps) {
           <div>
             <h4 className="font-bold mb-4 text-gray-900 dark:text-white">Contact</h4>
             <ul className="space-y-2 text-sm text-gray-600 dark:text-gray-400">
-              <li>support@vidyarthii.com</li>
-              <li>+91 98765 43210</li>
-              <li>Mumbai, India</li>
+              <li>ams.service.hub@gmail.com</li>
+              <li>+91 7352675671 / +91 7857847749</li>
+              <li>Ranchi, India</li>
             </ul>
           </div>
         </div>
 
         <div className="border-t pt-8 text-center text-sm border-gray-200/50 dark:border-gray-700/50 text-gray-600 dark:text-gray-400">
-          <p>&copy; 2025 Vidyarthii. All rights reserved.</p>
+          <p>&copy; 2025 Upastithi. All rights reserved.</p>
         </div>
       </div>
     </footer>
