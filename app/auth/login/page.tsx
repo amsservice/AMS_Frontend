@@ -30,7 +30,9 @@ export default function LoginPage() {
   });
 
   useEffect(() => {
+    console.log("USER FROM CONTEXT:", user);
     if (!loading && user) {
+       console.log("REDIRECTING TO:", getDashboardPath(user.role));
       router.replace(getDashboardPath(user.role));
     }
   }, [user, loading, router]);

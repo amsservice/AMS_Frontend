@@ -3,6 +3,54 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { apiFetch } from '@/lib/api';
 
+
+
+ 
+  
+/* =====================================================
+   TYPES
+===================================================== */
+
+export interface School {
+  _id: string;
+  name: string;
+}
+
+export interface Session {
+  _id: string;
+  name: string;
+}
+
+export interface Class {
+  _id: string;
+  name: string;
+  section?: string;
+}
+
+export interface TeacherHistory {
+  sessionId: Session;
+  classId: Class;
+  className: string;
+  section: string;
+  isActive: boolean;
+}
+
+export interface Teacher {
+  _id: string;
+  name: string;
+  email: string;
+  phone?: string;
+  isActive: boolean;
+  leftAt?: string;
+
+  schoolId: School;
+
+  history: TeacherHistory[];
+  currentClass?: TeacherHistory;
+
+  createdAt: string;
+  updatedAt: string;
+}
 /* =====================================================
    PRINCIPAL: CREATE TEACHER
    POST /api/teachers
@@ -242,4 +290,13 @@ export const useSwapTeacherClasses = () => {
   });
 };
 
+
+/* =====================================================
+   TEACHER: GET FULL PROFILE
+===================================================== */
+export const useMyTeacherFullProfile = () =>
+  useQuery<{ success: boolean; data: Teacher }>({
+    queryKey: ['teacher-profile-full'],
+    queryFn: () => apiFetch('/api/teacher/profile')
+  });
 

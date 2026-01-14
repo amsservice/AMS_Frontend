@@ -63,6 +63,10 @@ export default function SessionsPage() {
     const handleDelete = (id: string) => {
         console.log('Delete:', id);
     };
+    const formatDate = (dateString: string) => {
+    if (!dateString) return '';
+    return dateString.split('T')[0];
+  };
 
     return (
         <div className="min-h-screen bg-gradient-to-br from-gray-50 to-gray-100 dark:from-gray-900 dark:to-gray-800">
@@ -237,9 +241,9 @@ export default function SessionsPage() {
                                                     )}
                                                 </div>
                                                 <p className="text-xs lg:text-sm text-gray-600 dark:text-gray-400 flex items-center gap-2">
-                                                    <span className="font-medium">{session.startDate}</span>
+                                                    <span className="font-medium">{formatDate(session.startDate)}</span>
                                                     <span>–</span>
-                                                    <span className="font-medium">{session.endDate}</span>
+                                                    <span className="font-medium">{formatDate(session.endDate)}</span>
                                                 </p>
                                             </div>
                                         </div>

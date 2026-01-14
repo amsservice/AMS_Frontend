@@ -28,13 +28,15 @@ export const DASHBOARD_MENUS: Record<Role, {
 
   teacher: [
     { icon: Home, text: "Overview", path: "/dashboard/teacher" },
-    { icon: BookOpen, text: "My Class", path: "/dashboard/teacher/classes" },
+    { icon: Users, text: "My Profile", path: "/dashboard/teacher/profile" },
     { icon: Users, text: "Students", path: "/dashboard/teacher/student" },
     { icon: ClipboardList, text: "Attendance", path: "/dashboard/teacher/attendance" }
   ],
 
   student: [
     { icon: Home, text: "Overview", path: "/dashboard/student" },
-    { icon: ClipboardList, text: "My Attendance", path: "/dashboard/student/attendance" }
+
+    { icon: ClipboardList, text: "My Attendance", path: "/dashboard/student/attendance" },
+    { icon: Users, text: "My Profile", path: "/dashboard/student/profile" },
   ]
 };

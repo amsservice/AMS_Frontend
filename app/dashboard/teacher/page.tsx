@@ -18,6 +18,7 @@ import {
 import { useState } from "react";
 import { useAuth } from "@/app/context/AuthContext";
 import { useStudents } from "@/app/querry/useStudent";
+import SchoolCalendar from "@/components/holidays/SchoolCalendar";
 
 export default function TeacherDashboard() {
   // Mock user data - replace with actual auth context
@@ -111,41 +112,9 @@ export default function TeacherDashboard() {
     }
   ];
 
-  const upcomingEvents = [
-    {
-      icon: Calendar,
-      title: "Staff Meeting",
-      date: "Dec 31"
-    },
-    {
-      icon: Calendar,
-      title: "Parent Meeting",
-      date: "Jan 2"
-    },
-    {
-      icon: Clock,
-      title: "Exam Week Starts",
-      date: "Jan 5"
-    }
-  ];
+ 
 
-  // Generate calendar days
-  const generateCalendarDays = () => {
-    const days = [];
-    // Start from day 30 (previous month)
-    days.push({ day: 30, isCurrentMonth: false });
-    
-    // Add days of current month
-    for (let i = 1; i <= 31; i++) {
-      days.push({ day: i, isCurrentMonth: true });
-    }
-    
-    // Add next month days to fill grid
-    for (let i = 1; i <= 3; i++) {
-      days.push({ day: i, isCurrentMonth: false });
-    }
-    return days;
-  };
+  
 
   return (
     <div className="space-y-6">
@@ -266,7 +235,9 @@ export default function TeacherDashboard() {
 
       {/* Class Calendar */}
       <div className="dashboard-card border rounded-xl p-6">
-        <div className="flex items-start gap-3 mb-6">
+
+        <SchoolCalendar/>
+        {/* <div className="flex items-start gap-3 mb-6">
           <Calendar className="w-6 h-6 text-blue-500 flex-shrink-0 mt-1" />
           <div className="flex-1">
             <h3 className="text-lg lg:text-xl font-semibold dashboard-text">
@@ -279,7 +250,7 @@ export default function TeacherDashboard() {
         </div>
 
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-          {/* Calendar */}
+          {/* Calendar 
           <div>
             <div className="flex items-center justify-between mb-6">
               <button className="p-2 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition-dashboard">
@@ -319,7 +290,7 @@ export default function TeacherDashboard() {
             </div>
           </div>
 
-          {/* Today's Events & Upcoming */}
+          {/* Today's Events & Upcoming 
           <div className="space-y-6">
             <div>
               <div className="text-sm font-semibold dashboard-text mb-3">
@@ -356,7 +327,7 @@ export default function TeacherDashboard() {
                 ))}
               </div>
 
-              {/* Legend */}
+              {/* Legend 
               <div className="flex flex-wrap items-center gap-4 mt-6 pt-4 border-t dashboard-card-border">
                 <div className="flex items-center gap-2">
                   <div className="w-3 h-3 rounded-full bg-blue-500"></div>
@@ -377,7 +348,7 @@ export default function TeacherDashboard() {
               </div>
             </div>
           </div>
-        </div>
+        </div> */}
       </div>
     </div>
   );
