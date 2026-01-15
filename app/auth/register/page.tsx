@@ -4,11 +4,20 @@ import { Button } from "@/components/ui/button";
 import { GraduationCap } from "lucide-react";
 import { motion } from "framer-motion";
 import { useEffect, useState } from "react";
-import { useRouter, useSearchParams } from "next/navigation";
+import { useRouter } from "next/navigation";
+import { toast } from "sonner";
+import dynamic from "next/dynamic";
 import { useAuth } from "@/app/context/AuthContext";
 import { getDashboardPath } from "@/lib/roleRedirect";
 import MainNavbar from "@/components/main/MainNavbar";
 import MainFooter from "@/components/main/MainFooter";
+const UpasthitiPageLoader = dynamic(
+  () =>
+    import("@/components/loader/UpasthitiPageLoader").then(
+      (m) => m.UpasthitiPageLoader
+    ),
+  { ssr: false }
+);
 
 export default function RegisterPage() {
   const router = useRouter();
@@ -21,6 +30,8 @@ export default function RegisterPage() {
   const [submitting, setSubmitting] = useState(false);
   const [isDark, setIsDark] = useState(false);
   const [mounted, setMounted] = useState(false);
+  const [showLoader, setShowLoader] = useState(true);
+
 
   const [form, setForm] = useState({
     schoolName: "",
@@ -49,22 +60,34 @@ export default function RegisterPage() {
     }
   }, [user, loading, router]);
 
-  useEffect(() => {
-    setMounted(true);
-    const savedTheme = window.localStorage.getItem("vidyarthii-theme");
-    const initialIsDark = savedTheme
-      ? savedTheme === "dark"
-      : window.matchMedia("(prefers-color-scheme: dark)").matches;
+useEffect(() => {
+  const start = Date.now();
 
-    setIsDark(initialIsDark);
-    document.documentElement.classList.toggle("dark", initialIsDark);
-  }, []);
+  const savedTheme = window.localStorage.getItem("Upasthiti-theme");
+  const initialIsDark = savedTheme
+    ? savedTheme === "dark"
+    : window.matchMedia("(prefers-color-scheme: dark)").matches;
+
+  setIsDark(initialIsDark);
+  document.documentElement.classList.toggle("dark", initialIsDark);
+
+  const elapsed = Date.now() - start;
+  const remaining = Math.max(500 - elapsed, 0); // 0.5 sec minimum
+
+  const timer = setTimeout(() => {
+    setMounted(true);
+    setShowLoader(false);
+  }, remaining);
+
+  return () => clearTimeout(timer);
+}, []);
+
 
   const toggleTheme = () => {
     const next = !isDark;
     setIsDark(next);
     document.documentElement.classList.toggle("dark", next);
-    window.localStorage.setItem("vidyarthii-theme", next ? "dark" : "light");
+    window.localStorage.setItem("Upasthiti-theme", next ? "dark" : "light");
   };
 
   function handleChange(e: React.ChangeEvent<HTMLInputElement>) {
@@ -73,7 +96,7 @@ export default function RegisterPage() {
 
   async function handleSubmit() {
     if (form.principalPassword !== form.confirmPassword) {
-      alert("Passwords do not match");
+      toast.error("Passwords do not match");
       return;
     }
 
@@ -85,7 +108,7 @@ export default function RegisterPage() {
     try {
       setSubmitting(true);
 
-      await registerSchool({
+      const registerPromise = registerSchool({
         schoolName: form.schoolName,
         schoolEmail: form.schoolEmail,
         phone: form.phone,
@@ -93,31 +116,29 @@ export default function RegisterPage() {
         pincode: form.pincode,
         principalName: form.principalName,
         principalEmail: form.principalEmail,
-        principalPassword: form.principalPassword
+        principalPassword: form.principalPassword,
       });
 
-      alert("📩 OTP sent to your email. Please verify.");
+      toast.promise(registerPromise, {
+        loading: "Otp sending...",
+        success: "OTP sent to your email",
+        error: (err) => (err instanceof Error ? err.message : "Registration failed"),
+      });
+
+      await registerPromise;
+
       router.replace(
         `/auth/verify-otp?email=${encodeURIComponent(form.schoolEmail)}`
       );
     } catch (err: any) {
-      alert(err.message || "Registration failed");
+      // toast.promise handles UI; keep catch to avoid unhandled rejections
     } finally {
       setSubmitting(false);
     }
   }
 
-  if (!mounted) {
-    return (
-      <div className="min-h-screen bg-gradient-to-br from-gray-50 to-gray-100 dark:from-gray-900 dark:to-gray-800">
-        <div className="flex items-center justify-center min-h-screen">
-          <div className="flex flex-col items-center gap-4">
-            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600" />
-            <div className="text-sm text-gray-600 dark:text-gray-400">Loading...</div>
-          </div>
-        </div>
-      </div>
-    );
+  if (showLoader || !mounted) {
+    return <UpasthitiPageLoader />;
   }
 
   return (
@@ -289,7 +310,7 @@ export default function RegisterPage() {
               <div className="my-6 h-px bg-gray-200 dark:bg-gray-700" />
 
               <div className="text-xs text-gray-600 dark:text-gray-400">
-                Having trouble? Contact <span className="font-semibold text-gray-900 dark:text-white">support@vidyarthii.com</span>
+                Having trouble? Contact <span className="font-semibold text-gray-900 dark:text-white">support@Upasthiti.com</span>
               </div>
             </div>
           </div>

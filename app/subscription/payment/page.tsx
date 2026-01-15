@@ -134,7 +134,7 @@ export default function PaymentPage() {
 
   useEffect(() => {
     setMounted(true);
-    const savedTheme = window.localStorage.getItem("vidyarthii-theme");
+    const savedTheme = window.localStorage.getItem("Upasthiti-theme");
     const initialIsDark = savedTheme
       ? savedTheme === "dark"
       : window.matchMedia("(prefers-color-scheme: dark)").matches;
@@ -179,7 +179,7 @@ export default function PaymentPage() {
     const next = !isDark;
     setIsDark(next);
     document.documentElement.classList.toggle("dark", next);
-    window.localStorage.setItem("vidyarthii-theme", next ? "dark" : "light");
+    window.localStorage.setItem("Upasthiti-theme", next ? "dark" : "light");
   };
 
   /* ===============================
