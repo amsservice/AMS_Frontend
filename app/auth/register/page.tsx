@@ -1,3 +1,7 @@
+
+
+
+
 "use client";
 
 import { Button } from "@/components/ui/button";
@@ -11,6 +15,9 @@ import { useAuth } from "@/app/context/AuthContext";
 import { getDashboardPath } from "@/lib/roleRedirect";
 import MainNavbar from "@/components/main/MainNavbar";
 import MainFooter from "@/components/main/MainFooter";
+import { registerSchoolSchema } from "@/lib/zodSchema";
+import { z } from "zod";
+
 const UpasthitiPageLoader = dynamic(
   () =>
     import("@/components/loader/UpasthitiPageLoader").then(
@@ -21,17 +28,12 @@ const UpasthitiPageLoader = dynamic(
 
 export default function RegisterPage() {
   const router = useRouter();
-  // const searchParams = useSearchParams();
   const { registerSchool, user, loading } = useAuth();
-
-  // const orderId = searchParams.get("orderId");
-  // const paymentId = searchParams.get("paymentId");
 
   const [submitting, setSubmitting] = useState(false);
   const [isDark, setIsDark] = useState(false);
   const [mounted, setMounted] = useState(false);
   const [showLoader, setShowLoader] = useState(true);
-
 
   const [form, setForm] = useState({
     schoolName: "",
@@ -45,13 +47,7 @@ export default function RegisterPage() {
     confirmPassword: ""
   });
 
-  // useEffect(() => {
-  //   if (!orderId || !paymentId) {
-  //     alert("❌ Payment required before registration");
-  //     router.replace("/subscription/payment");
-  //   }
-  // }, [orderId, paymentId, router]);
-
+  const [errors, setErrors] = useState<Record<string, string>>({});
 
   //Redirect if already logged in
   useEffect(() => {
@@ -72,7 +68,7 @@ useEffect(() => {
   document.documentElement.classList.toggle("dark", initialIsDark);
 
   const elapsed = Date.now() - start;
-  const remaining = Math.max(500 - elapsed, 0); // 0.5 sec minimum
+  const remaining = Math.max(500 - elapsed, 0);
 
   const timer = setTimeout(() => {
     setMounted(true);
@@ -82,7 +78,6 @@ useEffect(() => {
   return () => clearTimeout(timer);
 }, []);
 
-
   const toggleTheme = () => {
     const next = !isDark;
     setIsDark(next);
@@ -91,21 +86,21 @@ useEffect(() => {
   };
 
   function handleChange(e: React.ChangeEvent<HTMLInputElement>) {
-    setForm({ ...form, [e.target.name]: e.target.value });
+    const { name, value } = e.target;
+    setForm({ ...form, [name]: value });
+    
+    // Clear error for this field when user types
+    if (errors[name]) {
+      setErrors({ ...errors, [name]: "" });
+    }
   }
 
   async function handleSubmit() {
-    if (form.principalPassword !== form.confirmPassword) {
-      toast.error("Passwords do not match");
-      return;
-    }
-
-    // if (!orderId || !paymentId) {
-    //   alert("Payment details missing");
-    //   return;
-    // }
-
     try {
+      // Validate form data
+      registerSchoolSchema.parse(form);
+      setErrors({});
+
       setSubmitting(true);
 
       const registerPromise = registerSchool({
@@ -131,7 +126,20 @@ useEffect(() => {
         `/auth/verify-otp?email=${encodeURIComponent(form.schoolEmail)}`
       );
     } catch (err: any) {
-      // toast.promise handles UI; keep catch to avoid unhandled rejections
+      if (err instanceof z.ZodError) {
+        const fieldErrors: Record<string, string> = {};
+        err.issues.forEach((issue) => {
+          if (issue.path[0]) {
+            fieldErrors[issue.path[0].toString()] = issue.message;
+          }
+        });
+        setErrors(fieldErrors);
+        toast.error("Please fix the errors in the form");
+      } else {
+        // Handle API errors (like email already registered)
+        const errorMessage = err?.response?.data?.message || err?.message || "Registration failed";
+        toast.error(errorMessage);
+      }
     } finally {
       setSubmitting(false);
     }
@@ -200,42 +208,57 @@ useEffect(() => {
                       <h2 className="text-lg font-bold text-gray-900 dark:text-white mb-4">School Information</h2>
 
                       <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                        <input 
-                          name="schoolName" 
-                          onChange={handleChange} 
-                          placeholder="School Name" 
-                          className="px-4 py-3 rounded-xl bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 text-gray-900 dark:text-white placeholder:text-gray-500 dark:placeholder:text-gray-400 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all" 
-                        />
-                        <input 
-                          name="schoolEmail" 
-                          type="email" 
-                          onChange={handleChange} 
-                          placeholder="School Email" 
-                          className="px-4 py-3 rounded-xl bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 text-gray-900 dark:text-white placeholder:text-gray-500 dark:placeholder:text-gray-400 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all" 
-                        />
+                        <div>
+                          <input 
+                            name="schoolName" 
+                            onChange={handleChange} 
+                            placeholder="School Name" 
+                            className={`px-4 py-3 rounded-xl bg-white dark:bg-gray-700 border ${errors.schoolName ? 'border-red-500' : 'border-gray-300 dark:border-gray-600'} text-gray-900 dark:text-white placeholder:text-gray-500 dark:placeholder:text-gray-400 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all w-full`}
+                          />
+                          {errors.schoolName && <p className="text-red-500 text-xs mt-1">{errors.schoolName}</p>}
+                        </div>
+                        <div>
+                          <input 
+                            name="schoolEmail" 
+                            type="email" 
+                            onChange={handleChange} 
+                            placeholder="School Email" 
+                            className={`px-4 py-3 rounded-xl bg-white dark:bg-gray-700 border ${errors.schoolEmail ? 'border-red-500' : 'border-gray-300 dark:border-gray-600'} text-gray-900 dark:text-white placeholder:text-gray-500 dark:placeholder:text-gray-400 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all w-full`}
+                          />
+                          {errors.schoolEmail && <p className="text-red-500 text-xs mt-1">{errors.schoolEmail}</p>}
+                        </div>
                       </div>
 
                       <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mt-4">
-                        <input 
-                          name="phone" 
-                          onChange={handleChange} 
-                          placeholder="Phone" 
-                          className="px-4 py-3 rounded-xl bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 text-gray-900 dark:text-white placeholder:text-gray-500 dark:placeholder:text-gray-400 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all" 
-                        />
-                        <input 
-                          name="pincode" 
-                          onChange={handleChange} 
-                          placeholder="Pincode" 
-                          className="px-4 py-3 rounded-xl bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 text-gray-900 dark:text-white placeholder:text-gray-500 dark:placeholder:text-gray-400 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all" 
-                        />
+                        <div>
+                          <input 
+                            name="phone" 
+                            onChange={handleChange} 
+                            placeholder="Phone" 
+                            className={`px-4 py-3 rounded-xl bg-white dark:bg-gray-700 border ${errors.phone ? 'border-red-500' : 'border-gray-300 dark:border-gray-600'} text-gray-900 dark:text-white placeholder:text-gray-500 dark:placeholder:text-gray-400 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all w-full`}
+                          />
+                          {errors.phone && <p className="text-red-500 text-xs mt-1">{errors.phone}</p>}
+                        </div>
+                        <div>
+                          <input 
+                            name="pincode" 
+                            onChange={handleChange} 
+                            placeholder="Pincode" 
+                            className={`px-4 py-3 rounded-xl bg-white dark:bg-gray-700 border ${errors.pincode ? 'border-red-500' : 'border-gray-300 dark:border-gray-600'} text-gray-900 dark:text-white placeholder:text-gray-500 dark:placeholder:text-gray-400 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all w-full`}
+                          />
+                          {errors.pincode && <p className="text-red-500 text-xs mt-1">{errors.pincode}</p>}
+                        </div>
                       </div>
 
-                      <input 
-                        name="address" 
-                        onChange={handleChange} 
-                        placeholder="Address" 
-                        className="w-full px-4 py-3 rounded-xl bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 text-gray-900 dark:text-white placeholder:text-gray-500 dark:placeholder:text-gray-400 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all mt-4" 
-                      />
+                      <div className="mt-4">
+                        <input 
+                          name="address" 
+                          onChange={handleChange} 
+                          placeholder="Address" 
+                          className={`w-full px-4 py-3 rounded-xl bg-white dark:bg-gray-700 border ${errors.address ? 'border-red-500' : 'border-gray-300 dark:border-gray-600'} text-gray-900 dark:text-white placeholder:text-gray-500 dark:placeholder:text-gray-400 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all`}
+                        />
+                        {errors.address && <p className="text-red-500 text-xs mt-1">{errors.address}</p>}
+                      </div>
                     </div>
 
                     {/* Principal Account */}
@@ -243,36 +266,48 @@ useEffect(() => {
                       <h2 className="text-lg font-bold text-gray-900 dark:text-white mb-4">Principal Account</h2>
 
                       <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                        <input 
-                          name="principalName" 
-                          onChange={handleChange} 
-                          placeholder="Full Name" 
-                          className="px-4 py-3 rounded-xl bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 text-gray-900 dark:text-white placeholder:text-gray-500 dark:placeholder:text-gray-400 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all" 
-                        />
-                        <input 
-                          name="principalEmail" 
-                          type="email" 
-                          onChange={handleChange} 
-                          placeholder="Email" 
-                          className="px-4 py-3 rounded-xl bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 text-gray-900 dark:text-white placeholder:text-gray-500 dark:placeholder:text-gray-400 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all" 
-                        />
+                        <div>
+                          <input 
+                            name="principalName" 
+                            onChange={handleChange} 
+                            placeholder="Full Name" 
+                            className={`px-4 py-3 rounded-xl bg-white dark:bg-gray-700 border ${errors.principalName ? 'border-red-500' : 'border-gray-300 dark:border-gray-600'} text-gray-900 dark:text-white placeholder:text-gray-500 dark:placeholder:text-gray-400 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all w-full`}
+                          />
+                          {errors.principalName && <p className="text-red-500 text-xs mt-1">{errors.principalName}</p>}
+                        </div>
+                        <div>
+                          <input 
+                            name="principalEmail" 
+                            type="email" 
+                            onChange={handleChange} 
+                            placeholder="Email" 
+                            className={`px-4 py-3 rounded-xl bg-white dark:bg-gray-700 border ${errors.principalEmail ? 'border-red-500' : 'border-gray-300 dark:border-gray-600'} text-gray-900 dark:text-white placeholder:text-gray-500 dark:placeholder:text-gray-400 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all w-full`}
+                          />
+                          {errors.principalEmail && <p className="text-red-500 text-xs mt-1">{errors.principalEmail}</p>}
+                        </div>
                       </div>
 
                       <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mt-4">
-                        <input 
-                          type="password" 
-                          name="principalPassword" 
-                          onChange={handleChange} 
-                          placeholder="Password" 
-                          className="px-4 py-3 rounded-xl bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 text-gray-900 dark:text-white placeholder:text-gray-500 dark:placeholder:text-gray-400 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all" 
-                        />
-                        <input 
-                          type="password" 
-                          name="confirmPassword" 
-                          onChange={handleChange} 
-                          placeholder="Confirm Password" 
-                          className="px-4 py-3 rounded-xl bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 text-gray-900 dark:text-white placeholder:text-gray-500 dark:placeholder:text-gray-400 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all" 
-                        />
+                        <div>
+                          <input 
+                            type="password" 
+                            name="principalPassword" 
+                            onChange={handleChange} 
+                            placeholder="Password" 
+                            className={`px-4 py-3 rounded-xl bg-white dark:bg-gray-700 border ${errors.principalPassword ? 'border-red-500' : 'border-gray-300 dark:border-gray-600'} text-gray-900 dark:text-white placeholder:text-gray-500 dark:placeholder:text-gray-400 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all w-full`}
+                          />
+                          {errors.principalPassword && <p className="text-red-500 text-xs mt-1">{errors.principalPassword}</p>}
+                        </div>
+                        <div>
+                          <input 
+                            type="password" 
+                            name="confirmPassword" 
+                            onChange={handleChange} 
+                            placeholder="Confirm Password" 
+                            className={`px-4 py-3 rounded-xl bg-white dark:bg-gray-700 border ${errors.confirmPassword ? 'border-red-500' : 'border-gray-300 dark:border-gray-600'} text-gray-900 dark:text-white placeholder:text-gray-500 dark:placeholder:text-gray-400 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all w-full`}
+                          />
+                          {errors.confirmPassword && <p className="text-red-500 text-xs mt-1">{errors.confirmPassword}</p>}
+                        </div>
                       </div>
                     </div>
 
