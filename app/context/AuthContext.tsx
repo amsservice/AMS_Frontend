@@ -43,8 +43,13 @@ interface RegisterSchoolPayload {
 interface AuthContextType {
   user: User | null;
   loading: boolean;
-  login: (role: Role, data: { email: string; password: string }) => Promise<void>;
-   registerSchool: (data: RegisterSchoolPayload) => Promise<void>;
+  // login: (role: Role, data: { email: string; password: string }) => Promise<void>;
+  login: (
+    role: Role,
+    data: { email: string; password: string; schoolCode: number }
+  ) => Promise<void>;
+
+  registerSchool: (data: RegisterSchoolPayload) => Promise<void>;
   logout: () => Promise<void>;
   refetchUser: () => Promise<void>;
 }
@@ -65,42 +70,42 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, []);
 
   /* -------- Fetch Logged-in User -------- */
- async function refetchUser() {
-  const token = localStorage.getItem("accessToken");
-  const role = localStorage.getItem("role") as Role | null;
+  async function refetchUser() {
+    const token = localStorage.getItem("accessToken");
+    const role = localStorage.getItem("role") as Role | null;
 
-  if (!token || !role) {
-    console.log("❌ NO TOKEN OR ROLE");
-    setLoading(false);
-    return;
+    if (!token || !role) {
+      console.log("❌ NO TOKEN OR ROLE");
+      setLoading(false);
+      return;
+    }
+
+    const meEndpoint: Record<Role, string> = {
+      principal: "/api/auth/principal/me",
+      teacher: "/api/teacher/me",
+      student: "/api/student/me"
+    };
+
+    try {
+      const res = await apiFetch(meEndpoint[role]);
+
+      console.log("🔥 FULL /ME RESPONSE:", res); // 👈 IMPORTANT
+      console.log("🔥 res.user:", res.user);
+
+      setUser(res.user ?? null);
+    } catch (err) {
+      console.error("❌ /ME FAILED:", err);
+      localStorage.removeItem("accessToken");
+      localStorage.removeItem("role");
+      setUser(null);
+    } finally {
+      setLoading(false);
+    }
   }
 
-  const meEndpoint: Record<Role, string> = {
-    principal: "/api/auth/principal/me",
-    teacher: "/api/teacher/me",
-    student: "/api/student/me"
-  };
-
-  try {
-    const res = await apiFetch(meEndpoint[role]);
-
-    console.log("🔥 FULL /ME RESPONSE:", res); // 👈 IMPORTANT
-    console.log("🔥 res.user:", res.user);
-
-    setUser(res.user ?? null);
-  } catch (err) {
-    console.error("❌ /ME FAILED:", err);
-    localStorage.removeItem("accessToken");
-    localStorage.removeItem("role");
-    setUser(null);
-  } finally {
-    setLoading(false);
-  }
-}
-
-/* ------------------------------------
-//      Register School
-//   ------------------------------------ */
+  /* ------------------------------------
+  //      Register School
+  //   ------------------------------------ */
   async function registerSchool(data: RegisterSchoolPayload) {
     const res = await apiFetch("/api/auth/register-school", {
       method: "POST",
@@ -113,10 +118,15 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
 
   /* -------- Login -------- */
+  // async function login(
+  //   role: Role,
+  //   data: { email: string; password: string }
+  // ) {
   async function login(
     role: Role,
-    data: { email: string; password: string }
+    data: { email: string; password: string; schoolCode: number }
   ) {
+
     const endpointMap: Record<Role, string> = {
       principal: "/api/auth/principal/login",
       teacher: "/api/auth/teacher/login",
@@ -133,21 +143,21 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
     await refetchUser();
 
-  console.log("LOGIN SUCCESS ✅");
-  console.log("Token stored, user fetched via /me");
+    console.log("LOGIN SUCCESS ✅");
+    console.log("Token stored, user fetched via /me");
 
-  //   setUser(res.user);
-  //   console.log("LOGIN SUCCESS ✅");
-  // console.log("User:", res.user);
-  // console.log("Role:", role);
-  // console.log("Access Token:", res.accessToken);
+    //   setUser(res.user);
+    //   console.log("LOGIN SUCCESS ✅");
+    // console.log("User:", res.user);
+    // console.log("Role:", role);
+    // console.log("Access Token:", res.accessToken);
   }
 
   /* -------- Logout -------- */
   async function logout() {
     try {
       await apiFetch("/api/auth/logout", { method: "POST" });
-    } catch {}
+    } catch { }
     finally {
       localStorage.removeItem("accessToken");
       localStorage.removeItem("role");
@@ -164,7 +174,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         logout,
         registerSchool,
         refetchUser,
-        
+
       }}
     >
       {children}

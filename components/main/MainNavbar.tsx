@@ -171,7 +171,7 @@ export default function MainNavbar({
             <div className="hidden sm:flex items-center gap-2 min-w-[200px] justify-end">
             {showAuthButtons && (
               <div className="hidden sm:flex items-center gap-2">
-                <a href="/auth/login">
+                <a href="/auth/school-code">
                   <motion.button
                     whileHover={{ scale: 1.02 }}
                     whileTap={{ scale: 0.98 }}
