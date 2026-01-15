@@ -8,10 +8,10 @@ import MainNavbar from "@/components/main/MainNavbar";
 import MainFooter from "@/components/main/MainFooter";
 import PricingCards from "@/components/pricing/PricingCards";
 import dynamic from "next/dynamic";
-const UpasthitiPageLoader = dynamic(
+const UpastithiPageLoader = dynamic(
   () =>
-    import("@/components/loader/UpasthitiPageLoader").then(
-      (m) => m.UpasthitiPageLoader
+    import("@/components/loader/UpastithiPageLoader").then(
+      (m) => m.UpastithiPageLoader
     ),
   { ssr: false }
 );
@@ -24,7 +24,7 @@ const AttendEaseLanding = () => {
 
   useEffect(() => {
     const start = Date.now();
-    const savedTheme = window.localStorage.getItem("Upasthiti-theme");
+    const savedTheme = window.localStorage.getItem("Upastithi-theme");
     const initialIsDark = savedTheme
       ? savedTheme === "dark"
       : window.matchMedia("(prefers-color-scheme: dark)").matches;
@@ -39,17 +39,19 @@ const AttendEaseLanding = () => {
     setMounted(true);
     setShowLoader(false);
   }, remaining);
+  
+  return () => clearTimeout(timer);
   }, []);
 
   const toggleTheme = () => {
     const newTheme = !isDark;
     setIsDark(newTheme);
-    window.localStorage.setItem("Upasthiti-theme", newTheme ? "dark" : "light");
+    window.localStorage.setItem("Upastithi-theme", newTheme ? "dark" : "light");
     document.documentElement.classList.toggle("dark", newTheme);
   };
 
   if (showLoader) {
-    return <UpasthitiPageLoader />;
+    return <UpastithiPageLoader />;
   }
 
   const features = [
@@ -72,7 +74,7 @@ const AttendEaseLanding = () => {
 
   const testimonials = [
     {
-      quote: "Upasthiti has transformed how we manage attendance. What used to take hours now takes minutes. The real-time analytics help us identify students who need support immediately.",
+      quote: "Upastithi has transformed how we manage attendance. What used to take hours now takes minutes. The real-time analytics help us identify students who need support immediately.",
       author: "Dr. Priya Sharma",
       role: "Principal, Delhi Public School",
       rating: 5,
@@ -86,7 +88,7 @@ const AttendEaseLanding = () => {
       highlighted: true,
     },
     {
-      quote: "We manage 5 branches with over 3,000 students. Upasthiti's multi-school support and centralized dashboard give us complete visibility. Best investment we've made.",
+      quote: "We manage 5 branches with over 3,000 students. Upastithi's multi-school support and centralized dashboard give us complete visibility. Best investment we've made.",
       author: "Anita Desai",
       role: "Director, Greenwood High",
       rating: 5,
@@ -432,7 +434,7 @@ const AttendEaseLanding = () => {
               </span>
             </h2>
             <p className="text-lg text-gray-600 dark:text-gray-300">
-              Hear from educators who transformed their institutions with Upasthiti
+              Hear from educators who transformed their institutions with Upastithi
             </p>
           </div>
 
@@ -522,7 +524,7 @@ const AttendEaseLanding = () => {
               Frequently Asked Questions
             </h2>
             <p className="text-lg text-gray-600 dark:text-gray-300">
-              Everything you need to know about Upasthiti
+              Everything you need to know about Upastithi
             </p>
           </div>
 
@@ -564,7 +566,7 @@ const AttendEaseLanding = () => {
                 It's easy to get started
               </h2>
               <p className="text-lg text-gray-700 dark:text-gray-300 mb-8 max-w-2xl mx-auto">
-                Join hundreds of schools using Upasthiti to transform their operations
+                Join hundreds of schools using Upastithi to transform their operations
               </p>
               
               <div className="flex flex-col sm:flex-row gap-4 justify-center">

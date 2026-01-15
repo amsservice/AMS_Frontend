@@ -11,10 +11,10 @@ import { useAuth } from "@/app/context/AuthContext";
 import { getDashboardPath } from "@/lib/roleRedirect";
 import MainNavbar from "@/components/main/MainNavbar";
 import MainFooter from "@/components/main/MainFooter";
-const UpasthitiPageLoader = dynamic(
+const UpastithiPageLoader = dynamic(
   () =>
-    import("@/components/loader/UpasthitiPageLoader").then(
-      (m) => m.UpasthitiPageLoader
+    import("@/components/loader/UpastithiPageLoader").then(
+      (m) => m.UpastithiPageLoader
     ),
   { ssr: false }
 );
@@ -63,7 +63,7 @@ export default function RegisterPage() {
 useEffect(() => {
   const start = Date.now();
 
-  const savedTheme = window.localStorage.getItem("Upasthiti-theme");
+  const savedTheme = window.localStorage.getItem("Upastithi-theme");
   const initialIsDark = savedTheme
     ? savedTheme === "dark"
     : window.matchMedia("(prefers-color-scheme: dark)").matches;
@@ -87,7 +87,7 @@ useEffect(() => {
     const next = !isDark;
     setIsDark(next);
     document.documentElement.classList.toggle("dark", next);
-    window.localStorage.setItem("Upasthiti-theme", next ? "dark" : "light");
+    window.localStorage.setItem("Upastithi-theme", next ? "dark" : "light");
   };
 
   function handleChange(e: React.ChangeEvent<HTMLInputElement>) {
@@ -138,7 +138,7 @@ useEffect(() => {
   }
 
   if (showLoader || !mounted) {
-    return <UpasthitiPageLoader />;
+    return <UpastithiPageLoader />;
   }
 
   return (
@@ -310,7 +310,7 @@ useEffect(() => {
               <div className="my-6 h-px bg-gray-200 dark:bg-gray-700" />
 
               <div className="text-xs text-gray-600 dark:text-gray-400">
-                Having trouble? Contact <span className="font-semibold text-gray-900 dark:text-white">support@Upasthiti.com</span>
+                Having trouble? Contact <span className="font-semibold text-gray-900 dark:text-white">support@Upastithi.com</span>
               </div>
             </div>
           </div>

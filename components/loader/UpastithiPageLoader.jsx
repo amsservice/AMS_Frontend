@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { motion } from 'framer-motion';
 
-export const UpasthitiPageLoader = () => {
+export const UpastithiPageLoader = () => {
 
     // const [darkMode, setDarkMode] = useState(false);
 

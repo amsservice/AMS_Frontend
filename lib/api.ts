@@ -1,15 +1,10 @@
-
-
-
-const API_BASE_URL = "http://localhost:4000";
-
 export async function apiFetch(
   endpoint: string,
   options: RequestInit = {}
 ) {
   const token = localStorage.getItem("accessToken");
 
-  const res = await fetch(`${API_BASE_URL}${endpoint}`, {
+  const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}${endpoint}`, {
     ...options,
     headers: {
       "Content-Type": "application/json",
@@ -23,6 +18,27 @@ export async function apiFetch(
 
   if (!res.ok) {
     throw new Error(data.message || "Unauthorized");
+  }
+
+  return data;
+}
+
+export async function adminFetch(
+  endpoint: string,
+  options: RequestInit = {}
+) {
+  const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}${endpoint}`, {
+    ...options,
+    headers: {
+      "Content-Type": "application/json",
+      ...(options.headers || {})
+    }
+  });
+
+  const data = await res.json().catch(() => ({}));
+
+  if (!res.ok) {
+    throw new Error(data.message || "Request failed");
   }
 
   return data;

@@ -41,7 +41,7 @@ export default function DashboardSidebar({ isOpen, onClose }: Props) {
         <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-blue-600 to-indigo-600 flex items-center justify-center shadow-lg">
           <GraduationCap className="w-6 h-6 text-white" />
         </div>
-        <span className="text-xl font-bold text-white">Upasthiti</span>
+        <span className="text-xl font-bold text-white">Upastithi</span>
       </div>
 
       {/* School Info Card */}

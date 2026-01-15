@@ -58,7 +58,7 @@ export default function MainNavbar({
 
               <div className="flex flex-col leading-tight">
                 <span className="text-base sm:text-lg font-bold text-gray-900 dark:text-white tracking-tight">
-                  Upasthiti
+                  Upastithi
                 </span>
                 <span className="hidden sm:block text-xs text-gray-600 dark:text-gray-400">
                   School management, simplified
