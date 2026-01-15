@@ -8,10 +8,10 @@ import MainFooter from "@/components/main/MainFooter";
 import { Instagram, Linkedin, Mail, MapPin, Phone, Send, Youtube } from "lucide-react";
 import contactPageData from "./contact-page.json";
 
-const UpasthitiPageLoader = dynamic(
+const UpastithiPageLoader = dynamic(
   () =>
-    import("@/components/loader/UpasthitiPageLoader").then(
-      (m) => m.UpasthitiPageLoader
+    import("@/components/loader/UpastithiPageLoader").then(
+      (m) => m.UpastithiPageLoader
     ),
   { ssr: false }
 );
@@ -52,7 +52,7 @@ export default function ContactPage() {
 
   useEffect(() => {
     const start = Date.now();
-    const savedTheme = window.localStorage.getItem("Upasthiti-theme");
+    const savedTheme = window.localStorage.getItem("Upastithi-theme");
     const initialIsDark = savedTheme
       ? savedTheme === "dark"
       : window.matchMedia("(prefers-color-scheme: dark)").matches;
@@ -76,7 +76,7 @@ export default function ContactPage() {
   const toggleTheme = () => {
     const next = !isDark;
     setIsDark(next);
-    window.localStorage.setItem("Upasthiti-theme", next ? "dark" : "light");
+    window.localStorage.setItem("Upastithi-theme", next ? "dark" : "light");
     document.documentElement.classList.toggle("dark", next);
   };
 
@@ -189,7 +189,7 @@ export default function ContactPage() {
   };
 
   if (showLoader || !mounted) {
-    return <UpasthitiPageLoader />;
+    return <UpastithiPageLoader />;
   }
 
   return (

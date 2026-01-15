@@ -19,10 +19,10 @@ import dynamic from "next/dynamic";
 import { loginSchema } from "@/lib/zodSchema";
 import { z } from "zod";
 
-const UpasthitiPageLoader = dynamic(
+const UpastithiPageLoader = dynamic(
   () =>
-    import("@/components/loader/UpasthitiPageLoader").then(
-      (m) => m.UpasthitiPageLoader
+    import("@/components/loader/UpastithiPageLoader").then(
+      (m) => m.UpastithiPageLoader
     ),
   { ssr: false }
 );
@@ -56,7 +56,7 @@ export default function LoginPage() {
 useEffect(() => {
   const start = Date.now();
 
-  const savedTheme = window.localStorage.getItem("Upasthiti-theme");
+  const savedTheme = window.localStorage.getItem("Upastithi-theme");
   const initialIsDark = savedTheme
     ? savedTheme === "dark"
     : window.matchMedia("(prefers-color-scheme: dark)").matches;
@@ -78,7 +78,7 @@ useEffect(() => {
   const toggleTheme = () => {
     const next = !isDark;
     setIsDark(next);
-    window.localStorage.setItem("Upasthiti-theme", next ? "dark" : "light");
+    window.localStorage.setItem("Upastithi-theme", next ? "dark" : "light");
     document.documentElement.classList.toggle("dark", next);
   };
 
@@ -129,7 +129,7 @@ useEffect(() => {
   }
 
   if (showLoader  ) {
-    return <UpasthitiPageLoader />
+    return <UpastithiPageLoader />
   }
 
   return (
