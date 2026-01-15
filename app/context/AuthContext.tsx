@@ -26,9 +26,16 @@ interface RegisterSchoolPayload {
   phone: string;
   address: string;
   pincode: string;
+  schoolType: string;
+  board: string;
+  city: string;
+  district: string;
+  state: string;
   principalName: string;
   principalEmail: string;
   principalPassword: string;
+  principalgender?: string;
+  principalExperience?: number;
   // orderId:string;
   // paymentId: string;
 }
