@@ -41,10 +41,17 @@ export default function RegisterPage() {
     phone: "",
     address: "",
     pincode: "",
+    schoolType: "",
+    board: "",
+    city: "",
+    district: "",
+    state: "",
     principalName: "",
     principalEmail: "",
     principalPassword: "",
-    confirmPassword: ""
+    confirmPassword: "",
+    gender: "",
+    yearsOfExperience: ""
   });
 
   const [errors, setErrors] = useState<Record<string, string>>({});
@@ -85,7 +92,7 @@ useEffect(() => {
     window.localStorage.setItem("Upasthiti-theme", next ? "dark" : "light");
   };
 
-  function handleChange(e: React.ChangeEvent<HTMLInputElement>) {
+  function handleChange(e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) {
     const { name, value } = e.target;
     setForm({ ...form, [name]: value });
     
@@ -109,9 +116,16 @@ useEffect(() => {
         phone: form.phone,
         address: form.address,
         pincode: form.pincode,
+        schoolType: form.schoolType,
+        board: form.board,
+        city: form.city,
+        district: form.district,
+        state: form.state,
         principalName: form.principalName,
         principalEmail: form.principalEmail,
         principalPassword: form.principalPassword,
+        principalgender: form.gender || undefined,
+        principalExperience: form.yearsOfExperience ? parseInt(form.yearsOfExperience) : undefined,
       });
 
       toast.promise(registerPromise, {
@@ -162,6 +176,7 @@ useEffect(() => {
       <MainNavbar
         isDark={isDark}
         onToggleTheme={toggleTheme}
+        showAuthButtons={false}
         hintText="Secure registration"
         navLinks={[
           { label: "Home", href: "/" },
@@ -231,6 +246,39 @@ useEffect(() => {
 
                       <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mt-4">
                         <div>
+                          <select
+                            name="schoolType"
+                            onChange={handleChange}
+                            value={form.schoolType}
+                            className={`px-4 py-3 rounded-xl bg-white dark:bg-gray-700 border ${errors.schoolType ? 'border-red-500' : 'border-gray-300 dark:border-gray-600'} text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all w-full`}
+                          >
+                            <option value="">Select School Type</option>
+                            <option value="Government">Government</option>
+                            <option value="Private">Private</option>
+                            <option value="Semi-Government">Semi-Government</option>
+                          </select>
+                          {errors.schoolType && <p className="text-red-500 text-xs mt-1">{errors.schoolType}</p>}
+                        </div>
+                        <div>
+                          <select
+                            name="board"
+                            onChange={handleChange}
+                            value={form.board}
+                            className={`px-4 py-3 rounded-xl bg-white dark:bg-gray-700 border ${errors.board ? 'border-red-500' : 'border-gray-300 dark:border-gray-600'} text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all w-full`}
+                          >
+                            <option value="">Select Board</option>
+                            <option value="CBSE">CBSE</option>
+                            <option value="ICSE">ICSE</option>
+                            <option value="State Board">State Board</option>
+                            <option value="IB">IB</option>
+                            <option value="Other">Other</option>
+                          </select>
+                          {errors.board && <p className="text-red-500 text-xs mt-1">{errors.board}</p>}
+                        </div>
+                      </div>
+
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mt-4">
+                        <div>
                           <input 
                             name="phone" 
                             onChange={handleChange} 
@@ -247,6 +295,36 @@ useEffect(() => {
                             className={`px-4 py-3 rounded-xl bg-white dark:bg-gray-700 border ${errors.pincode ? 'border-red-500' : 'border-gray-300 dark:border-gray-600'} text-gray-900 dark:text-white placeholder:text-gray-500 dark:placeholder:text-gray-400 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all w-full`}
                           />
                           {errors.pincode && <p className="text-red-500 text-xs mt-1">{errors.pincode}</p>}
+                        </div>
+                      </div>
+
+                      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mt-4">
+                        <div>
+                          <input 
+                            name="city" 
+                            onChange={handleChange} 
+                            placeholder="City" 
+                            className={`px-4 py-3 rounded-xl bg-white dark:bg-gray-700 border ${errors.city ? 'border-red-500' : 'border-gray-300 dark:border-gray-600'} text-gray-900 dark:text-white placeholder:text-gray-500 dark:placeholder:text-gray-400 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all w-full`}
+                          />
+                          {errors.city && <p className="text-red-500 text-xs mt-1">{errors.city}</p>}
+                        </div>
+                        <div>
+                          <input 
+                            name="district" 
+                            onChange={handleChange} 
+                            placeholder="District" 
+                            className={`px-4 py-3 rounded-xl bg-white dark:bg-gray-700 border ${errors.district ? 'border-red-500' : 'border-gray-300 dark:border-gray-600'} text-gray-900 dark:text-white placeholder:text-gray-500 dark:placeholder:text-gray-400 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all w-full`}
+                          />
+                          {errors.district && <p className="text-red-500 text-xs mt-1">{errors.district}</p>}
+                        </div>
+                        <div>
+                          <input 
+                            name="state" 
+                            onChange={handleChange} 
+                            placeholder="State" 
+                            className={`px-4 py-3 rounded-xl bg-white dark:bg-gray-700 border ${errors.state ? 'border-red-500' : 'border-gray-300 dark:border-gray-600'} text-gray-900 dark:text-white placeholder:text-gray-500 dark:placeholder:text-gray-400 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all w-full`}
+                          />
+                          {errors.state && <p className="text-red-500 text-xs mt-1">{errors.state}</p>}
                         </div>
                       </div>
 
@@ -284,6 +362,33 @@ useEffect(() => {
                             className={`px-4 py-3 rounded-xl bg-white dark:bg-gray-700 border ${errors.principalEmail ? 'border-red-500' : 'border-gray-300 dark:border-gray-600'} text-gray-900 dark:text-white placeholder:text-gray-500 dark:placeholder:text-gray-400 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all w-full`}
                           />
                           {errors.principalEmail && <p className="text-red-500 text-xs mt-1">{errors.principalEmail}</p>}
+                        </div>
+                      </div>
+
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mt-4">
+                        <div>
+                          <select
+                            name="gender"
+                            onChange={handleChange}
+                            value={form.gender}
+                            className={`px-4 py-3 rounded-xl bg-white dark:bg-gray-700 border ${errors.gender ? 'border-red-500' : 'border-gray-300 dark:border-gray-600'} text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all w-full`}
+                          >
+                            <option value="">Select Gender (Optional)</option>
+                            <option value="Male">Male</option>
+                            <option value="Female">Female</option>
+                            <option value="Other">Other</option>
+                          </select>
+                          {errors.gender && <p className="text-red-500 text-xs mt-1">{errors.gender}</p>}
+                        </div>
+                        <div>
+                          <input 
+                            name="yearsOfExperience" 
+                            type="number"
+                            onChange={handleChange} 
+                            placeholder="Years of Experience (Optional)" 
+                            className={`px-4 py-3 rounded-xl bg-white dark:bg-gray-700 border ${errors.yearsOfExperience ? 'border-red-500' : 'border-gray-300 dark:border-gray-600'} text-gray-900 dark:text-white placeholder:text-gray-500 dark:placeholder:text-gray-400 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all w-full`}
+                          />
+                          {errors.yearsOfExperience && <p className="text-red-500 text-xs mt-1">{errors.yearsOfExperience}</p>}
                         </div>
                       </div>
 
