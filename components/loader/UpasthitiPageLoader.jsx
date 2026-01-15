@@ -56,7 +56,7 @@ export const UpasthitiPageLoader = () => {
             // initial={false}
           >
             <div className="text-3xl font-bold bg-gradient-to-r from-purple-500 via-indigo-500 to-blue-500 bg-clip-text text-transparent">
-              UPASTITHI
+              UPASTHITI
             </div>
           </motion.div>
 
