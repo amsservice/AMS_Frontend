@@ -22,7 +22,7 @@ export async function apiFetch(
   const data = await res.json().catch(() => ({}));
 
   if (!res.ok) {
-    throw new Error(data.message || "Unauthorized");
+    throw new Error(data.message || "unauthorized");
   }
 
   return data;

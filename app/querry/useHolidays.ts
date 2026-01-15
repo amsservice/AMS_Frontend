@@ -58,3 +58,4 @@ export const useDeleteHoliday = () => {
     onSuccess: () => qc.invalidateQueries({ queryKey: ['holidays'] })
   });
 };
+
