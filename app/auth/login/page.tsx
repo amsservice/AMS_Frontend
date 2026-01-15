@@ -1,3 +1,7 @@
+
+
+
+
 "use client";
 
 import Link from "next/link";
@@ -12,6 +16,8 @@ import { getDashboardPath } from "@/lib/roleRedirect";
 import MainNavbar from "@/components/main/MainNavbar";
 import MainFooter from "@/components/main/MainFooter";
 import dynamic from "next/dynamic";
+import { loginSchema } from "@/lib/zodSchema";
+import { z } from "zod";
 
 const UpastithiPageLoader = dynamic(
   () =>
@@ -34,11 +40,12 @@ export default function LoginPage() {
   const [mounted, setMounted] = useState(false);
   const [showLoader, setShowLoader] = useState(true);
 
-
   const [form, setForm] = useState({
     email: "",
     password: ""
   });
+
+  const [errors, setErrors] = useState<Record<string, string>>({});
 
   useEffect(() => {
     if (!loading && user) {
@@ -68,7 +75,6 @@ useEffect(() => {
   return () => clearTimeout(timer);
 }, []);
 
-
   const toggleTheme = () => {
     const next = !isDark;
     setIsDark(next);
@@ -77,33 +83,46 @@ useEffect(() => {
   };
 
   function handleChange(e: React.ChangeEvent<HTMLInputElement>) {
-    setForm({ ...form, [e.target.name]: e.target.value });
+    const { name, value } = e.target;
+    setForm({ ...form, [name]: value });
+    
+    // Clear error for this field when user types
+    if (errors[name]) {
+      setErrors({ ...errors, [name]: "" });
+    }
   }
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
 
-    if (!form.email || !form.password) {
-      toast.error("Email and password are required");
-      return;
-    }
-
     try {
+      // Validate form data
+      loginSchema.parse(form);
+      setErrors({});
+
       setSubmitting(true);
-      const loginPromise = login(role, {
+
+      await login(role, {
         email: form.email,
         password: form.password,
       });
 
-      toast.promise(loginPromise, {
-        loading: "Logging in...",
-        success: "Logged in successfully",
-        error: (err) => (err instanceof Error ? err.message : "Login failed"),
-      });
-
-      await loginPromise;
+      toast.success("Logged in successfully");
     } catch (err: any) {
-      // toast.promise handles UI; keep catch to avoid unhandled rejections
+      if (err instanceof z.ZodError) {
+        const fieldErrors: Record<string, string> = {};
+        err.issues.forEach((issue) => {
+          if (issue.path[0]) {
+            fieldErrors[issue.path[0].toString()] = issue.message;
+          }
+        });
+        setErrors(fieldErrors);
+        toast.error("Please fix the errors in the form");
+      } else {
+        // Handle API errors (like invalid credentials)
+        const errorMessage = err?.response?.data?.message || err?.message || "Login failed";
+        toast.error(errorMessage);
+      }
     } finally {
       setSubmitting(false);
     }
@@ -183,8 +202,9 @@ useEffect(() => {
                 value={form.email}
                 onChange={handleChange}
                 placeholder="you@school.edu"
-                className="w-full px-4 py-3 rounded-xl border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-white placeholder:text-gray-500 dark:placeholder:text-gray-400 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-all"
+                className={`w-full px-4 py-3 rounded-xl border ${errors.email ? 'border-red-500' : 'border-gray-300 dark:border-gray-600'} bg-white dark:bg-gray-700 text-gray-900 dark:text-white placeholder:text-gray-500 dark:placeholder:text-gray-400 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-all`}
               />
+              {errors.email && <p className="text-red-500 text-xs mt-1">{errors.email}</p>}
             </div>
 
             <div>
@@ -198,7 +218,7 @@ useEffect(() => {
                   value={form.password}
                   onChange={handleChange}
                   placeholder="••••••••"
-                  className="w-full px-4 py-3 rounded-xl border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-white placeholder:text-gray-500 dark:placeholder:text-gray-400 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none pr-12 transition-all"
+                  className={`w-full px-4 py-3 rounded-xl border ${errors.password ? 'border-red-500' : 'border-gray-300 dark:border-gray-600'} bg-white dark:bg-gray-700 text-gray-900 dark:text-white placeholder:text-gray-500 dark:placeholder:text-gray-400 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none pr-12 transition-all`}
                 />
                 <button
                   type="button"
@@ -208,6 +228,7 @@ useEffect(() => {
                   {showPassword ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
                 </button>
               </div>
+              {errors.password && <p className="text-red-500 text-xs mt-1">{errors.password}</p>}
             </div>
 
             <Button
