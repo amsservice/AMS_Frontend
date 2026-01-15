@@ -134,7 +134,7 @@ useEffect(() => {
           }
         });
         setErrors(fieldErrors);
-        toast.error("Please fix the errors in the form");
+        toast.error("Please enter valid details");
       } else {
         // Handle API errors (like email already registered)
         const errorMessage = err?.response?.data?.message || err?.message || "Registration failed";
@@ -234,7 +234,7 @@ useEffect(() => {
                           <input 
                             name="phone" 
                             onChange={handleChange} 
-                            placeholder="Phone" 
+                            placeholder="Enter 10 digit phone number" 
                             className={`px-4 py-3 rounded-xl bg-white dark:bg-gray-700 border ${errors.phone ? 'border-red-500' : 'border-gray-300 dark:border-gray-600'} text-gray-900 dark:text-white placeholder:text-gray-500 dark:placeholder:text-gray-400 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all w-full`}
                           />
                           {errors.phone && <p className="text-red-500 text-xs mt-1">{errors.phone}</p>}

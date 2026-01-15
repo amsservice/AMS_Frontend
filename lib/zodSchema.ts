@@ -4,9 +4,9 @@ export const registerSchoolSchema = z.object({
   schoolName: z.string().min(3, "School name must be at least 3 characters"),
   schoolEmail: z.string().email("Invalid email address"),
 
-  phone: z.string().min(10, "Phone must be at least 10 characters").max(15, "Phone must not exceed 15 characters"),
+  phone: z.string().regex(/^\d{6}$/, "Phone number must be 10 digits"),
   address: z.string().min(10, "Address must be at least 10 characters"),
-  pincode: z.string().min(4,"Pincode must be atleast 4 digits"),
+  pincode: z.string().regex(/^\d{6}$/, "Pincode must be exactly 6 digits"),
 
   principalName: z.string().min(3, "Principal name must be at least 3 characters"),
   principalEmail: z.string().email("Invalid email address"),
