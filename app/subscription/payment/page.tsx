@@ -6,7 +6,9 @@ import { useRouter, useSearchParams } from "next/navigation";
 import MainNavbar from "@/components/main/MainNavbar";
 import MainFooter from "@/components/main/MainFooter";
 import { PRICING_PLANS } from "@/lib/pricing";
+import { useAuth } from "@/app/context/AuthContext";
 // import { verify } from "crypto";
+// import { AuthProvider } from "@/context/AuthProvider";
 
 type PlanId = "1Y" | "2Y" | "3Y";
 
@@ -37,6 +39,7 @@ type VerifyPaymentResponse = {
   success: boolean;
   orderId: string;
   paymentId: string;
+  accessToken: string;
 };
 
 type RazorpayHandlerResponse = {
@@ -71,10 +74,10 @@ declare global {
 export default function PaymentPage() {
   const router = useRouter();
   const searchParams = useSearchParams();
+  const { refetchUser } = useAuth();
 
   const API_URL = process.env.NEXT_PUBLIC_API_URL!;
   const RAZORPAY_KEY = process.env.NEXT_PUBLIC_RAZORPAY_KEY!;
-
 
   const schoolEmail = searchParams.get("email");
   const [planId, setPlanId] = useState<PlanId>("1Y");
@@ -301,11 +304,8 @@ export default function PaymentPage() {
         amount: paidAmount * 100,
         currency: "INR",
         order_id: order.orderId,
-        name: "Attendance SaaS",
-        description: "School Subscription",
-
-
-
+        name: "Upastithi",
+        description: "Upastithi Subscription",
 
         handler: async function (response: RazorpayHandlerResponse) {
           /* 3️⃣ Verify payment */
@@ -320,10 +320,7 @@ export default function PaymentPage() {
             }),
           });
 
-
-
-          const verifyData = await verifyRes.json();
-          // const parsed = verifyData as VerifyPaymentResponse;
+          const verifyData = (await verifyRes.json()) as VerifyPaymentResponse;
 
           if (!verifyRes.ok || !verifyData.success) {
             alert("Payment verification failed");
@@ -332,14 +329,10 @@ export default function PaymentPage() {
 
           localStorage.setItem("accessToken", verifyData.accessToken);
           localStorage.setItem("role", "principal");
-
+          await refetchUser();
           router.replace("/dashboard/principal");
 
-          /* 4️⃣ Redirect to registration */
-          // alert("✅ Payment successful. Please login.");
-          // router.replace("auth/login");
         },
-
         theme: { color: "#2563eb" },
       });
 

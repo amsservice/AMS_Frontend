@@ -91,7 +91,7 @@ export default function DashboardSidebar({ isOpen, onClose }: Props) {
         <button
           onClick={() => {
             logout();
-            router.replace("/auth/login");
+            router.replace("/auth/school-code");
           }}
           className="w-full flex items-center justify-center gap-2 px-4 py-3 rounded-xl text-gray-300 hover:text-white hover:bg-white/10 transition-all duration-200 transform hover:scale-[1.02]"
         >

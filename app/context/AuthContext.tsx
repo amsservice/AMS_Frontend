@@ -9,6 +9,7 @@ import {
   ReactNode
 } from "react";
 import { apiFetch } from "@/lib/api";
+import { useRouter, useSearchParams } from "next/navigation";
 
 /* ================= TYPES ================= */
 
@@ -63,6 +64,7 @@ const AuthContext = createContext<AuthContextType | null>(null);
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
+  const router = useRouter();
 
   /* -------- Restore session on refresh -------- */
   useEffect(() => {
@@ -161,6 +163,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     finally {
       localStorage.removeItem("accessToken");
       localStorage.removeItem("role");
+      router.replace("/auth/school-code");
       setUser(null);
     }
   }
