@@ -25,8 +25,6 @@ schoolCode:number;
   district: string;
   state: string;
 
-  
-
   principal: {
     id: string;
     name: string;

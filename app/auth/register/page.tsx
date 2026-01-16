@@ -255,7 +255,7 @@ useEffect(() => {
                             <option value="">Select School Type</option>
                             <option value="Government">Government</option>
                             <option value="Private">Private</option>
-                            <option value="Semi-Government">Semi-Government</option>
+                            <option value="Semi-Private">Semi-Private</option>
                           </select>
                           {errors.schoolType && <p className="text-red-500 text-xs mt-1">{errors.schoolType}</p>}
                         </div>
