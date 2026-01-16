@@ -54,6 +54,8 @@ export default function LoginPage() {
   const [showPassword, setShowPassword] = useState(false);
   const [submitting, setSubmitting] = useState(false);
 
+  const [schoolContextReady, setSchoolContextReady] = useState(false);
+
   const [isDark, setIsDark] = useState(false);
   const [mounted, setMounted] = useState(false);
   const [showLoader, setShowLoader] = useState(true);
@@ -76,6 +78,30 @@ export default function LoginPage() {
       router.replace(getDashboardPath(user.role));
     }
   }, [user, loading, router]);
+
+  /* ===============================
+     GUARD: REQUIRE SCHOOL CONTEXT
+  =============================== */
+  useEffect(() => {
+    const stored = localStorage.getItem("schoolContext");
+    if (!stored) {
+      router.replace("/auth/school-code");
+      return;
+    }
+
+    try {
+      const parsed = JSON.parse(stored);
+      if (!parsed?.schoolCode) {
+        router.replace("/auth/school-code");
+        return;
+      }
+    } catch {
+      router.replace("/auth/school-code");
+      return;
+    }
+
+    setSchoolContextReady(true);
+  }, [router]);
 
   /* ===============================
      THEME INIT
@@ -224,6 +250,10 @@ export default function LoginPage() {
   }
 }
 
+
+  if (!schoolContextReady) {
+    return null;
+  }
 
   if (showLoader || !mounted) {
     return <UpastithiPageLoader />;

@@ -20,7 +20,7 @@ import {
 } from "lucide-react";
 import { useState, useEffect } from "react";
 import { useAuth } from "@/app/context/AuthContext";
-
+import { useRouter } from "next/navigation";
 import { apiFetch } from "@/lib/api";
 import { useTotalClasses } from "@/app/querry/useClasses";
 import SchoolCalendar from "@/components/holidays/SchoolCalendar";
@@ -28,15 +28,16 @@ import SchoolCalendar from "@/components/holidays/SchoolCalendar";
 
 export default function PrincipalDashboard() {
   const { user, loading } = useAuth();
+  const router = useRouter();
 
   const [billableStudents, setBillableStudents] = useState<number>(0);
   const [activeTeachers, setActiveTeachers] = useState<number>(0);
-  
+
 
   // Fetch dashboard stats using React Query
   const { data: totalclasscount, isLoading: statsLoading } = useTotalClasses();
 
-  
+
   useEffect(() => {
     if (loading) return;
     if (!user) return;
@@ -53,6 +54,14 @@ export default function PrincipalDashboard() {
 
     fetchBillableStudents();
   }, [loading, user]);
+
+  useEffect(() => {
+    if (!user) {
+      router.replace('/'); // redirect to home
+    }
+  }, [user, router]);
+
+  if (!user) return null;
 
   /* ===============================
      FETCH ACTIVE TEACHERS
@@ -184,12 +193,11 @@ export default function PrincipalDashboard() {
             {stats.map((stat, index) => (
               <div
                 key={stat.label}
-                className={`group bg-gradient-to-br ${
-                  index === 0 ? 'from-blue-50 to-indigo-100 dark:from-blue-900/30 dark:to-indigo-900/30 border-blue-200/50 dark:border-blue-700/50' :
-                  index === 1 ? 'from-green-50 to-emerald-100 dark:from-green-900/30 dark:to-emerald-900/30 border-green-200/50 dark:border-green-700/50' :
-                  index === 2 ? 'from-purple-50 to-violet-100 dark:from-purple-900/30 dark:to-violet-900/30 border-purple-200/50 dark:border-purple-700/50' :
-                  'from-orange-50 to-amber-100 dark:from-orange-900/30 dark:to-amber-900/30 border-orange-200/50 dark:border-orange-700/50'
-                } border rounded-2xl shadow-lg hover:shadow-xl transition-all duration-300 transform hover:-translate-y-1`}
+                className={`group bg-gradient-to-br ${index === 0 ? 'from-blue-50 to-indigo-100 dark:from-blue-900/30 dark:to-indigo-900/30 border-blue-200/50 dark:border-blue-700/50' :
+                    index === 1 ? 'from-green-50 to-emerald-100 dark:from-green-900/30 dark:to-emerald-900/30 border-green-200/50 dark:border-green-700/50' :
+                      index === 2 ? 'from-purple-50 to-violet-100 dark:from-purple-900/30 dark:to-violet-900/30 border-purple-200/50 dark:border-purple-700/50' :
+                        'from-orange-50 to-amber-100 dark:from-orange-900/30 dark:to-amber-900/30 border-orange-200/50 dark:border-orange-700/50'
+                  } border rounded-2xl shadow-lg hover:shadow-xl transition-all duration-300 transform hover:-translate-y-1`}
               >
                 <div className="p-4 sm:p-6">
                   <div className="flex items-center justify-between">
@@ -292,7 +300,7 @@ export default function PrincipalDashboard() {
 
           {/* School Calendar */}
           <div className="bg-white/80 dark:bg-gray-800/80 backdrop-blur-sm shadow-xl rounded-2xl border border-gray-200/50 dark:border-gray-700/50 p-4 sm:p-6">
-            <SchoolCalendar/>
+            <SchoolCalendar />
           </div>
         </div>
       </main>
