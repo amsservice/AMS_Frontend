@@ -1,26 +1,39 @@
+
+
+
+
 "use client";
 
 import { Button } from "@/components/ui/button";
 import { GraduationCap } from "lucide-react";
 import { motion } from "framer-motion";
 import { useEffect, useState } from "react";
-import { useRouter, useSearchParams } from "next/navigation";
+import { useRouter } from "next/navigation";
+import { toast } from "sonner";
+import dynamic from "next/dynamic";
 import { useAuth } from "@/app/context/AuthContext";
 import { getDashboardPath } from "@/lib/roleRedirect";
 import MainNavbar from "@/components/main/MainNavbar";
 import MainFooter from "@/components/main/MainFooter";
+import { registerSchoolSchema } from "@/lib/zodSchema";
+import { z } from "zod";
+
+const UpastithiPageLoader = dynamic(
+  () =>
+    import("@/components/loader/UpastithiPageLoader").then(
+      (m) => m.UpastithiPageLoader
+    ),
+  { ssr: false }
+);
 
 export default function RegisterPage() {
   const router = useRouter();
-  const searchParams = useSearchParams();
   const { registerSchool, user, loading } = useAuth();
-
-  const orderId = searchParams.get("orderId");
-  const paymentId = searchParams.get("paymentId");
 
   const [submitting, setSubmitting] = useState(false);
   const [isDark, setIsDark] = useState(false);
   const [mounted, setMounted] = useState(false);
+  const [showLoader, setShowLoader] = useState(true);
 
   const [form, setForm] = useState({
     schoolName: "",
@@ -28,94 +41,126 @@ export default function RegisterPage() {
     phone: "",
     address: "",
     pincode: "",
+    schoolType: "",
+    board: "",
+    city: "",
+    district: "",
+    state: "",
     principalName: "",
     principalEmail: "",
     principalPassword: "",
-    confirmPassword: ""
+    confirmPassword: "",
+    gender: "",
+    yearsOfExperience: ""
   });
 
-  useEffect(() => {
-    if (!orderId || !paymentId) {
-      alert("❌ Payment required before registration");
-      router.replace("/subscription/payment");
-    }
-  }, [orderId, paymentId, router]);
+  const [errors, setErrors] = useState<Record<string, string>>({});
 
+  //Redirect if already logged in
   useEffect(() => {
     if (!loading && user) {
       router.replace(getDashboardPath(user.role));
     }
   }, [user, loading, router]);
 
-  useEffect(() => {
-    setMounted(true);
-    const savedTheme = window.localStorage.getItem("vidyarthii-theme");
-    const initialIsDark = savedTheme
-      ? savedTheme === "dark"
-      : window.matchMedia("(prefers-color-scheme: dark)").matches;
+useEffect(() => {
+  const start = Date.now();
 
-    setIsDark(initialIsDark);
-    document.documentElement.classList.toggle("dark", initialIsDark);
-  }, []);
+  const savedTheme = window.localStorage.getItem("Upastithi-theme");
+  const initialIsDark = savedTheme
+    ? savedTheme === "dark"
+    : window.matchMedia("(prefers-color-scheme: dark)").matches;
+
+  setIsDark(initialIsDark);
+  document.documentElement.classList.toggle("dark", initialIsDark);
+
+  const elapsed = Date.now() - start;
+  const remaining = Math.max(500 - elapsed, 0);
+
+  const timer = setTimeout(() => {
+    setMounted(true);
+    setShowLoader(false);
+  }, remaining);
+
+  return () => clearTimeout(timer);
+}, []);
 
   const toggleTheme = () => {
     const next = !isDark;
     setIsDark(next);
     document.documentElement.classList.toggle("dark", next);
-    window.localStorage.setItem("vidyarthii-theme", next ? "dark" : "light");
+    window.localStorage.setItem("Upastithi-theme", next ? "dark" : "light");
   };
 
-  function handleChange(e: React.ChangeEvent<HTMLInputElement>) {
-    setForm({ ...form, [e.target.name]: e.target.value });
+  function handleChange(e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) {
+    const { name, value } = e.target;
+    setForm({ ...form, [name]: value });
+    
+    // Clear error for this field when user types
+    if (errors[name]) {
+      setErrors({ ...errors, [name]: "" });
+    }
   }
 
   async function handleSubmit() {
-    if (form.principalPassword !== form.confirmPassword) {
-      alert("Passwords do not match");
-      return;
-    }
-
-    if (!orderId || !paymentId) {
-      alert("Payment details missing");
-      return;
-    }
-
     try {
+      // Validate form data
+      registerSchoolSchema.parse(form);
+      setErrors({});
+
       setSubmitting(true);
 
-      await registerSchool({
+      const registerPromise = registerSchool({
         schoolName: form.schoolName,
         schoolEmail: form.schoolEmail,
         phone: form.phone,
         address: form.address,
         pincode: form.pincode,
+        schoolType: form.schoolType,
+        board: form.board,
+        city: form.city,
+        district: form.district,
+        state: form.state,
         principalName: form.principalName,
         principalEmail: form.principalEmail,
         principalPassword: form.principalPassword,
-        orderId,
-        paymentId
+        principalgender: form.gender || undefined,
+        principalExperience: form.yearsOfExperience ? parseInt(form.yearsOfExperience) : undefined,
       });
 
-      alert("🎉 School registered successfully!");
-      router.replace("/dashboard/principal");
+      toast.promise(registerPromise, {
+        loading: "Otp sending...",
+        success: "OTP sent to your email",
+        error: (err) => (err instanceof Error ? err.message : "Registration failed"),
+      });
+
+      await registerPromise;
+
+      router.replace(
+        `/auth/verify-otp?email=${encodeURIComponent(form.schoolEmail)}`
+      );
     } catch (err: any) {
-      alert(err.message || "Registration failed");
+      if (err instanceof z.ZodError) {
+        const fieldErrors: Record<string, string> = {};
+        err.issues.forEach((issue) => {
+          if (issue.path[0]) {
+            fieldErrors[issue.path[0].toString()] = issue.message;
+          }
+        });
+        setErrors(fieldErrors);
+        toast.error("Please enter valid details");
+      } else {
+        // Handle API errors (like email already registered)
+        const errorMessage = err?.response?.data?.message || err?.message || "Registration failed";
+        toast.error(errorMessage);
+      }
     } finally {
       setSubmitting(false);
     }
   }
 
-  if (!mounted) {
-    return (
-      <div className="min-h-screen bg-gradient-to-br from-gray-50 to-gray-100 dark:from-gray-900 dark:to-gray-800">
-        <div className="flex items-center justify-center min-h-screen">
-          <div className="flex flex-col items-center gap-4">
-            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600" />
-            <div className="text-sm text-gray-600 dark:text-gray-400">Loading...</div>
-          </div>
-        </div>
-      </div>
-    );
+  if (showLoader || !mounted) {
+    return <UpastithiPageLoader />;
   }
 
   return (
@@ -131,6 +176,7 @@ export default function RegisterPage() {
       <MainNavbar
         isDark={isDark}
         onToggleTheme={toggleTheme}
+        showAuthButtons={false}
         hintText="Secure registration"
         navLinks={[
           { label: "Home", href: "/" },
@@ -177,42 +223,120 @@ export default function RegisterPage() {
                       <h2 className="text-lg font-bold text-gray-900 dark:text-white mb-4">School Information</h2>
 
                       <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                        <input 
-                          name="schoolName" 
-                          onChange={handleChange} 
-                          placeholder="School Name" 
-                          className="px-4 py-3 rounded-xl bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 text-gray-900 dark:text-white placeholder:text-gray-500 dark:placeholder:text-gray-400 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all" 
-                        />
-                        <input 
-                          name="schoolEmail" 
-                          type="email" 
-                          onChange={handleChange} 
-                          placeholder="School Email" 
-                          className="px-4 py-3 rounded-xl bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 text-gray-900 dark:text-white placeholder:text-gray-500 dark:placeholder:text-gray-400 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all" 
-                        />
+                        <div>
+                          <input 
+                            name="schoolName" 
+                            onChange={handleChange} 
+                            placeholder="School Name" 
+                            className={`px-4 py-3 rounded-xl bg-white dark:bg-gray-700 border ${errors.schoolName ? 'border-red-500' : 'border-gray-300 dark:border-gray-600'} text-gray-900 dark:text-white placeholder:text-gray-500 dark:placeholder:text-gray-400 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all w-full`}
+                          />
+                          {errors.schoolName && <p className="text-red-500 text-xs mt-1">{errors.schoolName}</p>}
+                        </div>
+                        <div>
+                          <input 
+                            name="schoolEmail" 
+                            type="email" 
+                            onChange={handleChange} 
+                            placeholder="School Email" 
+                            className={`px-4 py-3 rounded-xl bg-white dark:bg-gray-700 border ${errors.schoolEmail ? 'border-red-500' : 'border-gray-300 dark:border-gray-600'} text-gray-900 dark:text-white placeholder:text-gray-500 dark:placeholder:text-gray-400 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all w-full`}
+                          />
+                          {errors.schoolEmail && <p className="text-red-500 text-xs mt-1">{errors.schoolEmail}</p>}
+                        </div>
                       </div>
 
                       <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mt-4">
-                        <input 
-                          name="phone" 
-                          onChange={handleChange} 
-                          placeholder="Phone" 
-                          className="px-4 py-3 rounded-xl bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 text-gray-900 dark:text-white placeholder:text-gray-500 dark:placeholder:text-gray-400 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all" 
-                        />
-                        <input 
-                          name="pincode" 
-                          onChange={handleChange} 
-                          placeholder="Pincode" 
-                          className="px-4 py-3 rounded-xl bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 text-gray-900 dark:text-white placeholder:text-gray-500 dark:placeholder:text-gray-400 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all" 
-                        />
+                        <div>
+                          <select
+                            name="schoolType"
+                            onChange={handleChange}
+                            value={form.schoolType}
+                            className={`px-4 py-3 rounded-xl bg-white dark:bg-gray-700 border ${errors.schoolType ? 'border-red-500' : 'border-gray-300 dark:border-gray-600'} text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all w-full`}
+                          >
+                            <option value="">Select School Type</option>
+                            <option value="Government">Government</option>
+                            <option value="Private">Private</option>
+                            <option value="Semi-Government">Semi-Government</option>
+                          </select>
+                          {errors.schoolType && <p className="text-red-500 text-xs mt-1">{errors.schoolType}</p>}
+                        </div>
+                        <div>
+                          <select
+                            name="board"
+                            onChange={handleChange}
+                            value={form.board}
+                            className={`px-4 py-3 rounded-xl bg-white dark:bg-gray-700 border ${errors.board ? 'border-red-500' : 'border-gray-300 dark:border-gray-600'} text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all w-full`}
+                          >
+                            <option value="">Select Board</option>
+                            <option value="CBSE">CBSE</option>
+                            <option value="ICSE">ICSE</option>
+                            <option value="State Board">State Board</option>
+                            <option value="IB">IB</option>
+                            <option value="Other">Other</option>
+                          </select>
+                          {errors.board && <p className="text-red-500 text-xs mt-1">{errors.board}</p>}
+                        </div>
                       </div>
 
-                      <input 
-                        name="address" 
-                        onChange={handleChange} 
-                        placeholder="Address" 
-                        className="w-full px-4 py-3 rounded-xl bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 text-gray-900 dark:text-white placeholder:text-gray-500 dark:placeholder:text-gray-400 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all mt-4" 
-                      />
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mt-4">
+                        <div>
+                          <input 
+                            name="phone" 
+                            onChange={handleChange} 
+                            placeholder="Enter 10 digit phone number" 
+                            className={`px-4 py-3 rounded-xl bg-white dark:bg-gray-700 border ${errors.phone ? 'border-red-500' : 'border-gray-300 dark:border-gray-600'} text-gray-900 dark:text-white placeholder:text-gray-500 dark:placeholder:text-gray-400 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all w-full`}
+                          />
+                          {errors.phone && <p className="text-red-500 text-xs mt-1">{errors.phone}</p>}
+                        </div>
+                        <div>
+                          <input 
+                            name="pincode" 
+                            onChange={handleChange} 
+                            placeholder="Pincode" 
+                            className={`px-4 py-3 rounded-xl bg-white dark:bg-gray-700 border ${errors.pincode ? 'border-red-500' : 'border-gray-300 dark:border-gray-600'} text-gray-900 dark:text-white placeholder:text-gray-500 dark:placeholder:text-gray-400 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all w-full`}
+                          />
+                          {errors.pincode && <p className="text-red-500 text-xs mt-1">{errors.pincode}</p>}
+                        </div>
+                      </div>
+
+                      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mt-4">
+                        <div>
+                          <input 
+                            name="city" 
+                            onChange={handleChange} 
+                            placeholder="City" 
+                            className={`px-4 py-3 rounded-xl bg-white dark:bg-gray-700 border ${errors.city ? 'border-red-500' : 'border-gray-300 dark:border-gray-600'} text-gray-900 dark:text-white placeholder:text-gray-500 dark:placeholder:text-gray-400 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all w-full`}
+                          />
+                          {errors.city && <p className="text-red-500 text-xs mt-1">{errors.city}</p>}
+                        </div>
+                        <div>
+                          <input 
+                            name="district" 
+                            onChange={handleChange} 
+                            placeholder="District" 
+                            className={`px-4 py-3 rounded-xl bg-white dark:bg-gray-700 border ${errors.district ? 'border-red-500' : 'border-gray-300 dark:border-gray-600'} text-gray-900 dark:text-white placeholder:text-gray-500 dark:placeholder:text-gray-400 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all w-full`}
+                          />
+                          {errors.district && <p className="text-red-500 text-xs mt-1">{errors.district}</p>}
+                        </div>
+                        <div>
+                          <input 
+                            name="state" 
+                            onChange={handleChange} 
+                            placeholder="State" 
+                            className={`px-4 py-3 rounded-xl bg-white dark:bg-gray-700 border ${errors.state ? 'border-red-500' : 'border-gray-300 dark:border-gray-600'} text-gray-900 dark:text-white placeholder:text-gray-500 dark:placeholder:text-gray-400 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all w-full`}
+                          />
+                          {errors.state && <p className="text-red-500 text-xs mt-1">{errors.state}</p>}
+                        </div>
+                      </div>
+
+                      <div className="mt-4">
+                        <input 
+                          name="address" 
+                          onChange={handleChange} 
+                          placeholder="Address" 
+                          className={`w-full px-4 py-3 rounded-xl bg-white dark:bg-gray-700 border ${errors.address ? 'border-red-500' : 'border-gray-300 dark:border-gray-600'} text-gray-900 dark:text-white placeholder:text-gray-500 dark:placeholder:text-gray-400 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all`}
+                        />
+                        {errors.address && <p className="text-red-500 text-xs mt-1">{errors.address}</p>}
+                      </div>
                     </div>
 
                     {/* Principal Account */}
@@ -220,36 +344,75 @@ export default function RegisterPage() {
                       <h2 className="text-lg font-bold text-gray-900 dark:text-white mb-4">Principal Account</h2>
 
                       <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                        <input 
-                          name="principalName" 
-                          onChange={handleChange} 
-                          placeholder="Full Name" 
-                          className="px-4 py-3 rounded-xl bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 text-gray-900 dark:text-white placeholder:text-gray-500 dark:placeholder:text-gray-400 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all" 
-                        />
-                        <input 
-                          name="principalEmail" 
-                          type="email" 
-                          onChange={handleChange} 
-                          placeholder="Email" 
-                          className="px-4 py-3 rounded-xl bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 text-gray-900 dark:text-white placeholder:text-gray-500 dark:placeholder:text-gray-400 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all" 
-                        />
+                        <div>
+                          <input 
+                            name="principalName" 
+                            onChange={handleChange} 
+                            placeholder="Full Name" 
+                            className={`px-4 py-3 rounded-xl bg-white dark:bg-gray-700 border ${errors.principalName ? 'border-red-500' : 'border-gray-300 dark:border-gray-600'} text-gray-900 dark:text-white placeholder:text-gray-500 dark:placeholder:text-gray-400 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all w-full`}
+                          />
+                          {errors.principalName && <p className="text-red-500 text-xs mt-1">{errors.principalName}</p>}
+                        </div>
+                        <div>
+                          <input 
+                            name="principalEmail" 
+                            type="email" 
+                            onChange={handleChange} 
+                            placeholder="Email" 
+                            className={`px-4 py-3 rounded-xl bg-white dark:bg-gray-700 border ${errors.principalEmail ? 'border-red-500' : 'border-gray-300 dark:border-gray-600'} text-gray-900 dark:text-white placeholder:text-gray-500 dark:placeholder:text-gray-400 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all w-full`}
+                          />
+                          {errors.principalEmail && <p className="text-red-500 text-xs mt-1">{errors.principalEmail}</p>}
+                        </div>
                       </div>
 
                       <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mt-4">
-                        <input 
-                          type="password" 
-                          name="principalPassword" 
-                          onChange={handleChange} 
-                          placeholder="Password" 
-                          className="px-4 py-3 rounded-xl bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 text-gray-900 dark:text-white placeholder:text-gray-500 dark:placeholder:text-gray-400 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all" 
-                        />
-                        <input 
-                          type="password" 
-                          name="confirmPassword" 
-                          onChange={handleChange} 
-                          placeholder="Confirm Password" 
-                          className="px-4 py-3 rounded-xl bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 text-gray-900 dark:text-white placeholder:text-gray-500 dark:placeholder:text-gray-400 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all" 
-                        />
+                        <div>
+                          <select
+                            name="gender"
+                            onChange={handleChange}
+                            value={form.gender}
+                            className={`px-4 py-3 rounded-xl bg-white dark:bg-gray-700 border ${errors.gender ? 'border-red-500' : 'border-gray-300 dark:border-gray-600'} text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all w-full`}
+                          >
+                            <option value="">Select Gender (Optional)</option>
+                            <option value="Male">Male</option>
+                            <option value="Female">Female</option>
+                            <option value="Other">Other</option>
+                          </select>
+                          {errors.gender && <p className="text-red-500 text-xs mt-1">{errors.gender}</p>}
+                        </div>
+                        <div>
+                          <input 
+                            name="yearsOfExperience" 
+                            type="number"
+                            onChange={handleChange} 
+                            placeholder="Years of Experience (Optional)" 
+                            className={`px-4 py-3 rounded-xl bg-white dark:bg-gray-700 border ${errors.yearsOfExperience ? 'border-red-500' : 'border-gray-300 dark:border-gray-600'} text-gray-900 dark:text-white placeholder:text-gray-500 dark:placeholder:text-gray-400 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all w-full`}
+                          />
+                          {errors.yearsOfExperience && <p className="text-red-500 text-xs mt-1">{errors.yearsOfExperience}</p>}
+                        </div>
+                      </div>
+
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mt-4">
+                        <div>
+                          <input 
+                            type="password" 
+                            name="principalPassword" 
+                            onChange={handleChange} 
+                            placeholder="Password" 
+                            className={`px-4 py-3 rounded-xl bg-white dark:bg-gray-700 border ${errors.principalPassword ? 'border-red-500' : 'border-gray-300 dark:border-gray-600'} text-gray-900 dark:text-white placeholder:text-gray-500 dark:placeholder:text-gray-400 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all w-full`}
+                          />
+                          {errors.principalPassword && <p className="text-red-500 text-xs mt-1">{errors.principalPassword}</p>}
+                        </div>
+                        <div>
+                          <input 
+                            type="password" 
+                            name="confirmPassword" 
+                            onChange={handleChange} 
+                            placeholder="Confirm Password" 
+                            className={`px-4 py-3 rounded-xl bg-white dark:bg-gray-700 border ${errors.confirmPassword ? 'border-red-500' : 'border-gray-300 dark:border-gray-600'} text-gray-900 dark:text-white placeholder:text-gray-500 dark:placeholder:text-gray-400 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all w-full`}
+                          />
+                          {errors.confirmPassword && <p className="text-red-500 text-xs mt-1">{errors.confirmPassword}</p>}
+                        </div>
                       </div>
                     </div>
 
@@ -287,7 +450,7 @@ export default function RegisterPage() {
               <div className="my-6 h-px bg-gray-200 dark:bg-gray-700" />
 
               <div className="text-xs text-gray-600 dark:text-gray-400">
-                Having trouble? Contact <span className="font-semibold text-gray-900 dark:text-white">support@vidyarthii.com</span>
+                Having trouble? Contact <span className="font-semibold text-gray-900 dark:text-white">support@Upastithi.com</span>
               </div>
             </div>
           </div>

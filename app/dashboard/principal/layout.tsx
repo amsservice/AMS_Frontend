@@ -21,7 +21,7 @@ export default function PrincipalLayout({
   /* 🔐 Role Guard */
   useEffect(() => {
     if (!loading && user?.role !== "principal") {
-      router.replace("/auth/login");
+      router.replace("/auth/school-code");
     }
   }, [loading, user, router]);
 

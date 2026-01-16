@@ -41,7 +41,7 @@ export default function DashboardSidebar({ isOpen, onClose }: Props) {
         <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-blue-600 to-indigo-600 flex items-center justify-center shadow-lg">
           <GraduationCap className="w-6 h-6 text-white" />
         </div>
-        <span className="text-xl font-bold text-white">Vidyarthii</span>
+        <span className="text-xl font-bold text-white">Upastithi</span>
       </div>
 
       {/* School Info Card */}
@@ -91,7 +91,7 @@ export default function DashboardSidebar({ isOpen, onClose }: Props) {
         <button
           onClick={() => {
             logout();
-            router.replace("/auth/login");
+            router.replace("/auth/school-code");
           }}
           className="w-full flex items-center justify-center gap-2 px-4 py-3 rounded-xl text-gray-300 hover:text-white hover:bg-white/10 transition-all duration-200 transform hover:scale-[1.02]"
         >

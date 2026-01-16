@@ -55,7 +55,7 @@ export default function PricingCards({ isDark }: PricingCardsProps) {
               </p>
             </div>
 
-            <Link href="/subscription/payment?plan=STARTER" className="block">
+            <Link href="/auth/register" className="block">
               <button className="w-full py-4 rounded-xl font-bold text-base transition-all duration-300 transform hover:scale-[1.05] active:scale-[0.98] shadow-lg bg-gradient-to-r from-purple-600 via-violet-600 to-indigo-600 text-white hover:shadow-purple-500/50 hover:shadow-2xl">
                 Start Trial for ₹1
               </button>
@@ -123,7 +123,7 @@ export default function PricingCards({ isDark }: PricingCardsProps) {
                   <p className="text-xs mt-1 text-gray-500 dark:text-gray-400">Only ₹{yearlyFor500.toLocaleString()}/year</p>
                 </div>
 
-                <Link href={`/subscription/payment?plan=${plan.id}`} className="block">
+                <Link href={`/auth/register`} className="block">
                   <button
                     className={`w-full py-4 rounded-xl font-bold text-base transition-all duration-300 transform hover:scale-[1.05] active:scale-[0.98] shadow-lg ${
                       plan.highlighted

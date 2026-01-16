@@ -32,7 +32,7 @@ interface SchoolFormData {
   state: string;
   pincode: string;
   board: string;
-  code: string;
+  code: number;
   established: string;
 }
 
@@ -70,7 +70,7 @@ export default function PrincipalProfilePage() {
     state: '',
     pincode: '',
     board: '',
-    code: '',
+    code: 0,
     established: ''
   });
 
@@ -113,8 +113,8 @@ export default function PrincipalProfilePage() {
         city: city,
         state: state,
         pincode: school.pincode || '',
-        board: 'CBSE',
-        code: school.id || '',
+        board: school.board,
+        code: school.schoolCode,
         established: school.createdAt ? new Date(school.createdAt).getFullYear().toString() : ''
       };
       setSchoolData(newSchoolData);

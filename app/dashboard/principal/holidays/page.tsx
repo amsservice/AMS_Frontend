@@ -1,10 +1,15 @@
 'use client';
 
 import { useState } from 'react';
-import { Calendar, Pencil } from 'lucide-react';
-import { useHolidays } from '@/app/querry/useHolidays';
+import { Calendar, Pencil, Trash2 } from 'lucide-react';
+
+import { Toaster } from '@/components/ui/sonner';
+
+import { useHolidays, useDeleteHoliday } from '@/app/querry/useHolidays'; // PGhosal 13th
 import AddHolidayForm from '@/components/holidays/AddHolidayForm';
 import EditHolidayModal from '@/components/holidays/EditHolidaModal';
+
+import ConfirmDialog from '@/components/holidays/ConfirmDialog'; // PGhosal 13th
 import { motion, AnimatePresence } from 'framer-motion';
 import {
   CATEGORY_COLORS,
@@ -14,7 +19,11 @@ import {
 
 export default function HolidayPage() {
   const { data: holidays = [] } = useHolidays();
+  // PGhosal 13th
+  const { mutate: deleteHoliday } = useDeleteHoliday();
+  
   const [editing, setEditing] = useState<any>(null);
+  const [deleting, setDeleting] = useState<any>(null); // PGhosal 13th
   const [filter, setFilter] = useState<'ALL' | HolidayCategory>('ALL');
 
   const filtered =
@@ -22,9 +31,16 @@ export default function HolidayPage() {
       ? holidays
       : holidays.filter((h) => h.category === filter);
 
+  // PGhosal 13th
+  const handleConfirmDelete = () => {
+    if (deleting) {
+      deleteHoliday(deleting._id);
+      setDeleting(null);
+    }
+  };
+
   return (
     <div className="min-h-screen bg-gradient-to-br from-gray-50 to-gray-100 dark:from-gray-900 dark:to-gray-800">
-      {/* Modern Header with Gradient */}
       <header className="bg-gradient-to-r from-blue-600 via-purple-600 to-indigo-700 dark:from-blue-800 dark:via-purple-800 dark:to-indigo-900 shadow-xl">
         <div className="max-w-7xl mx-auto py-6 sm:py-8 px-4 sm:px-6 lg:px-8">
           <div className="flex-1">
@@ -40,12 +56,12 @@ export default function HolidayPage() {
 
       <main className="max-w-7xl mx-auto py-4 sm:py-6 px-4 sm:px-6 lg:px-8">
         <div className="space-y-6 sm:space-y-8">
-          {/* ADD FORM */}
           <AddHolidayForm />
 
           {/* FILTER */}
           <div className="bg-white/80 dark:bg-gray-800/80 backdrop-blur-sm shadow-xl rounded-2xl border border-gray-200/50 dark:border-gray-700/50 p-4 sm:p-6">
-            <div className="flex items-center gap-3 mb-4">
+             {/* ... existing filter code ... */}
+             <div className="flex items-center gap-3 mb-4">
               <div className="p-2 bg-gradient-to-br from-purple-600 to-violet-600 rounded-xl shadow-lg">
                 <Calendar className="h-5 w-5 sm:h-6 sm:w-6 text-white" />
               </div>
@@ -116,6 +132,14 @@ export default function HolidayPage() {
                     >
                       <Pencil className="w-4 h-4 text-gray-900 dark:text-white" />
                     </button>
+                    
+                    {/* Added Trash button */}
+                    <button
+                      onClick={() => setDeleting(h)}
+                      className="p-2 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-xl transition-all duration-200 transform hover:scale-110 shadow-sm"
+                    >
+                      <Trash2 className="w-4 h-4 text-gray-900 dark:text-white" />
+                    </button>
                   </div>
 
                   {h.description && (
@@ -143,6 +167,18 @@ export default function HolidayPage() {
           />
         )}
       </AnimatePresence>
+
+      {/* DELETE CONFIGURATION */}
+      {deleting && (
+        <ConfirmDialog
+          title="Delete Holiday"
+          message={`Are you sure you want to delete "${deleting.name}"? This action cannot be undone.`}
+          onConfirm={handleConfirmDelete}
+          onCancel={() => setDeleting(null)}
+        />
+      )}
     </div>
   );
 }
+
+

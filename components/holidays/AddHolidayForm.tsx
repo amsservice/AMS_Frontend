@@ -3,6 +3,8 @@
 import { useState } from 'react';
 import { Calendar, Pencil, Plus, X } from 'lucide-react';
 import { useHolidays, useCreateHoliday, useUpdateHoliday, useDeleteHoliday, Holiday } from '@/app/querry/useHolidays';
+import { useSessions } from '@/app/querry/useSessions';
+import { toast } from 'sonner';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -16,7 +18,9 @@ import { motion, AnimatePresence } from 'framer-motion';
 /* ================= ADD HOLIDAY FORM ================= */
 interface AddHolidayFormState {
   name: string;
-  date: string;
+  startDate: string;
+  endDate?: string;
+  mode: 'single' | 'range';
   category: HolidayCategory;
   description?: string;
 }
@@ -24,19 +28,91 @@ interface AddHolidayFormState {
 export default function AddHolidayForm() {
   const [form, setForm] = useState<AddHolidayFormState>({
     name: '',
-    date: '',
+    startDate: '',
+    endDate: '',
+    mode: 'single',
     category: 'SCHOOL',
     description: ''
   });
 
+  const { data: holidays = [] } = useHolidays();
+  const { data: sessions = [] } = useSessions();
   const { mutate: createHoliday, isPending } = useCreateHoliday();
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    createHoliday(form);
+    const hasActive = sessions.some((s: any) => s.isActive);
+    if (!hasActive) {
+      toast.error('Make a new session first');
+      return;
+    }
+    // Single mode
+    if (form.mode === 'single') {
+      if (!form.startDate) {
+        toast.error('Please select a date for the holiday');
+        return;
+      }
+
+      const formDate = new Date(form.startDate).toDateString();
+      const exists = holidays.some((h: any) => new Date(h.date).toDateString() === formDate);
+      if (exists) {
+        toast.error('A holiday already exists on this date');
+        return;
+      }
+
+      createHoliday({
+        name: form.name,
+        date: form.startDate,
+        category: form.category,
+        description: form.description
+      } as any);
+    }
+
+    // Range mode -> create a holiday for each date in range
+    if (form.mode === 'range') {
+      if (!form.startDate || !form.endDate) {
+        toast.error('Please select both start and end dates for the range');
+        return;
+      }
+
+      const start = new Date(form.startDate);
+      const end = new Date(form.endDate!);
+      if (start > end) {
+        toast.error('Start date must be before or equal to end date');
+        return;
+      }
+
+      // collect dates in range and check conflicts first
+      const dates: string[] = [];
+      for (let d = new Date(start); d <= end; d.setDate(d.getDate() + 1)) {
+        dates.push(new Date(d).toISOString().split('T')[0]);
+      }
+
+      const conflict = dates.find((dt) =>
+        holidays.some((h: any) => new Date(h.date).toDateString() === new Date(dt).toDateString())
+      );
+      if (conflict) {
+        toast.error(`A holiday already exists on ${new Date(conflict).toDateString()}`);
+        return;
+      }
+
+      // no conflicts: create for each date
+      dates.forEach((dt) =>
+        createHoliday({
+          name: form.name,
+          date: dt,
+          category: form.category,
+          description: form.description
+        } as any)
+      );
+    }
+
+    // reset form
     setForm({
       name: '',
-      date: '',
+      startDate: '',
+      endDate: '',
+      mode: 'single',
       category: 'SCHOOL',
       description: ''
     });
@@ -68,21 +144,61 @@ export default function AddHolidayForm() {
             onChange={(e) => setForm({ ...form, name: e.target.value })}
             required
             placeholder="Holiday name"
-            className="bg-white dark:bg-gray-700 border-gray-300 dark:border-gray-600 text-gray-900 dark:text-white rounded-xl"
+            className="w-full bg-white dark:bg-gray-700 border-gray-300 dark:border-gray-600 text-gray-900 dark:text-white rounded-xl"
           />
         </div>
-
         <div className="space-y-2">
           <Label className="text-xs sm:text-sm font-medium text-gray-700 dark:text-gray-300">
             Date
           </Label>
-          <Input
-            type="date"
-            value={form.date}
-            onChange={(e) => setForm({ ...form, date: e.target.value })}
-            required
-            className="bg-white dark:bg-gray-700 border-gray-300 dark:border-gray-600 text-gray-900 dark:text-white rounded-xl"
-          />
+
+          {form.mode === 'single' ? (
+            <Input
+              type="date"
+              value={form.startDate}
+              onChange={(e) => setForm({ ...form, startDate: e.target.value })}
+              required
+              className="w-full bg-white dark:bg-gray-700 border-gray-300 dark:border-gray-600 text-gray-900 dark:text-white rounded-xl"
+            />
+          ) : (
+            <div className="flex gap-2">
+              <Input
+                type="date"
+                value={form.startDate}
+                onChange={(e) => setForm({ ...form, startDate: e.target.value })}
+                required
+                className="w-full bg-white dark:bg-gray-700 border-gray-300 dark:border-gray-600 text-gray-900 dark:text-white rounded-xl"
+              />
+              <Input
+                type="date"
+                value={form.endDate}
+                onChange={(e) => setForm({ ...form, endDate: e.target.value })}
+                required
+                className="w-full bg-white dark:bg-gray-700 border-gray-300 dark:border-gray-600 text-gray-900 dark:text-white rounded-xl"
+              />
+            </div>
+          )}
+
+          <div className="flex items-center gap-3 mt-2">
+            <label className="inline-flex items-center gap-2">
+              <input
+                type="radio"
+                name="mode"
+                checked={form.mode === 'single'}
+                onChange={() => setForm({ ...form, mode: 'single' })}
+              />
+              <span className="text-sm">Single</span>
+            </label>
+            <label className="inline-flex items-center gap-2">
+              <input
+                type="radio"
+                name="mode"
+                checked={form.mode === 'range'}
+                onChange={() => setForm({ ...form, mode: 'range' })}
+              />
+              <span className="text-sm">Range</span>
+            </label>
+          </div>
         </div>
 
         <div className="space-y-2">
@@ -90,7 +206,7 @@ export default function AddHolidayForm() {
             Category
           </Label>
           <select
-            className="w-full bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 p-3 rounded-xl text-gray-900 dark:text-white focus:ring-2 focus:ring-teal-500 focus:border-teal-500"
+            className="w-full bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 p-1.5 rounded-xl text-gray-900 dark:text-white focus:ring-2 focus:ring-teal-500 focus:border-teal-500"
             value={form.category}
             onChange={(e) =>
               setForm({
@@ -120,7 +236,7 @@ export default function AddHolidayForm() {
               })
             }
             placeholder="Optional description"
-            className="bg-white dark:bg-gray-700 border-gray-300 dark:border-gray-600 text-gray-900 dark:text-white rounded-xl"
+            className="w-full bg-white dark:bg-gray-700 border-gray-300 dark:border-gray-600 text-gray-900 dark:text-white rounded-xl"
           />
         </div>
       </div>

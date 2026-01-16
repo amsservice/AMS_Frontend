@@ -21,7 +21,7 @@ export default function StudentLayout({
   /* 🔐 Role Guard */
   useEffect(() => {
     if (!loading && user?.role !== "student") {
-      router.replace("/auth/login");
+      router.replace("/auth/school-code");
     }
   }, [loading, user, router]);
 

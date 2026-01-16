@@ -3,43 +3,55 @@
 import React, { useEffect, useState } from "react";
 import Link from "next/link";
 import { BarChart3, Calendar, Shield, Sparkles, Users, Zap, CheckCircle, TrendingUp, Award, Target } from "lucide-react";
+
 import MainNavbar from "@/components/main/MainNavbar";
 import MainFooter from "@/components/main/MainFooter";
 import PricingCards from "@/components/pricing/PricingCards";
+import dynamic from "next/dynamic";
+const UpastithiPageLoader = dynamic(
+  () =>
+    import("@/components/loader/UpastithiPageLoader").then(
+      (m) => m.UpastithiPageLoader
+    ),
+  { ssr: false }
+);
 
 const AttendEaseLanding = () => {
   const [isDark, setIsDark] = useState(false);
   const [mounted, setMounted] = useState(false);
+  const [showLoader, setShowLoader] = useState(true);
+
 
   useEffect(() => {
-    setMounted(true);
-    const savedTheme = window.localStorage.getItem("vidyarthii-theme");
+    const start = Date.now();
+    const savedTheme = window.localStorage.getItem("Upastithi-theme");
     const initialIsDark = savedTheme
       ? savedTheme === "dark"
       : window.matchMedia("(prefers-color-scheme: dark)").matches;
 
     setIsDark(initialIsDark);
     document.documentElement.classList.toggle("dark", initialIsDark);
+
+      const elapsed = Date.now() - start;
+  const remaining = Math.max(1500 - elapsed, 0);
+
+  const timer = setTimeout(() => {
+    setMounted(true);
+    setShowLoader(false);
+  }, remaining);
+  
+  return () => clearTimeout(timer);
   }, []);
 
   const toggleTheme = () => {
     const newTheme = !isDark;
     setIsDark(newTheme);
-    window.localStorage.setItem("vidyarthii-theme", newTheme ? "dark" : "light");
+    window.localStorage.setItem("Upastithi-theme", newTheme ? "dark" : "light");
     document.documentElement.classList.toggle("dark", newTheme);
   };
 
-  if (!mounted) {
-    return (
-      <div className="min-h-screen bg-gradient-to-br from-purple-50 via-white to-blue-50 dark:from-purple-900 dark:via-gray-900 dark:to-black">
-        <div className="flex items-center justify-center min-h-screen">
-          <div className="flex flex-col items-center gap-4">
-            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-purple-600 dark:border-purple-500" />
-            <div className="text-sm text-gray-600 dark:text-gray-400">Loading...</div>
-          </div>
-        </div>
-      </div>
-    );
+  if (showLoader) {
+    return <UpastithiPageLoader />;
   }
 
   const features = [
@@ -62,7 +74,7 @@ const AttendEaseLanding = () => {
 
   const testimonials = [
     {
-      quote: "Vidyarthii has transformed how we manage attendance. What used to take hours now takes minutes. The real-time analytics help us identify students who need support immediately.",
+      quote: "Upastithi has transformed how we manage attendance. What used to take hours now takes minutes. The real-time analytics help us identify students who need support immediately.",
       author: "Dr. Priya Sharma",
       role: "Principal, Delhi Public School",
       rating: 5,
@@ -76,7 +88,7 @@ const AttendEaseLanding = () => {
       highlighted: true,
     },
     {
-      quote: "We manage 5 branches with over 3,000 students. Vidyarthii's multi-school support and centralized dashboard give us complete visibility. Best investment we've made.",
+      quote: "We manage 5 branches with over 3,000 students. Upastithi's multi-school support and centralized dashboard give us complete visibility. Best investment we've made.",
       author: "Anita Desai",
       role: "Director, Greenwood High",
       rating: 5,
@@ -144,7 +156,7 @@ const AttendEaseLanding = () => {
             </p>
 
             <div className="flex flex-col sm:flex-row gap-4 justify-center mb-16">
-              <Link href="/subscription/payment?plan=1Y">
+              <Link href="/auth/register">
                 <button className="group px-8 py-4 bg-gradient-to-r from-purple-600 to-blue-600 text-white rounded-full font-semibold text-lg shadow-2xl shadow-purple-500/30 dark:shadow-purple-500/50 hover:shadow-purple-500/50 dark:hover:shadow-purple-500/70 transition-all duration-300 transform hover:scale-105">
                   Get Started
                   <span className="ml-2 transition-transform group-hover:translate-x-1 inline-block">→</span>
@@ -228,7 +240,7 @@ const AttendEaseLanding = () => {
                 Transform your educational institution with powerful tools designed for modern school administration. Track attendance, manage students, and generate insights effortlessly.
               </p>
               <div className="flex gap-4">
-                <Link href="/subscription/payment?plan=1Y">
+                <Link href="/auth/register">
                   <button className="px-6 py-3 bg-gradient-to-r from-purple-600 to-blue-600 text-white rounded-full font-semibold shadow-lg hover:shadow-xl transition-all">
                     Learn More
                   </button>
@@ -386,7 +398,7 @@ const AttendEaseLanding = () => {
               <p className="text-lg text-gray-600 dark:text-gray-300 mb-8">
                 Comprehensive tools to track student progress, manage attendance, and generate actionable insights. Everything you need in one powerful platform.
               </p>
-              <Link href="/subscription/payment?plan=1Y">
+              <Link href="/auth/register">
                 <button className="px-6 py-3 bg-gradient-to-r from-purple-600 to-blue-600 text-white rounded-full font-semibold shadow-lg hover:shadow-xl transition-all">
                   Explore More
                 </button>
@@ -422,7 +434,7 @@ const AttendEaseLanding = () => {
               </span>
             </h2>
             <p className="text-lg text-gray-600 dark:text-gray-300">
-              Hear from educators who transformed their institutions with Vidyarthii
+              Hear from educators who transformed their institutions with Upastithi
             </p>
           </div>
 
@@ -512,7 +524,7 @@ const AttendEaseLanding = () => {
               Frequently Asked Questions
             </h2>
             <p className="text-lg text-gray-600 dark:text-gray-300">
-              Everything you need to know about Vidyarthii
+              Everything you need to know about Upastithi
             </p>
           </div>
 
@@ -554,11 +566,11 @@ const AttendEaseLanding = () => {
                 It's easy to get started
               </h2>
               <p className="text-lg text-gray-700 dark:text-gray-300 mb-8 max-w-2xl mx-auto">
-                Join hundreds of schools using Vidyarthii to transform their operations
+                Join hundreds of schools using Upastithi to transform their operations
               </p>
               
               <div className="flex flex-col sm:flex-row gap-4 justify-center">
-                <Link href="/subscription/payment?plan=1Y">
+                <Link href="/auth/register">
                   <button className="px-8 py-4 bg-gradient-to-r from-purple-600 to-blue-600 text-white rounded-full font-semibold shadow-2xl shadow-purple-500/30 dark:shadow-purple-500/50 hover:shadow-purple-500/50 dark:hover:shadow-purple-500/70 transition-all duration-300 transform hover:scale-105">
                     Create Account
                   </button>
