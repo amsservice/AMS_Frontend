@@ -27,7 +27,7 @@ const UpastithiPageLoader = dynamic(
 
 export default function RegisterPage() {
   const router = useRouter();
-  const { registerSchool, user, loading } = useAuth();
+  const { user, loading } = useAuth();
 
   const [submitting, setSubmitting] = useState(false);
   const [isDark, setIsDark] = useState(false);
@@ -102,6 +102,7 @@ export default function RegisterPage() {
   }
 
   async function handleSubmit() {
+    let toastId: string | number | undefined;
     try {
       // Validate form data
       registerSchoolSchema.parse(form);
@@ -109,9 +110,7 @@ export default function RegisterPage() {
 
       setSubmitting(true);
 
-      const toastId = toast.loading("Otp sending...");
-
-      await registerSchool({
+      const payload = {
         schoolName: form.schoolName,
         schoolEmail: form.schoolEmail,
         phone: form.phone,
@@ -125,14 +124,74 @@ export default function RegisterPage() {
         principalName: form.principalName,
         principalEmail: form.principalEmail,
         principalPassword: form.principalPassword,
-        principalgender: form.gender || undefined,
+        principalGender: form.gender || undefined,
         principalExperience: form.yearsOfExperience
           ? parseInt(form.yearsOfExperience)
           : undefined,
-      });
+      };
 
-      toast.dismiss(toastId);
-      toast.success("OTP sent to your email");
+      toastId = toast.loading("Otp sending...");
+      const postRes = await fetch(
+        `${process.env.NEXT_PUBLIC_API_URL}/api/auth/register-school`,
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify(payload),
+        }
+      );
+      const postData = await postRes.json().catch(() => ({}));
+
+      // New expected behavior: backend returns 200 even for "already registered"
+      if ((postData as any)?.statusCode === 409) {
+        const school = (postData as any)?.data?.school;
+        const paymentId = school?.paymentId ?? null;
+
+        if (paymentId) {
+          if (toastId !== undefined) toast.dismiss(toastId);
+          toast.error("Email already registered");
+          return;
+        }
+
+        // Unpaid: update details then go to payment
+        const putRes = await fetch(
+          `${process.env.NEXT_PUBLIC_API_URL}/api/auth/register-school`,
+          {
+            method: "PUT",
+            headers: {
+              "Content-Type": "application/json",
+            },
+            body: JSON.stringify(payload),
+          }
+        );
+        const putData = await putRes.json().catch(() => ({}));
+
+        if ((putData as any)?.statusCode === 409) {
+          if (toastId !== undefined) toast.dismiss(toastId);
+          toast.error("Email already registered");
+          return;
+        }
+
+        if (!putRes.ok) {
+          throw new Error(
+            (putData as any)?.message || "Update failed"
+          );
+        }
+
+        if (toastId !== undefined) toast.dismiss(toastId);
+        router.replace(
+          `/subscription/payment?email=${encodeURIComponent(form.schoolEmail)}`
+        );
+        return;
+      }
+
+      if (!postRes.ok) {
+        throw new Error(
+          (postData as any)?.message || "Registration failed"
+        );
+      }
+      if (toastId !== undefined) toast.dismiss(toastId);
 
       router.replace(
         `/auth/verify-otp?email=${encodeURIComponent(form.schoolEmail)}`
@@ -146,42 +205,13 @@ export default function RegisterPage() {
           }
         });
         setErrors(fieldErrors);
+        if (toastId !== undefined) toast.dismiss(toastId);
         toast.error("Please enter valid details");
       } else if (err instanceof ApiError) {
-        const data = err.data;
-        const lowerMessage = (err.message || "").toLowerCase();
-
-        const paymentId =
-          typeof data === "object" && data !== null
-            ? (data as any).paymentId ||
-              (data as any).school?.paymentId ||
-              (data as any).school?.subscription?.paymentId ||
-              (data as any).subscription?.paymentId
-            : undefined;
-
-        const isAlreadyRegistered =
-          lowerMessage.includes("already") ||
-          lowerMessage.includes("exists") ||
-          lowerMessage.includes("registered");
-
-        if (isAlreadyRegistered) {
-          if (!paymentId) {
-            toast.dismiss();
-            router.replace(
-              `/subscription/payment?email=${encodeURIComponent(form.schoolEmail)}`
-            );
-            return;
-          }
-
-          toast.dismiss();
-          toast.error("Email already registered");
-          return;
-        }
-
-        toast.dismiss();
+        if (toastId !== undefined) toast.dismiss(toastId);
         toast.error(err.message || "Registration failed");
       } else {
-        toast.dismiss();
+        if (toastId !== undefined) toast.dismiss(toastId);
         toast.error(err?.message || "Registration failed");
       }
     } finally {
