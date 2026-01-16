@@ -1,7 +1,5 @@
 
 
-
-
 "use client";
 
 import { Button } from "@/components/ui/button";
@@ -17,6 +15,7 @@ import MainNavbar from "@/components/main/MainNavbar";
 import MainFooter from "@/components/main/MainFooter";
 import { registerSchoolSchema } from "@/lib/zodSchema";
 import { z } from "zod";
+import { ApiError } from "@/lib/api";
 
 const UpastithiPageLoader = dynamic(
   () =>
@@ -63,27 +62,27 @@ export default function RegisterPage() {
     }
   }, [user, loading, router]);
 
-useEffect(() => {
-  const start = Date.now();
+  useEffect(() => {
+    const start = Date.now();
 
-  const savedTheme = window.localStorage.getItem("Upastithi-theme");
-  const initialIsDark = savedTheme
-    ? savedTheme === "dark"
-    : window.matchMedia("(prefers-color-scheme: dark)").matches;
+    const savedTheme = window.localStorage.getItem("Upastithi-theme");
+    const initialIsDark = savedTheme
+      ? savedTheme === "dark"
+      : window.matchMedia("(prefers-color-scheme: dark)").matches;
 
-  setIsDark(initialIsDark);
-  document.documentElement.classList.toggle("dark", initialIsDark);
+    setIsDark(initialIsDark);
+    document.documentElement.classList.toggle("dark", initialIsDark);
 
-  const elapsed = Date.now() - start;
-  const remaining = Math.max(500 - elapsed, 0);
+    const elapsed = Date.now() - start;
+    const remaining = Math.max(500 - elapsed, 0);
 
-  const timer = setTimeout(() => {
-    setMounted(true);
-    setShowLoader(false);
-  }, remaining);
+    const timer = setTimeout(() => {
+      setMounted(true);
+      setShowLoader(false);
+    }, remaining);
 
-  return () => clearTimeout(timer);
-}, []);
+    return () => clearTimeout(timer);
+  }, []);
 
   const toggleTheme = () => {
     const next = !isDark;
@@ -110,7 +109,9 @@ useEffect(() => {
 
       setSubmitting(true);
 
-      const registerPromise = registerSchool({
+      const toastId = toast.loading("Otp sending...");
+
+      await registerSchool({
         schoolName: form.schoolName,
         schoolEmail: form.schoolEmail,
         phone: form.phone,
@@ -125,16 +126,13 @@ useEffect(() => {
         principalEmail: form.principalEmail,
         principalPassword: form.principalPassword,
         principalgender: form.gender || undefined,
-        principalExperience: form.yearsOfExperience ? parseInt(form.yearsOfExperience) : undefined,
+        principalExperience: form.yearsOfExperience
+          ? parseInt(form.yearsOfExperience)
+          : undefined,
       });
 
-      toast.promise(registerPromise, {
-        loading: "Otp sending...",
-        success: "OTP sent to your email",
-        error: (err) => (err instanceof Error ? err.message : "Registration failed"),
-      });
-
-      await registerPromise;
+      toast.dismiss(toastId);
+      toast.success("OTP sent to your email");
 
       router.replace(
         `/auth/verify-otp?email=${encodeURIComponent(form.schoolEmail)}`
@@ -149,10 +147,42 @@ useEffect(() => {
         });
         setErrors(fieldErrors);
         toast.error("Please enter valid details");
+      } else if (err instanceof ApiError) {
+        const data = err.data;
+        const lowerMessage = (err.message || "").toLowerCase();
+
+        const paymentId =
+          typeof data === "object" && data !== null
+            ? (data as any).paymentId ||
+              (data as any).school?.paymentId ||
+              (data as any).school?.subscription?.paymentId ||
+              (data as any).subscription?.paymentId
+            : undefined;
+
+        const isAlreadyRegistered =
+          lowerMessage.includes("already") ||
+          lowerMessage.includes("exists") ||
+          lowerMessage.includes("registered");
+
+        if (isAlreadyRegistered) {
+          if (!paymentId) {
+            toast.dismiss();
+            router.replace(
+              `/subscription/payment?email=${encodeURIComponent(form.schoolEmail)}`
+            );
+            return;
+          }
+
+          toast.dismiss();
+          toast.error("Email already registered");
+          return;
+        }
+
+        toast.dismiss();
+        toast.error(err.message || "Registration failed");
       } else {
-        // Handle API errors (like email already registered)
-        const errorMessage = err?.response?.data?.message || err?.message || "Registration failed";
-        toast.error(errorMessage);
+        toast.dismiss();
+        toast.error(err?.message || "Registration failed");
       }
     } finally {
       setSubmitting(false);
