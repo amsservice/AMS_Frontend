@@ -14,12 +14,26 @@ export interface School {
   phone?: string;
   address?: string;
   pincode?: string;
+  /* ===============================
+     SCHOOL DETAILS (NEW)
+  =============================== */
+  
+schoolCode:number;
+  schoolType: 'Government' | 'Private' | 'Semi-Private';
+  board: string;
+  city: string;
+  district: string;
+  state: string;
+
+  
 
   principal: {
     id: string;
     name: string;
     email: string;
     phone?: string;
+    gender?: 'Male' | 'Female' | 'Other';
+    yearsOfExperience?: number;
   } | null;
 
   subscription: {

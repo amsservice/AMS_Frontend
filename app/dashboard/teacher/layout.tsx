@@ -21,7 +21,7 @@ export default function TeacherLayout({
   /* 🔐 Role Guard */
   useEffect(() => {
     if (!loading && user?.role !== "teacher") {
-      router.replace("/auth/login");
+      router.replace("/auth/school-code");
     }
   }, [loading, user, router]);
 

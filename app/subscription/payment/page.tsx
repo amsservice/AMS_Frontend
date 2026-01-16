@@ -6,6 +6,9 @@ import { useRouter, useSearchParams } from "next/navigation";
 import MainNavbar from "@/components/main/MainNavbar";
 import MainFooter from "@/components/main/MainFooter";
 import { PRICING_PLANS } from "@/lib/pricing";
+import { useAuth } from "@/app/context/AuthContext";
+// import { verify } from "crypto";
+// import { AuthProvider } from "@/context/AuthProvider";
 
 type PlanId = "1Y" | "2Y" | "3Y";
 
@@ -36,6 +39,7 @@ type VerifyPaymentResponse = {
   success: boolean;
   orderId: string;
   paymentId: string;
+  accessToken: string;
 };
 
 type RazorpayHandlerResponse = {
@@ -70,10 +74,12 @@ declare global {
 export default function PaymentPage() {
   const router = useRouter();
   const searchParams = useSearchParams();
+  const { refetchUser } = useAuth();
 
   const API_URL = process.env.NEXT_PUBLIC_API_URL!;
   const RAZORPAY_KEY = process.env.NEXT_PUBLIC_RAZORPAY_KEY!;
 
+  const schoolEmail = searchParams.get("email");
   const [planId, setPlanId] = useState<PlanId>("1Y");
   const [enteredStudents, setEnteredStudents] = useState<number | "">("");
   const [futureStudents, setFutureStudents] = useState<number | "">("");
@@ -87,6 +93,14 @@ export default function PaymentPage() {
   const [futureError, setFutureError] = useState<string | null>(null);
   const [shake, setShake] = useState(false);
 
+  /* 🔐 BLOCK ACCESS WITHOUT OTP */
+  useEffect(() => {
+    if (!schoolEmail) {
+      alert("Please verify email before payment");
+      router.replace("/auth/register");
+    }
+  }, [schoolEmail, router]);
+
   useEffect(() => {
     setPrice(null);
   }, [planId, enteredStudents, futureStudents, couponCode]);
@@ -97,7 +111,7 @@ export default function PaymentPage() {
   const billableStudentsUI =
     price?.billableStudents ??
     (enteredStudents === "" ? 0 : enteredStudents) +
-      (futureStudents === "" ? 0 : futureStudents);
+    (futureStudents === "" ? 0 : futureStudents);
 
   const uiRate = frontendPlan?.pricePerStudentPerMonth ?? 0;
   const uiMonths = frontendPlan?.durationMonths ?? 0;
@@ -110,8 +124,8 @@ export default function PaymentPage() {
   const hasBackendMismatch =
     price
       ? price.pricePerStudentPerMonth !== uiRate ||
-        price.totalMonths !== uiMonths ||
-        Math.abs(price.paidAmount - uiPayable) > 0.5
+      price.totalMonths !== uiMonths ||
+      Math.abs(price.paidAmount - uiPayable) > 0.5
       : false;
 
   useEffect(() => {
@@ -123,7 +137,7 @@ export default function PaymentPage() {
 
   useEffect(() => {
     setMounted(true);
-    const savedTheme = window.localStorage.getItem("vidyarthii-theme");
+    const savedTheme = window.localStorage.getItem("Upastithi-theme");
     const initialIsDark = savedTheme
       ? savedTheme === "dark"
       : window.matchMedia("(prefers-color-scheme: dark)").matches;
@@ -168,7 +182,7 @@ export default function PaymentPage() {
     const next = !isDark;
     setIsDark(next);
     document.documentElement.classList.toggle("dark", next);
-    window.localStorage.setItem("vidyarthii-theme", next ? "dark" : "light");
+    window.localStorage.setItem("Upastithi-theme", next ? "dark" : "light");
   };
 
   /* ===============================
@@ -263,6 +277,7 @@ export default function PaymentPage() {
       const order = orderData as CreatePaymentResponse;
 
       /* 1️⃣.5️⃣ Create PaymentIntent (CRITICAL STEP) */
+
       await fetch(`${API_URL}/api/payment/create-intent`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -289,8 +304,8 @@ export default function PaymentPage() {
         amount: paidAmount * 100,
         currency: "INR",
         order_id: order.orderId,
-        name: "Attendance SaaS",
-        description: "School Subscription",
+        name: "Upastithi",
+        description: "Upastithi Subscription",
 
         handler: async function (response: RazorpayHandlerResponse) {
           /* 3️⃣ Verify payment */
@@ -301,23 +316,23 @@ export default function PaymentPage() {
               razorpay_order_id: response.razorpay_order_id,
               razorpay_payment_id: response.razorpay_payment_id,
               razorpay_signature: response.razorpay_signature,
+              schoolEmail
             }),
           });
 
-          const verifyData: unknown = await verifyRes.json();
-          const parsed = verifyData as VerifyPaymentResponse;
+          const verifyData = (await verifyRes.json()) as VerifyPaymentResponse;
 
-          if (!verifyRes.ok || !parsed.success) {
+          if (!verifyRes.ok || !verifyData.success) {
             alert("Payment verification failed");
             return;
           }
 
-          /* 4️⃣ Redirect to registration */
-          router.push(
-            `/auth/register?orderId=${parsed.orderId}&paymentId=${parsed.paymentId}`
-          );
-        },
+          localStorage.setItem("accessToken", verifyData.accessToken);
+          localStorage.setItem("role", "principal");
+          await refetchUser();
+          router.replace("/dashboard/principal");
 
+        },
         theme: { color: "#2563eb" },
       });
 

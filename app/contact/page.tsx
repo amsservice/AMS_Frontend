@@ -1,9 +1,20 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
+import dynamic from "next/dynamic";
+import { toast } from "sonner";
 import MainNavbar from "@/components/main/MainNavbar";
 import MainFooter from "@/components/main/MainFooter";
-import { Mail, Phone, MapPin, Send } from "lucide-react";
+import { Instagram, Linkedin, Mail, MapPin, Phone, Send, Youtube } from "lucide-react";
+import contactPageData from "./contact-page.json";
+
+const UpastithiPageLoader = dynamic(
+  () =>
+    import("@/components/loader/UpastithiPageLoader").then(
+      (m) => m.UpastithiPageLoader
+    ),
+  { ssr: false }
+);
 
 type ContactForm = {
   name: string;
@@ -24,6 +35,7 @@ export default function ContactPage() {
 
   const [isDark, setIsDark] = useState(false);
   const [mounted, setMounted] = useState(false);
+  const [showLoader, setShowLoader] = useState(true);
 
   const [form, setForm] = useState<ContactForm>({
     name: "",
@@ -39,20 +51,32 @@ export default function ContactPage() {
   const [statusMessage, setStatusMessage] = useState<string>("");
 
   useEffect(() => {
-    setMounted(true);
-    const savedTheme = window.localStorage.getItem("vidyarthii-theme");
+    const start = Date.now();
+    const savedTheme = window.localStorage.getItem("Upastithi-theme");
     const initialIsDark = savedTheme
       ? savedTheme === "dark"
       : window.matchMedia("(prefers-color-scheme: dark)").matches;
 
     setIsDark(initialIsDark);
     document.documentElement.classList.toggle("dark", initialIsDark);
+
+    const elapsed = Date.now() - start;
+    const remaining = Math.max(500 - elapsed, 0);
+
+    const timer = setTimeout(() => {
+      setMounted(true);
+      setShowLoader(false);
+    }, remaining);
+
+    return () => {
+      clearTimeout(timer);
+    };
   }, []);
 
   const toggleTheme = () => {
     const next = !isDark;
     setIsDark(next);
-    window.localStorage.setItem("vidyarthii-theme", next ? "dark" : "light");
+    window.localStorage.setItem("Upastithi-theme", next ? "dark" : "light");
     document.documentElement.classList.toggle("dark", next);
   };
 
@@ -118,27 +142,39 @@ export default function ContactPage() {
     setStatusMessage("");
 
     try {
-      const res = await fetch(`${API_URL}/api/contact`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          name: next.name.trim(),
-          email: next.email.trim(),
-          phone: next.phone.trim() || undefined,
-          subject: next.subject.trim() || undefined,
-          message: next.message.trim(),
-        }),
+      const sendPromise = (async () => {
+        const res = await fetch(`${API_URL}/api/contact`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            name: next.name.trim(),
+            email: next.email.trim(),
+            phone: next.phone.trim() || undefined,
+            subject: next.subject.trim() || undefined,
+            message: next.message.trim(),
+          }),
+        });
+
+        const data: unknown = await res.json();
+
+        if (!res.ok) {
+          const message =
+            typeof data === "object" && data !== null && "message" in data
+              ? String((data as { message: unknown }).message)
+              : "Failed to send message";
+          throw new Error(message);
+        }
+
+        return true;
+      })();
+
+      toast.promise(sendPromise, {
+        loading: "Sending message...",
+        success: "Message sent successfully",
+        error: (err) => (err instanceof Error ? err.message : "Failed to send message"),
       });
 
-      const data: unknown = await res.json();
-
-      if (!res.ok) {
-        const message =
-          typeof data === "object" && data !== null && "message" in data
-            ? String((data as { message: unknown }).message)
-            : "Failed to send message";
-        throw new Error(message);
-      }
+      await sendPromise;
 
       setStatus("success");
       setStatusMessage("Thanks! We received your message. We'll reach out soon.");
@@ -152,17 +188,8 @@ export default function ContactPage() {
     }
   };
 
-  if (!mounted) {
-    return (
-      <div className="min-h-screen bg-gradient-to-br from-gray-50 to-gray-100 dark:from-gray-900 dark:to-gray-800">
-        <div className="flex items-center justify-center min-h-screen">
-          <div className="flex flex-col items-center gap-4">
-            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600" />
-            <div className="text-sm text-gray-600 dark:text-gray-400">Loading...</div>
-          </div>
-        </div>
-      </div>
-    );
+  if (showLoader || !mounted) {
+    return <UpastithiPageLoader />;
   }
 
   return (
@@ -319,7 +346,7 @@ export default function ContactPage() {
                   <Mail className="w-5 h-5 text-blue-600 dark:text-cyan-400 mt-0.5" />
                   <div>
                     <div className="font-bold text-gray-900 dark:text-white">Email</div>
-                    <div className="text-gray-600 dark:text-gray-300">support@vidyarthii.com</div>
+                    <div className="text-gray-600 dark:text-gray-300">{contactPageData.quickContact.email}</div>
                   </div>
                 </div>
 
@@ -327,7 +354,7 @@ export default function ContactPage() {
                   <Phone className="w-5 h-5 text-blue-600 dark:text-cyan-400 mt-0.5" />
                   <div>
                     <div className="font-bold text-gray-900 dark:text-white">Phone</div>
-                    <div className="text-gray-600 dark:text-gray-300">+91 98765 43210</div>
+                    <div className="text-gray-600 dark:text-gray-300">{contactPageData.quickContact.phone}</div>
                   </div>
                 </div>
 
@@ -335,8 +362,41 @@ export default function ContactPage() {
                   <MapPin className="w-5 h-5 text-blue-600 dark:text-cyan-400 mt-0.5" />
                   <div>
                     <div className="font-bold text-gray-900 dark:text-white">Location</div>
-                    <div className="text-gray-600 dark:text-gray-300">Mumbai, India</div>
+                    <div className="text-gray-600 dark:text-gray-300">{contactPageData.quickContact.location}</div>
                   </div>
+                </div>
+              </div>
+
+              <div className="mt-6 pt-6 border-t border-gray-200 dark:border-gray-700">
+                <div className="text-sm font-bold text-gray-900 dark:text-white mb-3">Social</div>
+                <div className="flex flex-wrap gap-3">
+                  <a
+                    href={contactPageData.socialLinks.instagram}
+                    target="_blank"
+                    rel="noreferrer"
+                    className="inline-flex items-center gap-2 px-3 py-2 rounded-xl bg-gray-50 dark:bg-gray-700/50 border border-gray-200 dark:border-gray-600 text-gray-800 dark:text-gray-200 hover:shadow-md transition-all"
+                  >
+                    <Instagram className="w-4 h-4" />
+                    Instagram
+                  </a>
+                  <a
+                    href={contactPageData.socialLinks.linkedin}
+                    target="_blank"
+                    rel="noreferrer"
+                    className="inline-flex items-center gap-2 px-3 py-2 rounded-xl bg-gray-50 dark:bg-gray-700/50 border border-gray-200 dark:border-gray-600 text-gray-800 dark:text-gray-200 hover:shadow-md transition-all"
+                  >
+                    <Linkedin className="w-4 h-4" />
+                    LinkedIn
+                  </a>
+                  <a
+                    href={contactPageData.socialLinks.youtube}
+                    target="_blank"
+                    rel="noreferrer"
+                    className="inline-flex items-center gap-2 px-3 py-2 rounded-xl bg-gray-50 dark:bg-gray-700/50 border border-gray-200 dark:border-gray-600 text-gray-800 dark:text-gray-200 hover:shadow-md transition-all"
+                  >
+                    <Youtube className="w-4 h-4" />
+                    YouTube
+                  </a>
                 </div>
               </div>
 

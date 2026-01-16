@@ -23,7 +23,7 @@ export const DASHBOARD_MENUS: Record<Role, {
     { icon: Users, text: "Teachers", path: "/dashboard/principal/teachers" },
     
     { icon: Umbrella, text: "Holidays", path: "/dashboard/principal/holidays" },
-  { icon: BarChart3, text: "Reports", path: "/dashboard/principal/reports" }
+    { icon: BarChart3, text: "Reports", path: "/dashboard/principal/reports" }
   ],
 
   teacher: [

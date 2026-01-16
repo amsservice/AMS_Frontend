@@ -58,7 +58,7 @@ export default function MainNavbar({
 
               <div className="flex flex-col leading-tight">
                 <span className="text-base sm:text-lg font-bold text-gray-900 dark:text-white tracking-tight">
-                  Vidyarthii
+                  Upastithi
                 </span>
                 <span className="hidden sm:block text-xs text-gray-600 dark:text-gray-400">
                   School management, simplified
@@ -171,7 +171,7 @@ export default function MainNavbar({
             <div className="hidden sm:flex items-center gap-2 min-w-[200px] justify-end">
             {showAuthButtons && (
               <div className="hidden sm:flex items-center gap-2">
-                <a href="/auth/login">
+                <a href="/auth/school-code">
                   <motion.button
                     whileHover={{ scale: 1.02 }}
                     whileTap={{ scale: 0.98 }}
@@ -180,7 +180,7 @@ export default function MainNavbar({
                     Login
                   </motion.button>
                 </a>
-                <a href="/subscription/payment?plan=1Y">
+                <a href="/auth/register">
                   <motion.button
                     whileHover={{
                       scale: 1.02,
@@ -289,7 +289,7 @@ export default function MainNavbar({
                       Login
                     </button>
                   </a>
-                  <a href="/subscription/payment?plan=1Y" className="block">
+                  <a href="/auth/register" className="block">
                     <button className="w-full px-4 py-2.5 text-white rounded-xl font-semibold text-sm shadow-lg bg-gradient-to-r from-blue-600 via-indigo-600 to-purple-600 hover:opacity-90 transition-all">
                       Register School
                     </button>
