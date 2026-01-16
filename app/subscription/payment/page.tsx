@@ -90,7 +90,7 @@ export default function PaymentPage() {
   const [futureError, setFutureError] = useState<string | null>(null);
   const [shake, setShake] = useState(false);
 
-   /* 🔐 BLOCK ACCESS WITHOUT OTP */
+  /* 🔐 BLOCK ACCESS WITHOUT OTP */
   useEffect(() => {
     if (!schoolEmail) {
       alert("Please verify email before payment");
@@ -108,7 +108,7 @@ export default function PaymentPage() {
   const billableStudentsUI =
     price?.billableStudents ??
     (enteredStudents === "" ? 0 : enteredStudents) +
-      (futureStudents === "" ? 0 : futureStudents);
+    (futureStudents === "" ? 0 : futureStudents);
 
   const uiRate = frontendPlan?.pricePerStudentPerMonth ?? 0;
   const uiMonths = frontendPlan?.durationMonths ?? 0;
@@ -121,8 +121,8 @@ export default function PaymentPage() {
   const hasBackendMismatch =
     price
       ? price.pricePerStudentPerMonth !== uiRate ||
-        price.totalMonths !== uiMonths ||
-        Math.abs(price.paidAmount - uiPayable) > 0.5
+      price.totalMonths !== uiMonths ||
+      Math.abs(price.paidAmount - uiPayable) > 0.5
       : false;
 
   useEffect(() => {
@@ -303,7 +303,7 @@ export default function PaymentPage() {
         order_id: order.orderId,
         name: "Attendance SaaS",
         description: "School Subscription",
-     
+
 
 
 
@@ -320,7 +320,7 @@ export default function PaymentPage() {
             }),
           });
 
-        
+
 
           const verifyData = await verifyRes.json();
           // const parsed = verifyData as VerifyPaymentResponse;
@@ -330,9 +330,14 @@ export default function PaymentPage() {
             return;
           }
 
+          localStorage.setItem("accessToken", verifyData.accessToken);
+          localStorage.setItem("role", "principal");
+
+          router.replace("/dashboard/principal");
+
           /* 4️⃣ Redirect to registration */
-          alert("✅ Payment successful. Please login.");
-          router.replace("/auth/login");
+          // alert("✅ Payment successful. Please login.");
+          // router.replace("auth/login");
         },
 
         theme: { color: "#2563eb" },

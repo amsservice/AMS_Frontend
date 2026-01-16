@@ -17,6 +17,8 @@ export interface School {
   /* ===============================
      SCHOOL DETAILS (NEW)
   =============================== */
+  
+schoolCode:number;
   schoolType: 'Government' | 'Private' | 'Semi-Private';
   board: string;
   city: string;
