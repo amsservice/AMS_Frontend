@@ -21,7 +21,7 @@ export const DASHBOARD_MENUS: Record<Role, {
     { icon: Calendar, text: "Sessions", path: "/dashboard/principal/session" },
     { icon: BookOpen, text: "Classes", path: "/dashboard/principal/class" },
     { icon: Users, text: "Teachers", path: "/dashboard/principal/teachers" },
-    
+    { icon: Users, text: "Students", path: "/dashboard/principal/students" },
     { icon: Umbrella, text: "Holidays", path: "/dashboard/principal/holidays" },
     { icon: BarChart3, text: "Reports", path: "/dashboard/principal/reports" }
   ],

@@ -85,3 +85,43 @@ export const useMyStudentProfile = () =>
     queryKey: ['student', 'me'],
     queryFn: () => apiFetch('/api/student/me')
   });
+
+
+  /* =====================================================
+   TEACHER / PRINCIPAL: BULK UPLOAD STUDENTS
+   POST /api/students/bulk-upload
+===================================================== */
+interface BulkUploadPayload {
+  file: File;
+  classId?: string;
+  className?: string;
+  section?: string;
+  sessionId?: string;
+}
+
+export const useBulkUploadStudents = () => {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async (payload: BulkUploadPayload) => {
+      const formData = new FormData();
+
+      // MUST match multer.single('csvFile')
+      formData.append('csvFile', payload.file);
+
+      if (payload.classId) formData.append('classId', payload.classId);
+      if (payload.className) formData.append('className', payload.className);
+      if (payload.section) formData.append('section', payload.section);
+      if (payload.sessionId) formData.append('sessionId', payload.sessionId);
+
+      return apiFetch('/api/student/bulk-upload', {
+        method: 'POST',
+        body: formData
+      });
+    },
+
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['students'] });
+    }
+  });
+};
