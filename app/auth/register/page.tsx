@@ -1,5 +1,3 @@
-
-
 "use client";
 
 import { Button } from "@/components/ui/button";
@@ -145,6 +143,14 @@ export default function RegisterPage() {
 
       // New expected behavior: backend returns 200 even for "already registered"
       if ((postData as any)?.statusCode === 409) {
+        const msg = String((postData as any)?.message || "");
+
+        if (msg.toLowerCase().includes('principal email')) {
+          if (toastId !== undefined) toast.dismiss(toastId);
+          toast.error(msg || "Principal email is already registered");
+          return;
+        }
+
         const school = (postData as any)?.data?.school;
         const paymentId = school?.paymentId ?? null;
 
@@ -206,7 +212,11 @@ export default function RegisterPage() {
         });
         setErrors(fieldErrors);
         if (toastId !== undefined) toast.dismiss(toastId);
-        toast.error("Please enter valid details");
+        if (fieldErrors.yearsOfExperience) {
+          toast.error(fieldErrors.yearsOfExperience);
+        } else {
+          toast.error("Please enter valid details");
+        }
       } else if (err instanceof ApiError) {
         if (toastId !== undefined) toast.dismiss(toastId);
         toast.error(err.message || "Registration failed");
@@ -436,7 +446,6 @@ export default function RegisterPage() {
                             <option value="">Select Gender (Optional)</option>
                             <option value="Male">Male</option>
                             <option value="Female">Female</option>
-                            <option value="Other">Other</option>
                           </select>
                           {errors.gender && <p className="text-red-500 text-xs mt-1">{errors.gender}</p>}
                         </div>
@@ -480,8 +489,7 @@ export default function RegisterPage() {
                     <Button
                       onClick={handleSubmit}
                       disabled={submitting}
-                      className="w-full h-12 rounded-xl font-semibold text-white bg-gradient-to-r from-blue-600 via-indigo-600 to-purple-600 hover:opacity-90 transition-all shadow-lg disabled:opacity-50 disabled:cursor-not-allowed"
-                    >
+                      className="w-full h-12 rounded-xl font-semibold text-white bg-gradient-to-r from-blue-600 via-indigo-600 to-purple-600 hover:opacity-90 transition-all shadow-lg disabled:opacity-50 disabled:cursor-not-allowed">
                       {submitting ? "Creating..." : "Create Account"}
                     </Button>
                   </div>
@@ -510,7 +518,7 @@ export default function RegisterPage() {
               <div className="my-6 h-px bg-gray-200 dark:bg-gray-700" />
 
               <div className="text-xs text-gray-600 dark:text-gray-400">
-                Having trouble? Contact <span className="font-semibold text-gray-900 dark:text-white">support@Upastithi.com</span>
+                Having trouble? Contact <span className="font-semibold text-gray-900 dark:text-white">upastithi@gmail.com</span>
               </div>
             </div>
           </div>
