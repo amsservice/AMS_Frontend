@@ -59,6 +59,7 @@ export const useCreateStudent = () => {
       }),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['students'] });
+      queryClient.invalidateQueries({ queryKey: ['school-students'] });
     }
   });
 };

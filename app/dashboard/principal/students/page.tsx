@@ -620,12 +620,13 @@ export default function BulkStudentUploadPage() {
                 exit={{ opacity: 0 }}
                 className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4"
               >
-                <div className="w-full max-w-3xl dashboard-card border dashboard-card-border rounded-2xl shadow-dashboard-lg overflow-hidden">
+                <div className="w-full max-w-3xl dashboard-card border dashboard-card-border rounded-2xl shadow-dashboard-lg overflow-hidden max-h-[85vh]">
                   <div className="px-6 py-5 border-b dashboard-card-border bg-gradient-to-r from-blue-50 to-indigo-50 dark:from-blue-900/20 dark:to-indigo-900/20 flex items-center justify-between">
                     <div className="flex items-center gap-3">
                       <div className="p-2 bg-gradient-to-br from-blue-600 to-indigo-600 rounded-xl shadow-lg">
                         <UserPlus className="h-6 w-6 text-white" />
                       </div>
+
                       <div>
                         <h3 className="text-xl font-bold dashboard-text">Add Student</h3>
                         <p className="text-sm dashboard-text-muted">Create a student in a selected class</p>
@@ -639,12 +640,13 @@ export default function BulkStudentUploadPage() {
                     </button>
                   </div>
 
-                  <div className="p-6 space-y-5">
+                  <div className="p-6 space-y-5 overflow-y-auto max-h-[calc(85vh-96px)]">
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
                       {Object.entries(student).map(([key, value]) => (
                         <div key={key}>
                           <label className="block text-sm font-semibold dashboard-text mb-2">
                             {fieldLabels[key as keyof SingleStudentForm]}
+
                           </label>
                           <input
                             type={
@@ -741,7 +743,7 @@ export default function BulkStudentUploadPage() {
                 exit={{ opacity: 0 }}
                 className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4"
               >
-                <div className="w-full max-w-4xl dashboard-card border dashboard-card-border rounded-2xl shadow-dashboard-lg overflow-hidden">
+                <div className="w-full max-w-3xl dashboard-card border dashboard-card-border rounded-2xl shadow-dashboard-lg overflow-hidden max-h-[85vh]">
                   <div className="px-6 py-5 border-b dashboard-card-border bg-gradient-to-r from-teal-50 to-cyan-50 dark:from-teal-900/20 dark:to-cyan-900/20 flex items-center justify-between">
                     <div className="flex items-center gap-3">
                       <div className="p-2 bg-gradient-to-br from-teal-500 to-cyan-600 rounded-xl shadow-lg">
@@ -760,7 +762,7 @@ export default function BulkStudentUploadPage() {
                     </button>
                   </div>
 
-                  <div className="p-6 space-y-6">
+                  <div className="p-6 space-y-6 overflow-y-auto max-h-[calc(85vh-96px)]">
                     <div className="flex flex-wrap gap-3">
                       <button
                         onClick={() => setBulkMode('classWise')}
