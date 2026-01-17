@@ -86,6 +86,7 @@ export default function PaymentPage() {
   const [couponCode, setCouponCode] = useState("");
   const [price, setPrice] = useState<PricePreview | null>(null);
   const [loading, setLoading] = useState(false);
+  const [alreadyPaid, setAlreadyPaid] = useState(false);
 
   const [isDark, setIsDark] = useState(false);
   const [mounted, setMounted] = useState(false);
@@ -100,6 +101,34 @@ export default function PaymentPage() {
       router.replace("/auth/register");
     }
   }, [schoolEmail, router]);
+
+  useEffect(() => {
+    if (!schoolEmail) return;
+
+    (async () => {
+      try {
+        const res = await fetch(
+          `${API_URL}/api/auth/school/payment-status?email=${encodeURIComponent(
+            schoolEmail
+          )}`
+        );
+
+        const data: unknown = await res.json();
+
+        if (
+          res.ok &&
+          typeof data === "object" &&
+          data !== null &&
+          "hasPayment" in data &&
+          Boolean((data as { hasPayment: unknown }).hasPayment)
+        ) {
+          setAlreadyPaid(true);
+          router.replace("/");
+        }
+      } catch {
+      }
+    })();
+  }, [API_URL, router, schoolEmail]);
 
   useEffect(() => {
     setPrice(null);
@@ -204,6 +233,10 @@ export default function PaymentPage() {
      PRICE PREVIEW
   =============================== */
   const previewPrice = async () => {
+    if (alreadyPaid) {
+      router.replace("/");
+      return;
+    }
     if (!validateStudents()) return;
     setLoading(true);
     try {
