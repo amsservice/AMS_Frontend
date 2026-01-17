@@ -1,19 +1,18 @@
-
 'use client';
 
 import { useState, DragEvent } from 'react';
-import { Upload, UserPlus, Download, FileSpreadsheet, UploadCloud, X, CheckCircle } from 'lucide-react';
+import { Upload, UserPlus, Download, FileSpreadsheet, UploadCloud, X, CheckCircle, Users, Mail, Phone } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 
 /* =====================================================
-   IMPORT YOUR ACTUAL API HOOKS
+  IMPORT YOUR ACTUAL API HOOKS
 ===================================================== */
-import { useBulkUploadStudents, useCreateStudent } from '@/app/querry/useStudent';
+import { useBulkUploadStudents, useBulkUploadStudentsSchoolWide, useCreateStudent, useSchoolStudents, type Student } from '@/app/querry/useStudent';
 import { useClasses } from '@/app/querry/useClasses';
 import { useAuth } from '@/app/context/AuthContext';
 
 /* =====================================================
-   DRAG DROP CSV COMPONENT
+  DRAG DROP CSV COMPONENT
 ===================================================== */
 interface DragDropCSVProps {
   onFileSelect: (file: File) => void;
@@ -199,7 +198,7 @@ function DragDropCSV({ onFileSelect, selectedFile }: DragDropCSVProps) {
 }
 
 /* =====================================================
-   TYPES
+  TYPES
 ===================================================== */
 
 interface Class {
@@ -221,7 +220,7 @@ interface SingleStudentForm {
 }
 
 /* =====================================================
-   MAIN PAGE COMPONENT
+  MAIN PAGE COMPONENT
 ===================================================== */
 
 export default function BulkStudentUploadPage() {
@@ -242,8 +241,23 @@ export default function BulkStudentUploadPage() {
     data,
     error: bulkError
   } = useBulkUploadStudents();
+
+  const {
+    mutate: uploadStudentsSchoolWide,
+    isPending: uploadingSchoolWide,
+    isSuccess: isSchoolWideSuccess,
+    data: schoolWideData,
+    error: schoolWideError
+  } = useBulkUploadStudentsSchoolWide();
   
   const { data: classes = [], isLoading: classesLoading } = useClasses();
+
+  const {
+    data: schoolStudents = [],
+    isLoading: studentsLoading,
+    error: studentsError
+  } = useSchoolStudents();
+
 
   // TEMPORARY MOCK DATA - REMOVE WHEN USING REAL HOOKS
   // const user = { role: 'principal' };
@@ -262,7 +276,11 @@ export default function BulkStudentUploadPage() {
   // ];
   // const classesLoading = false;
 
-  const [mode, setMode] = useState<'single' | 'bulk'>('bulk');
+  const [searchTerm, setSearchTerm] = useState('');
+  const [openSingle, setOpenSingle] = useState(false);
+  const [openBulk, setOpenBulk] = useState(false);
+  const [bulkMode, setBulkMode] = useState<'classWise' | 'schoolWide'>('classWise');
+
 
   /* ---------------- SINGLE STUDENT ---------------- */
   const [student, setStudent] = useState<SingleStudentForm>({
@@ -282,6 +300,9 @@ export default function BulkStudentUploadPage() {
 
   /* ---------------- BULK UPLOAD ---------------- */
   const [file, setFile] = useState<File | null>(null);
+
+  const [schoolWideFile, setSchoolWideFile] = useState<File | null>(null);
+
 
   const [bulkClassId, setBulkClassId] = useState('');
   const [bulkClassName, setBulkClassName] = useState('');
@@ -354,15 +375,48 @@ export default function BulkStudentUploadPage() {
     });
   };
 
-  const downloadSample = () => {
-    const csvContent = 'name,email,password,admissionNo,fatherName,motherName,parentsPhone,rollNo\nRahul Sharma,rahul@example.com,pass123,ADM001,Mr. Sharma,Mrs. Sharma,+91 98765 43210,1\nPriya Patel,priya@example.com,pass456,ADM002,Mr. Patel,Mrs. Patel,+91 98765 43211,2';
+  const handleSchoolWideBulkUpload = () => {
+    if (!schoolWideFile) {
+      alert('Please select a CSV file');
+      return;
+    }
+
+    uploadStudentsSchoolWide({
+      file: schoolWideFile
+    });
+  };
+
+  const downloadSampleClassWise = () => {
+    const csvContent =
+      'name,email,password,admissionNo,fatherName,motherName,parentsPhone,rollNo\nRahul Sharma,rahul@example.com,pass123,ADM001,Mr. Sharma,Mrs. Sharma,+91 98765 43210,1\nPriya Patel,priya@example.com,pass456,ADM002,Mr. Patel,Mrs. Patel,+91 98765 43211,2';
     const blob = new Blob([csvContent], { type: 'text/csv' });
     const url = window.URL.createObjectURL(blob);
     const a = document.createElement('a');
     a.href = url;
-    a.download = 'students_sample.csv';
+    a.download = 'students_classwise_sample.csv';
     a.click();
   };
+
+  const downloadSampleSchoolWide = () => {
+    const csvContent =
+      'name,email,password,admissionNo,fatherName,motherName,parentsPhone,rollNo,className,section\nRahul Sharma,rahul@example.com,pass123,ADM001,Mr. Sharma,Mrs. Sharma,+91 98765 43210,1,10,A\nPriya Patel,priya@example.com,pass456,ADM002,Mr. Patel,Mrs. Patel,+91 98765 43211,2,10,B';
+    const blob = new Blob([csvContent], { type: 'text/csv' });
+    const url = window.URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = 'students_schoolwide_sample.csv';
+    a.click();
+  };
+
+  const filteredStudents = schoolStudents.filter((s: Student) => {
+    const q = searchTerm.trim().toLowerCase();
+    if (!q) return true;
+    return (
+      s.name?.toLowerCase().includes(q) ||
+      s.email?.toLowerCase().includes(q) ||
+      s.admissionNo?.toLowerCase().includes(q)
+    );
+  });
 
   /* =====================================================
      FIELD LABELS
@@ -382,107 +436,199 @@ export default function BulkStudentUploadPage() {
      RENDER
   ===================================================== */
 
+  if (role !== 'principal') {
+    return null;
+  }
+
   return (
     <div className="min-h-screen dashboard-bg">
-      {/* HEADER */}
       <header className="bg-gradient-to-r from-blue-600 via-purple-600 to-indigo-700 dark:from-blue-800 dark:via-purple-800 dark:to-indigo-900 shadow-xl">
         <div className="max-w-7xl mx-auto py-6 sm:py-8 px-4 sm:px-6 lg:px-8">
           <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between space-y-4 lg:space-y-0">
             <div className="flex-1">
               <h1 className="text-2xl sm:text-3xl lg:text-4xl font-bold text-white tracking-tight">
-                Student Upload 📚
+                Students
               </h1>
               <p className="mt-2 text-sm sm:text-base text-blue-100 font-medium">
-                Add single or multiple students to your system
+                Manage school students
               </p>
+            </div>
+            <div className="flex gap-3">
+              <button
+                onClick={() => setOpenSingle(true)}
+                className="px-4 py-2 bg-white/10 hover:bg-white/20 text-white rounded-xl font-semibold transition-all flex items-center gap-2"
+              >
+                <UserPlus className="w-4 h-4" /> Add Student
+              </button>
+              <button
+                onClick={() => setOpenBulk(true)}
+                className="px-4 py-2 bg-white text-indigo-700 hover:bg-indigo-50 rounded-xl font-semibold transition-all flex items-center gap-2"
+              >
+                <Upload className="w-4 h-4" /> Bulk Upload
+              </button>
             </div>
           </div>
         </div>
       </header>
 
-      <main className="max-w-5xl mx-auto py-6 px-4 sm:px-6 lg:px-8">
+      <main className="max-w-7xl mx-auto py-6 px-4 sm:px-6 lg:px-8">
         <div className="space-y-6">
-          {/* MODE SWITCH CARD */}
-          <div className="dashboard-card border dashboard-card-border rounded-2xl shadow-dashboard-lg p-6">
-            <div className="flex items-center gap-3 mb-6">
-              <div className="p-2 bg-gradient-to-br from-purple-600 to-violet-600 rounded-xl shadow-lg">
-                <Upload className="h-6 w-6 text-white" />
-              </div>
-              <div>
-                <h2 className="text-xl font-bold dashboard-text">Upload Method</h2>
-                <p className="text-sm dashboard-text-muted">Choose how you want to add students</p>
+          <div className="dashboard-card border dashboard-card-border rounded-2xl shadow-dashboard-lg p-4">
+            <input
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              placeholder="Search students by name, email or admission no..."
+              className="w-full px-4 py-3 dashboard-card border dashboard-card-border rounded-xl dashboard-text focus:outline-none focus:ring-2 focus:ring-accent-blue transition-all"
+            />
+          </div>
+
+          <div className="dashboard-card border dashboard-card-border rounded-2xl shadow-dashboard-lg overflow-hidden">
+            <div className="px-6 py-5 border-b dashboard-card-border bg-gradient-to-r from-blue-50 to-indigo-50 dark:from-blue-900/20 dark:to-indigo-900/20">
+              <div className="flex items-center gap-3">
+                <div className="p-2 bg-gradient-to-br from-blue-600 to-indigo-600 rounded-xl shadow-lg">
+                  <Users className="h-6 w-6 text-white" />
+                </div>
+                <div>
+                  <h3 className="text-xl font-bold dashboard-text">Students ({schoolStudents.length})</h3>
+                  <p className="text-sm dashboard-text-muted">Active session students</p>
+                </div>
               </div>
             </div>
 
-            <div className="flex flex-wrap gap-3">
-              <button
-                onClick={() => setMode('single')}
-                className={`flex-1 min-w-[200px] px-6 py-4 rounded-xl font-medium transition-all duration-200 flex items-center justify-center gap-2 ${
-                  mode === 'single'
-                    ? 'bg-gradient-to-br from-blue-600 to-indigo-600 text-white shadow-lg transform scale-105'
-                    : 'dashboard-card border dashboard-card-border dashboard-text hover:border-accent-blue'
-                }`}
-              >
-                <UserPlus className="w-5 h-5" /> Single Student
-              </button>
-
-              <button
-                onClick={() => setMode('bulk')}
-                className={`flex-1 min-w-[200px] px-6 py-4 rounded-xl font-medium transition-all duration-200 flex items-center justify-center gap-2 ${
-                  mode === 'bulk'
-                    ? 'bg-gradient-to-br from-teal-500 to-cyan-600 text-white shadow-lg transform scale-105'
-                    : 'dashboard-card border dashboard-card-border dashboard-text hover:border-accent-teal'
-                }`}
-              >
-                <Upload className="w-5 h-5" /> Bulk Upload
-              </button>
+            <div className="p-0">
+              {studentsLoading ? (
+                <div className="p-8 text-center">
+                  <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mx-auto"></div>
+                  <p className="mt-2 dashboard-text-muted">Loading students...</p>
+                </div>
+              ) : studentsError ? (
+                <div className="p-8 text-center">
+                  <p className="text-red-600 dark:text-red-400">Error loading students.</p>
+                </div>
+              ) : filteredStudents.length === 0 ? (
+                <div className="p-8 text-center">
+                  <Users className="w-12 h-12 text-gray-400 mx-auto mb-4" />
+                  <p className="dashboard-text-muted">
+                    {searchTerm ? 'No students found matching your search.' : 'No students added yet.'}
+                  </p>
+                </div>
+              ) : (
+                <div className="overflow-x-auto">
+                  <table className="w-full">
+                    <thead className="bg-gray-50 dark:bg-gray-800/40 border-b dashboard-card-border">
+                      <tr>
+                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                          Student
+                        </th>
+                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                          Admission No
+                        </th>
+                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                          Class
+                        </th>
+                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                          Roll No
+                        </th>
+                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                          Parent Contact
+                        </th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y dashboard-card-border">
+                      {filteredStudents.map((s: Student) => {
+                        const active = s.history?.find(h => h.isActive) || s.history?.[0];
+                        return (
+                          <tr key={s._id} className="hover:bg-gray-50 dark:hover:bg-gray-800/30">
+                            <td className="px-6 py-4 whitespace-nowrap">
+                              <div>
+                                <div className="text-sm font-medium dashboard-text">{s.name}</div>
+                                <div className="text-sm dashboard-text-muted flex items-center gap-1">
+                                  <Mail className="w-3 h-3" />
+                                  {s.email}
+                                </div>
+                              </div>
+                            </td>
+                            <td className="px-6 py-4 whitespace-nowrap text-sm dashboard-text">
+                              {s.admissionNo}
+                            </td>
+                            <td className="px-6 py-4 whitespace-nowrap text-sm dashboard-text">
+                              {active ? `${active.className} - ${active.section}` : ''}
+                            </td>
+                            <td className="px-6 py-4 whitespace-nowrap text-sm dashboard-text">
+                              {active?.rollNo ?? ''}
+                            </td>
+                            <td className="px-6 py-4 whitespace-nowrap">
+                              <div className="text-sm dashboard-text">
+                                <div>Father: {s.fatherName}</div>
+                                <div className="flex items-center gap-1 dashboard-text-muted">
+                                  <Phone className="w-3 h-3" />
+                                  {s.parentsPhone}
+                                </div>
+                              </div>
+                            </td>
+                          </tr>
+                        );
+                      })}
+                    </tbody>
+                  </table>
+                </div>
+              )}
             </div>
           </div>
 
-          {/* ================= SINGLE STUDENT ================= */}
-          <AnimatePresence mode="wait">
-            {mode === 'single' && (
+          <AnimatePresence>
+            {openSingle && (
               <motion.div
-                key="single"
-                initial={{ opacity: 0, y: 20 }}
-                animate={{ opacity: 1, y: 0 }}
-                exit={{ opacity: 0, y: -20 }}
-                className="dashboard-card border dashboard-card-border rounded-2xl shadow-dashboard-lg overflow-hidden"
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                exit={{ opacity: 0 }}
+                className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4"
               >
-                <div className="px-6 py-5 border-b dashboard-card-border bg-gradient-to-r from-blue-50 to-indigo-50 dark:from-blue-900/20 dark:to-indigo-900/20">
-                  <div className="flex items-center gap-3">
-                    <div className="p-2 bg-gradient-to-br from-blue-600 to-indigo-600 rounded-xl shadow-lg">
-                      <UserPlus className="h-6 w-6 text-white" />
-                    </div>
-                    <div>
-                      <h3 className="text-xl font-bold dashboard-text">Add Single Student</h3>
-                      <p className="text-sm dashboard-text-muted">Fill in the student details below</p>
-                    </div>
-                  </div>
-                </div>
-
-                <div className="p-6 space-y-5">
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
-                    {Object.entries(student).map(([key, value]) => (
-                      <div key={key}>
-                        <label className="block text-sm font-semibold dashboard-text mb-2">
-                          {fieldLabels[key as keyof SingleStudentForm]}
-                        </label>
-                        <input
-                          type={key === 'password' ? 'password' : key === 'email' ? 'email' : 'text'}
-                          placeholder={`Enter ${fieldLabels[key as keyof SingleStudentForm].toLowerCase()}`}
-                          value={value}
-                          onChange={(e) =>
-                            setStudent({ ...student, [key]: e.target.value })
-                          }
-                          className="w-full px-4 py-3 dashboard-card border dashboard-card-border rounded-xl dashboard-text focus:outline-none focus:ring-2 focus:ring-accent-blue transition-all"
-                        />
+                <div className="w-full max-w-3xl dashboard-card border dashboard-card-border rounded-2xl shadow-dashboard-lg overflow-hidden">
+                  <div className="px-6 py-5 border-b dashboard-card-border bg-gradient-to-r from-blue-50 to-indigo-50 dark:from-blue-900/20 dark:to-indigo-900/20 flex items-center justify-between">
+                    <div className="flex items-center gap-3">
+                      <div className="p-2 bg-gradient-to-br from-blue-600 to-indigo-600 rounded-xl shadow-lg">
+                        <UserPlus className="h-6 w-6 text-white" />
                       </div>
-                    ))}
+                      <div>
+                        <h3 className="text-xl font-bold dashboard-text">Add Student</h3>
+                        <p className="text-sm dashboard-text-muted">Create a student in a selected class</p>
+                      </div>
+                    </div>
+                    <button
+                      onClick={() => setOpenSingle(false)}
+                      className="p-2 rounded-xl hover:bg-gray-100 dark:hover:bg-gray-800 transition-all"
+                    >
+                      <X className="w-5 h-5" />
+                    </button>
                   </div>
 
-                  {/* CLASS (PRINCIPAL ONLY) */}
-                  {role === 'principal' && (
+                  <div className="p-6 space-y-5">
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+                      {Object.entries(student).map(([key, value]) => (
+                        <div key={key}>
+                          <label className="block text-sm font-semibold dashboard-text mb-2">
+                            {fieldLabels[key as keyof SingleStudentForm]}
+                          </label>
+                          <input
+                            type={
+                              key === 'password'
+                                ? 'password'
+                                : key === 'email'
+                                ? 'email'
+                                : 'text'
+                            }
+                            placeholder={`Enter ${fieldLabels[key as keyof SingleStudentForm].toLowerCase()}`}
+                            value={value}
+                            onChange={(e) =>
+                              setStudent({ ...student, [key]: e.target.value })
+                            }
+                            className="w-full px-4 py-3 dashboard-card border dashboard-card-border rounded-xl dashboard-text focus:outline-none focus:ring-2 focus:ring-accent-blue transition-all"
+                          />
+                        </div>
+                      ))}
+                    </div>
+
                     <div className="p-4 bg-purple-50 dark:bg-purple-900/20 border border-purple-200 dark:border-purple-800 rounded-xl">
                       <label className="block text-sm font-semibold dashboard-text mb-2">
                         Select Class & Section
@@ -507,123 +653,213 @@ export default function BulkStudentUploadPage() {
                         ))}
                       </select>
                     </div>
-                  )}
 
-                  <div className="flex gap-3 pt-4">
-                    <button
-                      onClick={handleSingleSubmit}
-                      disabled={creatingStudent}
-                      className="flex-1 px-6 py-3 bg-gradient-to-br from-blue-600 to-indigo-600 text-white rounded-xl font-semibold hover:opacity-90 transition-all shadow-lg disabled:opacity-50 disabled:cursor-not-allowed"
-                    >
-                      {creatingStudent ? 'Adding...' : 'Add Student'}
-                    </button>
-                  </div>
-
-                  {singleError && (
-                    <div className="p-4 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-xl">
-                      <p className="text-red-600 dark:text-red-400 text-sm font-medium">
-                        {(singleError as any)?.message}
-                      </p>
+                    <div className="flex gap-3 pt-2">
+                      <button
+                        onClick={() => setOpenSingle(false)}
+                        className="flex-1 px-6 py-3 dashboard-card border dashboard-card-border rounded-xl font-semibold hover:bg-gray-50 dark:hover:bg-gray-800/40 transition-all"
+                      >
+                        Cancel
+                      </button>
+                      <button
+                        onClick={handleSingleSubmit}
+                        disabled={creatingStudent}
+                        className="flex-1 px-6 py-3 bg-gradient-to-br from-blue-600 to-indigo-600 text-white rounded-xl font-semibold hover:opacity-90 transition-all shadow-lg disabled:opacity-50 disabled:cursor-not-allowed"
+                      >
+                        {creatingStudent ? 'Adding...' : 'Add Student'}
+                      </button>
                     </div>
-                  )}
+
+                    {singleError && (
+                      <div className="p-4 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-xl">
+                        <p className="text-red-600 dark:text-red-400 text-sm font-medium">
+                          {(singleError as any)?.message}
+                        </p>
+                      </div>
+                    )}
+                  </div>
                 </div>
               </motion.div>
             )}
+          </AnimatePresence>
 
-            {/* ================= BULK UPLOAD ================= */}
-            {mode === 'bulk' && (
+          <AnimatePresence>
+            {openBulk && (
               <motion.div
-                key="bulk"
-                initial={{ opacity: 0, y: 20 }}
-                animate={{ opacity: 1, y: 0 }}
-                exit={{ opacity: 0, y: -20 }}
-                className="dashboard-card border dashboard-card-border rounded-2xl shadow-dashboard-lg overflow-hidden"
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                exit={{ opacity: 0 }}
+                className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4"
               >
-                <div className="px-6 py-5 border-b dashboard-card-border bg-gradient-to-r from-teal-50 to-cyan-50 dark:from-teal-900/20 dark:to-cyan-900/20">
-                  <div className="flex items-center justify-between flex-wrap gap-4">
+                <div className="w-full max-w-4xl dashboard-card border dashboard-card-border rounded-2xl shadow-dashboard-lg overflow-hidden">
+                  <div className="px-6 py-5 border-b dashboard-card-border bg-gradient-to-r from-teal-50 to-cyan-50 dark:from-teal-900/20 dark:to-cyan-900/20 flex items-center justify-between">
                     <div className="flex items-center gap-3">
                       <div className="p-2 bg-gradient-to-br from-teal-500 to-cyan-600 rounded-xl shadow-lg">
                         <Upload className="h-6 w-6 text-white" />
                       </div>
                       <div>
                         <h3 className="text-xl font-bold dashboard-text">Bulk Upload Students</h3>
-                        <p className="text-sm dashboard-text-muted">Upload a CSV file to add multiple students</p>
+                        <p className="text-sm dashboard-text-muted">Choose class-wise or whole-school upload</p>
                       </div>
                     </div>
                     <button
-                      onClick={downloadSample}
-                      className="px-4 py-2 dashboard-card border dashboard-card-border rounded-xl hover:bg-gray-50 dark:hover:bg-gray-700 transition-all flex items-center gap-2"
+                      onClick={() => setOpenBulk(false)}
+                      className="p-2 rounded-xl hover:bg-gray-100 dark:hover:bg-gray-800 transition-all"
                     >
-                      <Download className="w-4 h-4 text-accent-teal" />
-                      <span className="dashboard-text text-sm font-medium">Sample CSV</span>
+                      <X className="w-5 h-5" />
                     </button>
                   </div>
-                </div>
 
-                <div className="p-6 space-y-5">
-                  <DragDropCSV onFileSelect={setFile} selectedFile={file} />
-
-                  {role === 'principal' && (
-                    <div className="p-4 bg-purple-50 dark:bg-purple-900/20 border border-purple-200 dark:border-purple-800 rounded-xl">
-                      <label className="block text-sm font-semibold dashboard-text mb-2">
-                        Select Class & Section
-                      </label>
-                      <select
-                        className="w-full px-4 py-3 dashboard-card border dashboard-card-border rounded-xl dashboard-text focus:outline-none focus:ring-2 focus:ring-accent-purple transition-all"
-                        disabled={classesLoading}
-                        value={bulkClassId}
-                        onChange={(e) => {
-                          const cls = classes.find((c: Class) => c.id === e.target.value);
-                          if (!cls) return;
-                          setBulkClassId(cls.id);
-                          setBulkClassName(cls.name);
-                          setBulkSection(cls.section);
-                        }}
+                  <div className="p-6 space-y-6">
+                    <div className="flex flex-wrap gap-3">
+                      <button
+                        onClick={() => setBulkMode('classWise')}
+                        className={`flex-1 min-w-[220px] px-6 py-4 rounded-xl font-medium transition-all duration-200 flex items-center justify-center gap-2 ${
+                          bulkMode === 'classWise'
+                            ? 'bg-gradient-to-br from-teal-500 to-cyan-600 text-white shadow-lg transform scale-[1.02]'
+                            : 'dashboard-card border dashboard-card-border dashboard-text hover:border-accent-teal'
+                        }`}
                       >
-                        <option value="">Select class</option>
-                        {classes.map((cls: Class) => (
-                          <option key={cls.id} value={cls.id}>
-                            {cls.name} - {cls.section}
-                          </option>
-                        ))}
-                      </select>
-                    </div>
-                  )}
+                        <Upload className="w-5 h-5" /> Class-wise Upload
+                      </button>
 
-                  <div className="p-4 bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-xl">
-                    <p className="text-sm dashboard-text font-medium mb-2">
-                      <strong>Required CSV columns:</strong>
-                    </p>
-                    <code className="block text-xs dashboard-text-muted font-mono bg-white dark:bg-gray-800 p-3 rounded-lg border dashboard-card-border">
-                      name, email, password, admissionNo, fatherName, motherName, parentsPhone, rollNo
-                    </code>
+                      <button
+                        onClick={() => setBulkMode('schoolWide')}
+                        className={`flex-1 min-w-[220px] px-6 py-4 rounded-xl font-medium transition-all duration-200 flex items-center justify-center gap-2 ${
+                          bulkMode === 'schoolWide'
+                            ? 'bg-gradient-to-br from-blue-600 to-indigo-600 text-white shadow-lg transform scale-[1.02]'
+                            : 'dashboard-card border dashboard-card-border dashboard-text hover:border-accent-blue'
+                        }`}
+                      >
+                        <Upload className="w-5 h-5" /> Whole-school Upload
+                      </button>
+                    </div>
+
+                    {bulkMode === 'classWise' && (
+                      <div className="space-y-5">
+                        <div className="flex items-center justify-between flex-wrap gap-3">
+                          <div className="dashboard-text font-semibold">Upload CSV (selected class & section)</div>
+                          <button
+                            onClick={downloadSampleClassWise}
+                            className="px-4 py-2 dashboard-card border dashboard-card-border rounded-xl hover:bg-gray-50 dark:hover:bg-gray-700 transition-all flex items-center gap-2"
+                          >
+                            <Download className="w-4 h-4 text-accent-teal" />
+                            <span className="dashboard-text text-sm font-medium">Sample CSV</span>
+                          </button>
+                        </div>
+
+                        <DragDropCSV onFileSelect={setFile} selectedFile={file} />
+
+                        <div className="p-4 bg-purple-50 dark:bg-purple-900/20 border border-purple-200 dark:border-purple-800 rounded-xl">
+                          <label className="block text-sm font-semibold dashboard-text mb-2">
+                            Select Class & Section
+                          </label>
+                          <select
+                            className="w-full px-4 py-3 dashboard-card border dashboard-card-border rounded-xl dashboard-text focus:outline-none focus:ring-2 focus:ring-accent-purple transition-all"
+                            disabled={classesLoading}
+                            value={bulkClassId}
+                            onChange={(e) => {
+                              const cls = classes.find((c: Class) => c.id === e.target.value);
+                              if (!cls) return;
+                              setBulkClassId(cls.id);
+                              setBulkClassName(cls.name);
+                              setBulkSection(cls.section);
+                            }}
+                          >
+                            <option value="">Select class</option>
+                            {classes.map((cls: Class) => (
+                              <option key={cls.id} value={cls.id}>
+                                {cls.name} - {cls.section}
+                              </option>
+                            ))}
+                          </select>
+                        </div>
+
+                        <div className="p-4 bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-xl">
+                          <p className="text-sm dashboard-text font-medium mb-2">
+                            <strong>Required CSV columns:</strong>
+                          </p>
+                          <code className="block text-xs dashboard-text-muted font-mono bg-white dark:bg-gray-800 p-3 rounded-lg border dashboard-card-border">
+                            name, email, password, admissionNo, fatherName, motherName, parentsPhone, rollNo
+                          </code>
+                        </div>
+
+                        <button
+                          onClick={handleBulkUpload}
+                          disabled={uploading || !file}
+                          className="w-full px-6 py-3 bg-gradient-to-br from-teal-500 to-cyan-600 text-white rounded-xl font-semibold hover:opacity-90 transition-all shadow-lg disabled:opacity-50 disabled:cursor-not-allowed"
+                        >
+                          {uploading ? 'Uploading...' : 'Upload CSV'}
+                        </button>
+
+                        {isSuccess && data && (
+                          <div className="p-4 bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 rounded-xl">
+                            <p className="text-green-600 dark:text-green-400 text-sm font-medium">
+                              {(data as any).message} (Uploaded: {(data as any).successCount})
+                            </p>
+                          </div>
+                        )}
+
+                        {bulkError && (
+                          <div className="p-4 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-xl">
+                            <p className="text-red-600 dark:text-red-400 text-sm font-medium">
+                              {(bulkError as any)?.message}
+                            </p>
+                          </div>
+                        )}
+                      </div>
+                    )}
+
+                    {bulkMode === 'schoolWide' && (
+                      <div className="space-y-5">
+                        <div className="flex items-center justify-between flex-wrap gap-3">
+                          <div className="dashboard-text font-semibold">Upload CSV (entire school)</div>
+                          <button
+                            onClick={downloadSampleSchoolWide}
+                            className="px-4 py-2 dashboard-card border dashboard-card-border rounded-xl hover:bg-gray-50 dark:hover:bg-gray-700 transition-all flex items-center gap-2"
+                          >
+                            <Download className="w-4 h-4 text-accent-blue" />
+                            <span className="dashboard-text text-sm font-medium">Sample CSV</span>
+                          </button>
+                        </div>
+
+                        <DragDropCSV onFileSelect={setSchoolWideFile} selectedFile={schoolWideFile} />
+
+                        <div className="p-4 bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-xl">
+                          <p className="text-sm dashboard-text font-medium mb-2">
+                            <strong>Required CSV columns:</strong>
+                          </p>
+                          <code className="block text-xs dashboard-text-muted font-mono bg-white dark:bg-gray-800 p-3 rounded-lg border dashboard-card-border">
+                            name, email, password, admissionNo, fatherName, motherName, parentsPhone, rollNo, className, section
+                          </code>
+                        </div>
+
+                        <button
+                          onClick={handleSchoolWideBulkUpload}
+                          disabled={uploadingSchoolWide || !schoolWideFile}
+                          className="w-full px-6 py-3 bg-gradient-to-br from-blue-600 to-indigo-600 text-white rounded-xl font-semibold hover:opacity-90 transition-all shadow-lg disabled:opacity-50 disabled:cursor-not-allowed"
+                        >
+                          {uploadingSchoolWide ? 'Uploading...' : 'Upload CSV'}
+                        </button>
+
+                        {isSchoolWideSuccess && schoolWideData && (
+                          <div className="p-4 bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 rounded-xl">
+                            <p className="text-green-600 dark:text-green-400 text-sm font-medium">
+                              {(schoolWideData as any).message} (Uploaded: {(schoolWideData as any).successCount})
+                            </p>
+                          </div>
+                        )}
+
+                        {schoolWideError && (
+                          <div className="p-4 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-xl">
+                            <p className="text-red-600 dark:text-red-400 text-sm font-medium">
+                              {(schoolWideError as any)?.message}
+                            </p>
+                          </div>
+                        )}
+                      </div>
+                    )}
                   </div>
-
-                  <div className="flex flex-col sm:flex-row gap-3 pt-4">
-                    <button
-                      onClick={handleBulkUpload}
-                      disabled={uploading || !file}
-                      className="flex-1 px-6 py-3 bg-gradient-to-br from-teal-500 to-cyan-600 text-white rounded-xl font-semibold hover:opacity-90 transition-all shadow-lg disabled:opacity-50 disabled:cursor-not-allowed"
-                    >
-                      {uploading ? 'Uploading...' : 'Upload CSV'}
-                    </button>
-                  </div>
-
-                  {isSuccess && data && (
-                    <div className="p-4 bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 rounded-xl">
-                      <p className="text-green-600 dark:text-green-400 text-sm font-medium">
-                        ✅ {(data as any).message} (Uploaded: {(data as any).successCount})
-                      </p>
-                    </div>
-                  )}
-
-                  {bulkError && (
-                    <div className="p-4 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-xl">
-                      <p className="text-red-600 dark:text-red-400 text-sm font-medium">
-                        {(bulkError as any)?.message}
-                      </p>
-                    </div>
-                  )}
                 </div>
               </motion.div>
             )}

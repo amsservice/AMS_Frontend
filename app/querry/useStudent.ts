@@ -38,6 +38,12 @@ export const useStudents = () =>
     queryFn: () => apiFetch('/api/student/my-students')
   });
 
+export const useSchoolStudents = () =>
+  useQuery<Student[]>({
+    queryKey: ['school-students'],
+    queryFn: () => apiFetch('/api/student/school-students')
+  });
+
 /* =====================================================
    TEACHER: ADD STUDENT
    POST /api/students
@@ -52,6 +58,29 @@ export const useCreateStudent = () => {
         body: JSON.stringify(data)
       }),
     onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['students'] });
+    }
+  });
+};
+
+
+export const useBulkUploadStudentsSchoolWide = () => {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async (payload: BulkUploadPayload) => {
+      const formData = new FormData();
+
+      formData.append('csvFile', payload.file);
+
+      return apiFetch('/api/student/bulk-upload-school', {
+        method: 'POST',
+        body: formData
+      });
+    },
+
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['school-students'] });
       queryClient.invalidateQueries({ queryKey: ['students'] });
     }
   });
