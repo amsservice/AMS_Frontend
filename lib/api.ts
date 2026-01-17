@@ -23,26 +23,7 @@
 //   return data;
 // }
 
-// export async function adminFetch(
-//   endpoint: string,
-//   options: RequestInit = {}
-// ) {
-//   const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}${endpoint}`, {
-//     ...options,
-//     headers: {
-//       "Content-Type": "application/json",
-//       ...(options.headers || {})
-//     }
-//   });
 
-//   const data = await res.json().catch(() => ({}));
-
-//   if (!res.ok) {
-//     throw new Error(data.message || "Request failed");
-//   }
-
-//   return data;
-// }
 
 export async function apiFetch(
   endpoint: string,
@@ -70,14 +51,33 @@ export async function apiFetch(
       headers
     }
   );
-  console.log('API URL:', process.env.NEXT_PUBLIC_API_URL);
-console.log('ENDPOINT:', endpoint);
-
+  
 
   const data = await res.json().catch(() => ({}));
 
   if (!res.ok) {
     throw new Error(data.message || 'Request failed');
+  }
+
+  return data;
+}
+
+export async function adminFetch(
+  endpoint: string,
+  options: RequestInit = {}
+) {
+  const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}${endpoint}`, {
+    ...options,
+    headers: {
+      "Content-Type": "application/json",
+      ...(options.headers || {})
+    }
+  });
+
+  const data = await res.json().catch(() => ({}));
+
+  if (!res.ok) {
+    throw new Error(data.message || "Request failed");
   }
 
   return data;
