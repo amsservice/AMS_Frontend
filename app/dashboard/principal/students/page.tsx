@@ -1,8 +1,9 @@
 'use client';
 
-import { useState, DragEvent } from 'react';
+import { useState, DragEvent, useEffect } from 'react';
 import { Upload, UserPlus, Download, FileSpreadsheet, UploadCloud, X, CheckCircle, Users, Mail, Phone } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
+import { toast } from 'sonner';
 
 /* =====================================================
   IMPORT YOUR ACTUAL API HOOKS
@@ -16,14 +17,17 @@ import { useAuth } from '@/app/context/AuthContext';
 ===================================================== */
 interface DragDropCSVProps {
   onFileSelect: (file: File) => void;
+  onClear?: () => void;
   selectedFile?: File | null;
 }
 
-function DragDropCSV({ onFileSelect, selectedFile }: DragDropCSVProps) {
+function DragDropCSV({ onFileSelect, onClear, selectedFile }: DragDropCSVProps) {
   const [isDragging, setIsDragging] = useState(false);
-  const [fileName, setFileName] = useState<string | null>(
-    selectedFile?.name || null
-  );
+  const [fileName, setFileName] = useState<string | null>(selectedFile?.name || null);
+
+  useEffect(() => {
+    setFileName(selectedFile?.name || null);
+  }, [selectedFile]);
 
   const handleDrop = (e: DragEvent<HTMLDivElement>) => {
     e.preventDefault();
@@ -58,6 +62,7 @@ function DragDropCSV({ onFileSelect, selectedFile }: DragDropCSVProps) {
     setFileName(null);
     const input = document.getElementById('csv-upload-input') as HTMLInputElement;
     if (input) input.value = '';
+    onClear?.();
   };
 
   return (
@@ -218,6 +223,7 @@ interface SingleStudentForm {
   parentsPhone: string;
   rollNo: string;
 }
+
 /* =====================================================
   MAIN PAGE COMPONENT
 ===================================================== */
@@ -258,29 +264,10 @@ export default function BulkStudentUploadPage() {
     error: studentsError
   } = useSchoolStudents();
 
-
-  // TEMPORARY MOCK DATA - REMOVE WHEN USING REAL HOOKS
-  // const user = { role: 'principal' };
-  // const role = user?.role;
-  // const createStudent = (data: any) => console.log('Creating:', data);
-  // const creatingStudent = false;
-  // const singleError = null;
-  // const uploadStudents = (data: any) => console.log('Uploading:', data);
-  // const uploading = false;
-  // const isSuccess = false;
-  // const data = null;
-  // const bulkError = null;
-  // const classes = [
-  //   { id: '1', name: '10', section: 'A', sessionId: '2024' },
-  //   { id: '2', name: '10', section: 'B', sessionId: '2024' },
-  // ];
-  // const classesLoading = false;
-
   const [searchTerm, setSearchTerm] = useState('');
   const [openSingle, setOpenSingle] = useState(false);
   const [openBulk, setOpenBulk] = useState(false);
   const [bulkMode, setBulkMode] = useState<'classWise' | 'schoolWide'>('classWise');
-
 
   /* ---------------- SINGLE STUDENT ---------------- */
   const initialStudent: SingleStudentForm = {
@@ -308,10 +295,20 @@ export default function BulkStudentUploadPage() {
 
   const [schoolWideFile, setSchoolWideFile] = useState<File | null>(null);
 
-
   const [bulkClassId, setBulkClassId] = useState('');
   const [bulkClassName, setBulkClassName] = useState('');
   const [bulkSection, setBulkSection] = useState('');
+
+  const handleClearBulkClassWise = () => {
+    setFile(null);
+    setBulkClassId('');
+    setBulkClassName('');
+    setBulkSection('');
+  };
+
+  const handleClearBulkSchoolWide = () => {
+    setSchoolWideFile(null);
+  };
 
   /* =====================================================
      HANDLERS
@@ -378,6 +375,7 @@ export default function BulkStudentUploadPage() {
       },
       {
         onSuccess: () => {
+          toast.success('Student added successfully');
           setStudent(initialStudent);
           setSingleErrors({});
           setSingleClassId('');
@@ -403,12 +401,20 @@ export default function BulkStudentUploadPage() {
       return;
     }
 
-    uploadStudents({
-      file,
-      classId: role === 'principal' ? bulkClassId : undefined,
-      className: role === 'principal' ? bulkClassName : undefined,
-      section: role === 'principal' ? bulkSection : undefined
-    });
+    uploadStudents(
+      {
+        file,
+        classId: role === 'principal' ? bulkClassId : undefined,
+        className: role === 'principal' ? bulkClassName : undefined,
+        section: role === 'principal' ? bulkSection : undefined
+      },
+      {
+        onSuccess: (resp: any) => {
+          toast.success(resp?.message || 'Students uploaded successfully');
+          handleClearBulkClassWise();
+        }
+      }
+    );
   };
 
   const handleSchoolWideBulkUpload = () => {
@@ -417,9 +423,17 @@ export default function BulkStudentUploadPage() {
       return;
     }
 
-    uploadStudentsSchoolWide({
-      file: schoolWideFile
-    });
+    uploadStudentsSchoolWide(
+      {
+        file: schoolWideFile
+      },
+      {
+        onSuccess: (resp: any) => {
+          toast.success(resp?.message || 'Students uploaded successfully');
+          handleClearBulkSchoolWide();
+        }
+      }
+    );
   };
 
   const downloadSampleClassWise = () => {
@@ -800,7 +814,11 @@ export default function BulkStudentUploadPage() {
                           </button>
                         </div>
 
-                        <DragDropCSV onFileSelect={setFile} selectedFile={file} />
+                        <DragDropCSV
+                          onFileSelect={setFile}
+                          selectedFile={file}
+                          onClear={handleClearBulkClassWise}
+                        />
 
                         <div className="p-4 bg-purple-50 dark:bg-purple-900/20 border border-purple-200 dark:border-purple-800 rounded-xl">
                           <label className="block text-sm font-semibold dashboard-text mb-2">
@@ -875,7 +893,11 @@ export default function BulkStudentUploadPage() {
                           </button>
                         </div>
 
-                        <DragDropCSV onFileSelect={setSchoolWideFile} selectedFile={schoolWideFile} />
+                        <DragDropCSV
+                          onFileSelect={setSchoolWideFile}
+                          selectedFile={schoolWideFile}
+                          onClear={handleClearBulkSchoolWide}
+                        />
 
                         <div className="p-4 bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-xl">
                           <p className="text-sm dashboard-text font-medium mb-2">
