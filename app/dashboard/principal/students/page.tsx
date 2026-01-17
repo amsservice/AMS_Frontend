@@ -218,12 +218,12 @@ interface SingleStudentForm {
   parentsPhone: string;
   rollNo: string;
 }
-
 /* =====================================================
   MAIN PAGE COMPONENT
 ===================================================== */
 
 export default function BulkStudentUploadPage() {
+
   // UNCOMMENT AND USE YOUR ACTUAL HOOKS:
   const { user } = useAuth();
   const role = user?.role;
@@ -283,7 +283,7 @@ export default function BulkStudentUploadPage() {
 
 
   /* ---------------- SINGLE STUDENT ---------------- */
-  const [student, setStudent] = useState<SingleStudentForm>({
+  const initialStudent: SingleStudentForm = {
     name: '',
     email: '',
     password: '',
@@ -292,7 +292,12 @@ export default function BulkStudentUploadPage() {
     motherName: '',
     parentsPhone: '',
     rollNo: ''
-  });
+  };
+
+  const [student, setStudent] = useState<SingleStudentForm>(initialStudent);
+  const [singleErrors, setSingleErrors] = useState<
+    Partial<Record<keyof SingleStudentForm | 'class', string>>
+  >({});
 
   const [singleClassId, setSingleClassId] = useState('');
   const [singleClassName, setSingleClassName] = useState('');
@@ -313,8 +318,12 @@ export default function BulkStudentUploadPage() {
   ===================================================== */
 
   const handleSingleSubmit = () => {
+    const errors: Partial<Record<keyof SingleStudentForm | 'class', string>> =
+      {};
+
     const {
       name,
+      email,
       password,
       admissionNo,
       fatherName,
@@ -323,34 +332,61 @@ export default function BulkStudentUploadPage() {
       rollNo
     } = student;
 
-    if (
-      !name ||
-      !password ||
-      !admissionNo ||
-      !fatherName ||
-      !motherName ||
-      !parentsPhone ||
-      !rollNo
-    ) {
-      alert('Please fill all required fields');
-      return;
+    const trimmedName = name.trim();
+    const trimmedEmail = email.trim();
+    const trimmedPassword = password;
+    const trimmedAdmissionNo = admissionNo.trim();
+    const trimmedFatherName = fatherName.trim();
+    const trimmedMotherName = motherName.trim();
+    const trimmedParentsPhone = parentsPhone.trim();
+    const trimmedRollNo = rollNo.trim();
+
+    if (trimmedName.length < 3) errors.name = 'Name must be at least 3 characters';
+    if (trimmedPassword.length < 6) errors.password = 'Password must be at least 6 characters';
+    if (!trimmedAdmissionNo) errors.admissionNo = 'Admission number is required';
+    if (trimmedFatherName.length < 3) errors.fatherName = "Father's name must be at least 3 characters";
+    if (trimmedMotherName.length < 3) errors.motherName = "Mother's name must be at least 3 characters";
+
+    const phoneDigits = trimmedParentsPhone.replace(/\D/g, '');
+    if (phoneDigits.length < 10) errors.parentsPhone = 'Parent phone must be at least 10 digits';
+
+    const rollNoNum = Number(trimmedRollNo);
+    if (!trimmedRollNo || Number.isNaN(rollNoNum) || rollNoNum <= 0 || !Number.isInteger(rollNoNum)) {
+      errors.rollNo = 'Roll number must be a positive integer';
     }
 
-    if (
-      role === 'principal' &&
-      (!singleClassId || !singleClassName || !singleSection)
-    ) {
-      alert('Please select class and section');
-      return;
+    if (trimmedEmail) {
+      const emailOk = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(trimmedEmail);
+      if (!emailOk) errors.email = 'Please enter a valid email';
     }
 
-    createStudent({
-      ...student,
-      rollNo: Number(rollNo),
-      classId: role === 'principal' ? singleClassId : undefined,
-      className: role === 'principal' ? singleClassName : undefined,
-      section: role === 'principal' ? singleSection : undefined
-    });
+    if (role === 'principal' && (!singleClassId || !singleClassName || !singleSection)) {
+      errors.class = 'Please select class and section';
+    }
+
+    setSingleErrors(errors);
+    if (Object.keys(errors).length) return;
+
+    createStudent(
+      {
+        ...student,
+        email: trimmedEmail ? trimmedEmail : undefined,
+        rollNo: rollNoNum,
+        classId: role === 'principal' ? singleClassId : undefined,
+        className: role === 'principal' ? singleClassName : undefined,
+        section: role === 'principal' ? singleSection : undefined
+      },
+      {
+        onSuccess: () => {
+          setStudent(initialStudent);
+          setSingleErrors({});
+          setSingleClassId('');
+          setSingleClassName('');
+          setSingleSection('');
+          setOpenSingle(false);
+        }
+      }
+    );
   };
 
   const handleBulkUpload = () => {
@@ -621,10 +657,17 @@ export default function BulkStudentUploadPage() {
                             placeholder={`Enter ${fieldLabels[key as keyof SingleStudentForm].toLowerCase()}`}
                             value={value}
                             onChange={(e) =>
-                              setStudent({ ...student, [key]: e.target.value })
+                              (setStudent({ ...student, [key]: e.target.value }),
+                              setSingleErrors(prev => ({ ...prev, [key]: undefined })))
                             }
                             className="w-full px-4 py-3 dashboard-card border dashboard-card-border rounded-xl dashboard-text focus:outline-none focus:ring-2 focus:ring-accent-blue transition-all"
                           />
+
+                          {singleErrors[key as keyof SingleStudentForm] && (
+                            <p className="mt-1 text-xs text-red-600 dark:text-red-400 font-medium">
+                              {singleErrors[key as keyof SingleStudentForm]}
+                            </p>
+                          )}
                         </div>
                       ))}
                     </div>
@@ -643,6 +686,7 @@ export default function BulkStudentUploadPage() {
                           setSingleClassId(cls.id);
                           setSingleClassName(cls.name);
                           setSingleSection(cls.section);
+                          setSingleErrors(prev => ({ ...prev, class: undefined }));
                         }}
                       >
                         <option value="">Select class</option>
@@ -652,6 +696,12 @@ export default function BulkStudentUploadPage() {
                           </option>
                         ))}
                       </select>
+
+                      {singleErrors.class && (
+                        <p className="mt-2 text-xs text-red-600 dark:text-red-400 font-medium">
+                          {singleErrors.class}
+                        </p>
+                      )}
                     </div>
 
                     <div className="flex gap-3 pt-2">
