@@ -53,6 +53,7 @@ export default function TeacherStudentsPage() {
     addStudent(
       {
         ...formData,
+        email: formData.email.trim() === '' ? undefined : formData.email,
         rollNo: Number(formData.rollNo)
       },
       {
@@ -130,13 +131,12 @@ export default function TeacherStudentsPage() {
 
             {/* Email */}
             <div>
-              <Label>Email *</Label>
+              <Label>Email</Label>
               <Input
                 type="email"
                 name="email"
                 value={formData.email}
                 onChange={handleChange}
-                required
               />
             </div>
 

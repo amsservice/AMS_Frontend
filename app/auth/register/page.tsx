@@ -1,7 +1,3 @@
-
-
-
-
 "use client";
 
 import { Button } from "@/components/ui/button";
@@ -17,6 +13,7 @@ import MainNavbar from "@/components/main/MainNavbar";
 import MainFooter from "@/components/main/MainFooter";
 import { registerSchoolSchema } from "@/lib/zodSchema";
 import { z } from "zod";
+import { ApiError } from "@/lib/api";
 
 const UpastithiPageLoader = dynamic(
   () =>
@@ -28,7 +25,7 @@ const UpastithiPageLoader = dynamic(
 
 export default function RegisterPage() {
   const router = useRouter();
-  const { registerSchool, user, loading } = useAuth();
+  const { user, loading } = useAuth();
 
   const [submitting, setSubmitting] = useState(false);
   const [isDark, setIsDark] = useState(false);
@@ -63,27 +60,27 @@ export default function RegisterPage() {
     }
   }, [user, loading, router]);
 
-useEffect(() => {
-  const start = Date.now();
+  useEffect(() => {
+    const start = Date.now();
 
-  const savedTheme = window.localStorage.getItem("Upastithi-theme");
-  const initialIsDark = savedTheme
-    ? savedTheme === "dark"
-    : window.matchMedia("(prefers-color-scheme: dark)").matches;
+    const savedTheme = window.localStorage.getItem("Upastithi-theme");
+    const initialIsDark = savedTheme
+      ? savedTheme === "dark"
+      : window.matchMedia("(prefers-color-scheme: dark)").matches;
 
-  setIsDark(initialIsDark);
-  document.documentElement.classList.toggle("dark", initialIsDark);
+    setIsDark(initialIsDark);
+    document.documentElement.classList.toggle("dark", initialIsDark);
 
-  const elapsed = Date.now() - start;
-  const remaining = Math.max(500 - elapsed, 0);
+    const elapsed = Date.now() - start;
+    const remaining = Math.max(500 - elapsed, 0);
 
-  const timer = setTimeout(() => {
-    setMounted(true);
-    setShowLoader(false);
-  }, remaining);
+    const timer = setTimeout(() => {
+      setMounted(true);
+      setShowLoader(false);
+    }, remaining);
 
-  return () => clearTimeout(timer);
-}, []);
+    return () => clearTimeout(timer);
+  }, []);
 
   const toggleTheme = () => {
     const next = !isDark;
@@ -103,6 +100,7 @@ useEffect(() => {
   }
 
   async function handleSubmit() {
+    let toastId: string | number | undefined;
     try {
       // Validate form data
       registerSchoolSchema.parse(form);
@@ -110,7 +108,7 @@ useEffect(() => {
 
       setSubmitting(true);
 
-      const registerPromise = registerSchool({
+      const payload = {
         schoolName: form.schoolName,
         schoolEmail: form.schoolEmail,
         phone: form.phone,
@@ -124,17 +122,82 @@ useEffect(() => {
         principalName: form.principalName,
         principalEmail: form.principalEmail,
         principalPassword: form.principalPassword,
-        principalgender: form.gender || undefined,
-        principalExperience: form.yearsOfExperience ? parseInt(form.yearsOfExperience) : undefined,
-      });
+        principalGender: form.gender || undefined,
+        principalExperience: form.yearsOfExperience
+          ? parseInt(form.yearsOfExperience)
+          : undefined,
+      };
 
-      toast.promise(registerPromise, {
-        loading: "Otp sending...",
-        success: "OTP sent to your email",
-        error: (err) => (err instanceof Error ? err.message : "Registration failed"),
-      });
+      toastId = toast.loading("Otp sending...");
+      const postRes = await fetch(
+        `${process.env.NEXT_PUBLIC_API_URL}/api/auth/register-school`,
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify(payload),
+        }
+      );
+      const postData = await postRes.json().catch(() => ({}));
 
-      await registerPromise;
+      // New expected behavior: backend returns 200 even for "already registered"
+      if ((postData as any)?.statusCode === 409) {
+        const msg = String((postData as any)?.message || "");
+
+        if (msg.toLowerCase().includes('principal email')) {
+          if (toastId !== undefined) toast.dismiss(toastId);
+          toast.error(msg || "Principal email is already registered");
+          return;
+        }
+
+        const school = (postData as any)?.data?.school;
+        const paymentId = school?.paymentId ?? null;
+
+        if (paymentId) {
+          if (toastId !== undefined) toast.dismiss(toastId);
+          toast.error("Email already registered");
+          return;
+        }
+
+        // Unpaid: update details then go to payment
+        const putRes = await fetch(
+          `${process.env.NEXT_PUBLIC_API_URL}/api/auth/register-school`,
+          {
+            method: "PUT",
+            headers: {
+              "Content-Type": "application/json",
+            },
+            body: JSON.stringify(payload),
+          }
+        );
+        const putData = await putRes.json().catch(() => ({}));
+
+        if ((putData as any)?.statusCode === 409) {
+          if (toastId !== undefined) toast.dismiss(toastId);
+          toast.error("Email already registered");
+          return;
+        }
+
+        if (!putRes.ok) {
+          throw new Error(
+            (putData as any)?.message || "Update failed"
+          );
+        }
+
+        if (toastId !== undefined) toast.dismiss(toastId);
+        router.replace(
+          `/subscription/payment?email=${encodeURIComponent(form.schoolEmail)}`
+        );
+        return;
+      }
+
+      if (!postRes.ok) {
+        throw new Error(
+          (postData as any)?.message || "Registration failed"
+        );
+      }
+      if (toastId !== undefined) toast.dismiss(toastId);
 
       router.replace(
         `/auth/verify-otp?email=${encodeURIComponent(form.schoolEmail)}`
@@ -148,11 +211,18 @@ useEffect(() => {
           }
         });
         setErrors(fieldErrors);
-        toast.error("Please enter valid details");
+        if (toastId !== undefined) toast.dismiss(toastId);
+        if (fieldErrors.yearsOfExperience) {
+          toast.error(fieldErrors.yearsOfExperience);
+        } else {
+          toast.error("Please enter valid details");
+        }
+      } else if (err instanceof ApiError) {
+        if (toastId !== undefined) toast.dismiss(toastId);
+        toast.error(err.message || "Registration failed");
       } else {
-        // Handle API errors (like email already registered)
-        const errorMessage = err?.response?.data?.message || err?.message || "Registration failed";
-        toast.error(errorMessage);
+        if (toastId !== undefined) toast.dismiss(toastId);
+        toast.error(err?.message || "Registration failed");
       }
     } finally {
       setSubmitting(false);
@@ -255,7 +325,7 @@ useEffect(() => {
                             <option value="">Select School Type</option>
                             <option value="Government">Government</option>
                             <option value="Private">Private</option>
-                            <option value="Semi-Government">Semi-Government</option>
+                            <option value="Semi-Private">Semi-Private</option>
                           </select>
                           {errors.schoolType && <p className="text-red-500 text-xs mt-1">{errors.schoolType}</p>}
                         </div>
@@ -376,7 +446,6 @@ useEffect(() => {
                             <option value="">Select Gender (Optional)</option>
                             <option value="Male">Male</option>
                             <option value="Female">Female</option>
-                            <option value="Other">Other</option>
                           </select>
                           {errors.gender && <p className="text-red-500 text-xs mt-1">{errors.gender}</p>}
                         </div>
@@ -420,8 +489,7 @@ useEffect(() => {
                     <Button
                       onClick={handleSubmit}
                       disabled={submitting}
-                      className="w-full h-12 rounded-xl font-semibold text-white bg-gradient-to-r from-blue-600 via-indigo-600 to-purple-600 hover:opacity-90 transition-all shadow-lg disabled:opacity-50 disabled:cursor-not-allowed"
-                    >
+                      className="w-full h-12 rounded-xl font-semibold text-white bg-gradient-to-r from-blue-600 via-indigo-600 to-purple-600 hover:opacity-90 transition-all shadow-lg disabled:opacity-50 disabled:cursor-not-allowed">
                       {submitting ? "Creating..." : "Create Account"}
                     </Button>
                   </div>
@@ -450,7 +518,7 @@ useEffect(() => {
               <div className="my-6 h-px bg-gray-200 dark:bg-gray-700" />
 
               <div className="text-xs text-gray-600 dark:text-gray-400">
-                Having trouble? Contact <span className="font-semibold text-gray-900 dark:text-white">support@Upastithi.com</span>
+                Having trouble? Contact <span className="font-semibold text-gray-900 dark:text-white">upastithi@gmail.com</span>
               </div>
             </div>
           </div>

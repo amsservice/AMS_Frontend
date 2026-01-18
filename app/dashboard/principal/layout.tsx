@@ -18,6 +18,24 @@ export default function PrincipalLayout({
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [darkMode, setDarkMode] = useState(false);
 
+  useEffect(() => {
+    try {
+      const stored = localStorage.getItem('ams:darkMode');
+      if (stored === 'true' || stored === 'false') {
+        setDarkMode(stored === 'true');
+        return;
+      }
+
+      const prefersDark =
+        typeof window !== 'undefined' &&
+        window.matchMedia &&
+        window.matchMedia('(prefers-color-scheme: dark)').matches;
+      setDarkMode(prefersDark);
+    } catch {
+      // ignore
+    }
+  }, []);
+
   /* 🔐 Role Guard */
   useEffect(() => {
     if (!loading && user?.role !== "principal") {
@@ -28,6 +46,12 @@ export default function PrincipalLayout({
   /* 🌙 Dark Mode */
   useEffect(() => {
     document.documentElement.classList.toggle("dark", darkMode);
+
+    try {
+      localStorage.setItem('ams:darkMode', String(darkMode));
+    } catch {
+      // ignore
+    }
   }, [darkMode]);
 
   if (loading || !user) return null;
@@ -49,7 +73,7 @@ export default function PrincipalLayout({
           onMenuClick={() => setSidebarOpen(true)}
         />
 
-        <div className="p-4 pt-20 lg:pt-0 lg:p-8">
+        <div className="">
           <div className="max-w-[1400px] mx-auto">
             {children}
           </div>

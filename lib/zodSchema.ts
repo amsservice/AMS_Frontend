@@ -50,17 +50,21 @@ export const registerSchoolSchema = z
       .string()
       .min(6, "Password must be at least 6 characters"),
 
-    // ✅ NEW (OPTIONAL)
-    principalGender: z
+    gender: z
       .enum(["Male", "Female", "Other"])
       .optional(),
 
-    // ⚠️ IMPORTANT: must be number (frontend must convert)
-    principalExperience: z
-      .number()
-      .min(0, "Experience cannot be negative")
-      .max(60, "Experience cannot exceed 60 years")
-      .optional()
+    yearsOfExperience: z.preprocess(
+      (value) => {
+        if (value === '' || value === null || value === undefined) return undefined;
+        return value;
+      },
+      z.coerce
+        .number()
+        .min(0, "Experience cannot be negative")
+        .max(42, "Experience cannot exceed 42 years")
+        .optional()
+    )
   })
   .refine(
     (data) => data.principalPassword === data.confirmPassword,

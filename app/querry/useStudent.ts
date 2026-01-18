@@ -28,6 +28,13 @@ export interface Student {
   history: StudentHistory[];
 }
 
+export interface ClassWiseStudentCount {
+  classId: string;
+  className: string;
+  section: string;
+  totalStudents: number;
+}
+
 /* =====================================================
    TEACHER: LIST STUDENTS
    GET /api/students
@@ -36,6 +43,25 @@ export const useStudents = () =>
   useQuery<Student[]>({
     queryKey: ['students'],
     queryFn: () => apiFetch('/api/student/my-students')
+  });
+
+export const useSchoolStudents = () =>
+  useQuery<Student[]>({
+    queryKey: ['school-students'],
+    queryFn: () => apiFetch('/api/student/school-students')
+  });
+
+export const useStudentsClassWiseStats = () =>
+  useQuery<ClassWiseStudentCount[]>({
+    queryKey: ['students-class-wise-stats'],
+    queryFn: () => apiFetch('/api/student/stats/class-wise')
+  });
+
+export const useStudentsByClass = (classId?: string) =>
+  useQuery<Student[]>({
+    queryKey: ['students-by-class', classId],
+    queryFn: () => apiFetch(`/api/student/class/${classId}/students`),
+    enabled: Boolean(classId)
   });
 
 /* =====================================================
@@ -53,6 +79,34 @@ export const useCreateStudent = () => {
       }),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['students'] });
+      queryClient.invalidateQueries({ queryKey: ['school-students'] });
+      queryClient.invalidateQueries({ queryKey: ['students-class-wise-stats'] });
+      queryClient.invalidateQueries({ queryKey: ['students-by-class'] });
+    }
+  });
+};
+
+
+export const useBulkUploadStudentsSchoolWide = () => {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async (payload: BulkUploadPayload) => {
+      const formData = new FormData();
+
+      formData.append('csvFile', payload.file);
+
+      return apiFetch('/api/student/bulk-upload-school', {
+        method: 'POST',
+        body: formData
+      });
+    },
+
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['school-students'] });
+      queryClient.invalidateQueries({ queryKey: ['students'] });
+      queryClient.invalidateQueries({ queryKey: ['students-class-wise-stats'] });
+      queryClient.invalidateQueries({ queryKey: ['students-by-class'] });
     }
   });
 };
@@ -72,6 +126,9 @@ export const useUpdateStudent = () => {
       }),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['students'] });
+      queryClient.invalidateQueries({ queryKey: ['school-students'] });
+      queryClient.invalidateQueries({ queryKey: ['students-class-wise-stats'] });
+      queryClient.invalidateQueries({ queryKey: ['students-by-class'] });
     }
   });
 };
@@ -85,3 +142,43 @@ export const useMyStudentProfile = () =>
     queryKey: ['student', 'me'],
     queryFn: () => apiFetch('/api/student/me')
   });
+
+
+  /* =====================================================
+   TEACHER / PRINCIPAL: BULK UPLOAD STUDENTS
+   POST /api/students/bulk-upload
+===================================================== */
+interface BulkUploadPayload {
+  file: File;
+  classId?: string;
+  className?: string;
+  section?: string;
+  sessionId?: string;
+}
+
+export const useBulkUploadStudents = () => {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async (payload: BulkUploadPayload) => {
+      const formData = new FormData();
+
+      // MUST match multer.single('csvFile')
+      formData.append('csvFile', payload.file);
+
+      if (payload.classId) formData.append('classId', payload.classId);
+      if (payload.className) formData.append('className', payload.className);
+      if (payload.section) formData.append('section', payload.section);
+      if (payload.sessionId) formData.append('sessionId', payload.sessionId);
+
+      return apiFetch('/api/student/bulk-upload', {
+        method: 'POST',
+        body: formData
+      });
+    },
+
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['students'] });
+    }
+  });
+};
