@@ -49,7 +49,7 @@ export default function PrincipalLayout({
           onMenuClick={() => setSidebarOpen(true)}
         />
 
-        <div className="p-4 pt-20 lg:pt-0 lg:p-8">
+        <div className="">
           <div className="max-w-[1400px] mx-auto">
             {children}
           </div>
