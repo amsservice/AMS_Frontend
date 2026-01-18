@@ -24,6 +24,7 @@ export interface User {
 interface RegisterSchoolPayload {
   schoolName: string;
   schoolEmail: string;
+  establishedYear: number;
   phone: string;
   address: string;
   pincode: string;

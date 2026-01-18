@@ -1,7 +1,7 @@
-'use client';
+"use client";
 
-import { useState, useEffect } from 'react';
-import { motion, AnimatePresence } from 'framer-motion';
+import { useState, useEffect } from "react";
+import { motion, AnimatePresence } from "framer-motion";
 import {
   Building2,
   Mail,
@@ -16,12 +16,14 @@ import {
   Check,
   Loader2,
   AlertCircle,
-  Save
-} from 'lucide-react';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { useMySchool, useUpdateSchool } from '@/app/querry/useSchool';
+  Save,
+} from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { useMySchool, useUpdateSchool } from "@/app/querry/useSchool";
 import { toast } from "sonner";
+import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { apiFetch } from "@/lib/api";
 
 interface SchoolFormData {
   name: string;
@@ -32,7 +34,7 @@ interface SchoolFormData {
   state: string;
   pincode: string;
   board: string;
-  code: number;
+  code: number | null;
   established: string;
 }
 
@@ -46,12 +48,12 @@ interface PrincipalFormData {
 }
 
 interface SubscriptionData {
-  planId: '1Y' | '2Y' | '3Y';
+  planId: "1Y" | "2Y" | "3Y";
   billableStudents: number;
   paidAmount: number;
   startDate: string;
   endDate: string;
-  status: 'active' | 'grace' | 'expired';
+  status: "active" | "grace" | "expired";
 }
 
 export default function PrincipalProfilePage() {
@@ -60,74 +62,110 @@ export default function PrincipalProfilePage() {
 
   const { data: schoolResponse, isLoading, error, refetch } = useMySchool();
   const updateSchoolMutation = useUpdateSchool();
+  const queryClient = useQueryClient();
+
+  const updatePrincipalMutation = useMutation({
+    mutationFn: (data: {
+      name?: string;
+      phone?: string;
+      qualification?: string;
+      yearsOfExperience?: number;
+    }) =>
+      apiFetch("/api/auth/principal/profile", {
+        method: "PUT",
+        body: JSON.stringify(data),
+      }),
+    onSuccess: async () => {
+      await queryClient.invalidateQueries({ queryKey: ["school", "me"] });
+    },
+  });
 
   const [schoolData, setSchoolData] = useState<SchoolFormData>({
-    name: '',
-    email: '',
-    phone: '',
-    address: '',
-    city: '',
-    state: '',
-    pincode: '',
-    board: '',
-    code: 0,
-    established: ''
+    name: "",
+    email: "",
+    phone: "",
+    address: "",
+    city: "",
+    state: "",
+    pincode: "",
+    board: "",
+    code: null,
+    established: "",
   });
 
   const [principalData, setPrincipalData] = useState<PrincipalFormData>({
-    name: '',
-    email: '',
-    phone: '',
-    qualification: '',
-    experience: '',
-    joinedDate: ''
+    name: "",
+    email: "",
+    phone: "",
+    qualification: "",
+    experience: "",
+    joinedDate: "",
   });
 
   const [subscriptionData, setSubscriptionData] = useState<SubscriptionData>({
-    planId: '1Y',
+    planId: "1Y",
     billableStudents: 0,
     paidAmount: 0,
-    startDate: '',
-    endDate: '',
-    status: 'active'
+    startDate: "",
+    endDate: "",
+    status: "active",
   });
 
   const [schoolForm, setSchoolForm] = useState<SchoolFormData>(schoolData);
-  const [principalForm, setPrincipalForm] = useState<PrincipalFormData>(principalData);
+  const [principalForm, setPrincipalForm] =
+    useState<PrincipalFormData>(principalData);
   const [schoolErrors, setSchoolErrors] = useState<Partial<SchoolFormData>>({});
-  const [principalErrors, setPrincipalErrors] = useState<Partial<PrincipalFormData>>({});
+  const [principalErrors, setPrincipalErrors] = useState<
+    Partial<PrincipalFormData>
+  >({});
 
   useEffect(() => {
     if (schoolResponse?.school) {
       const school = schoolResponse.school;
-      const addressParts = school.address ? school.address.split(',').map(s => s.trim()) : [];
-      const city = addressParts.length > 1 ? addressParts[addressParts.length - 2] : '';
-      const state = addressParts.length > 2 ? addressParts[addressParts.length - 1] : '';
-      const streetAddress = addressParts.length > 2 ? addressParts.slice(0, -2).join(', ') : school.address || '';
+      const addressParts = school.address
+        ? school.address.split(",").map((s) => s.trim())
+        : [];
+      const city =
+        addressParts.length > 1 ? addressParts[addressParts.length - 2] : "";
+      const state =
+        addressParts.length > 2 ? addressParts[addressParts.length - 1] : "";
+      const streetAddress =
+        addressParts.length > 2
+          ? addressParts.slice(0, -2).join(", ")
+          : school.address || "";
 
       const newSchoolData: SchoolFormData = {
-        name: school.name || '',
-        email: school.email || '',
-        phone: school.phone || '',
+        name: school.name || "",
+        email: school.email || "",
+        phone: school.phone || "",
         address: streetAddress,
         city: city,
         state: state,
-        pincode: school.pincode || '',
+        pincode: school.pincode || "",
         board: school.board,
-        code: school.schoolCode,
-        established: school.createdAt ? new Date(school.createdAt).getFullYear().toString() : ''
+        code: typeof school.schoolCode === "number" ? school.schoolCode : null,
+        established:
+          typeof (school as any).establishedYear === "number"
+            ? String((school as any).establishedYear)
+            : "",
       };
       setSchoolData(newSchoolData);
       setSchoolForm(newSchoolData);
 
       if (school.principal) {
+        const yearsOfExp =
+          typeof school.principal.yearsOfExperience === "number"
+            ? String(school.principal.yearsOfExperience)
+            : "";
         const newPrincipalData: PrincipalFormData = {
-          name: school.principal.name || '',
-          email: school.principal.email || '',
-          phone: school.principal.phone || '',
-          qualification: '',
-          experience: '',
-          joinedDate: school.createdAt ? new Date(school.createdAt).toISOString().split('T')[0] : ''
+          name: school.principal.name || "",
+          email: school.principal.email || "",
+          phone: school.principal.phone || "",
+          qualification: (school.principal as any).qualification || "",
+          experience: yearsOfExp,
+          joinedDate: school.createdAt
+            ? new Date(school.createdAt).toISOString().split("T")[0]
+            : "",
         };
         setPrincipalData(newPrincipalData);
         setPrincipalForm(newPrincipalData);
@@ -140,7 +178,7 @@ export default function PrincipalProfilePage() {
           paidAmount: school.subscription.paidAmount,
           startDate: school.subscription.startDate,
           endDate: school.subscription.endDate,
-          status: school.subscription.status
+          status: school.subscription.status,
         });
       }
     }
@@ -162,22 +200,41 @@ export default function PrincipalProfilePage() {
 
   const validateSchoolForm = (): boolean => {
     const errors: Partial<SchoolFormData> = {};
-    if (!schoolForm.name.trim()) errors.name = 'School name is required';
-    if (!schoolForm.email.trim()) errors.email = 'Email is required';
-    else if (!validateEmail(schoolForm.email)) errors.email = 'Invalid email format';
-    if (schoolForm.phone && !validatePhone(schoolForm.phone)) errors.phone = 'Invalid phone number';
-    if (schoolForm.pincode && !validatePincode(schoolForm.pincode)) errors.pincode = 'Pincode must be 6 digits';
-    if (!schoolForm.address.trim()) errors.address = 'Address is required';
+    if (!schoolForm.name.trim()) errors.name = "School name is required";
+    if (!schoolForm.email.trim()) errors.email = "Email is required";
+    else if (!validateEmail(schoolForm.email))
+      errors.email = "Invalid email format";
+    if (schoolForm.phone && !validatePhone(schoolForm.phone))
+      errors.phone = "Invalid phone number";
+    if (schoolForm.pincode && !validatePincode(schoolForm.pincode))
+      errors.pincode = "Pincode must be 6 digits";
+    if (!schoolForm.address.trim()) errors.address = "Address is required";
+    if (!schoolForm.board?.trim()) (errors as any).board = "Board is required";
+    if (!schoolForm.city?.trim()) (errors as any).city = "City is required";
+    if (!schoolForm.state?.trim()) (errors as any).state = "State is required";
+    const est = schoolForm.established?.trim();
+    if (est) {
+      const establishedYear = Number.parseInt(est, 10);
+      const currentYear = new Date().getFullYear();
+      if (!Number.isFinite(establishedYear)) {
+        (errors as any).established = "Established year must be a valid year";
+      } else if (establishedYear < 1900 || establishedYear > currentYear) {
+        (errors as any).established =
+          "Established year must be between 1900 and current year";
+      }
+    }
     setSchoolErrors(errors);
     return Object.keys(errors).length === 0;
   };
 
   const validatePrincipalForm = (): boolean => {
     const errors: Partial<PrincipalFormData> = {};
-    if (!principalForm.name.trim()) errors.name = 'Principal name is required';
-    if (!principalForm.email.trim()) errors.email = 'Email is required';
-    else if (!validateEmail(principalForm.email)) errors.email = 'Invalid email format';
-    if (principalForm.phone && !validatePhone(principalForm.phone)) errors.phone = 'Invalid phone number';
+    if (!principalForm.name.trim()) errors.name = "Principal name is required";
+    if (!principalForm.email.trim()) errors.email = "Email is required";
+    else if (!validateEmail(principalForm.email))
+      errors.email = "Invalid email format";
+    if (principalForm.phone && !validatePhone(principalForm.phone))
+      errors.phone = "Invalid phone number";
     setPrincipalErrors(errors);
     return Object.keys(errors).length === 0;
   };
@@ -200,35 +257,74 @@ export default function PrincipalProfilePage() {
 
   const handleSchoolSubmit = async () => {
     if (!validateSchoolForm()) {
-      toast.error('Please fix the errors in the form');
+      toast.error("Please fix the errors in the form");
       return;
     }
 
     try {
-      const fullAddress = [schoolForm.address, schoolForm.city, schoolForm.state].filter(Boolean).join(', ');
+      const fullAddress = [
+        schoolForm.address,
+        schoolForm.city,
+        schoolForm.state,
+      ]
+        .filter(Boolean)
+        .join(", ");
+
+      const est = schoolForm.established?.trim();
+      const establishedYear = est ? Number.parseInt(est, 10) : undefined;
+
       await updateSchoolMutation.mutateAsync({
         name: schoolForm.name.trim(),
+        establishedYear: Number.isFinite(establishedYear as number)
+          ? (establishedYear as number)
+          : undefined,
         phone: schoolForm.phone.trim() || undefined,
+        board: schoolForm.board.trim() || undefined,
+        city: schoolForm.city.trim() || undefined,
+        state: schoolForm.state.trim() || undefined,
         address: fullAddress || undefined,
-        pincode: schoolForm.pincode.trim() || undefined
+        pincode: schoolForm.pincode.trim() || undefined,
       });
       setSchoolData(schoolForm);
       setIsEditSchoolOpen(false);
-      toast.success('School details updated successfully');
+      toast.success("School details updated successfully");
     } catch (error: any) {
-      console.error('Failed to update school:', error);
-      toast.error(error?.message || 'Failed to update school details. Please try again.');
+      console.error("Failed to update school:", error);
+      toast.error(
+        error?.message || "Failed to update school details. Please try again."
+      );
     }
   };
 
-  const handlePrincipalSubmit = () => {
+  const handlePrincipalSubmit = async () => {
     if (!validatePrincipalForm()) {
-      toast.error('Please fix the errors in the form');
+      toast.error("Please fix the errors in the form");
       return;
     }
-    setPrincipalData(principalForm);
-    setIsEditPrincipalOpen(false);
-    toast.success('principal details updated successfully');
+
+    try {
+      const exp = principalForm.experience?.trim();
+      const yearsOfExperience = exp ? Number.parseInt(exp, 10) : undefined;
+
+      await updatePrincipalMutation.mutateAsync({
+        name: principalForm.name.trim(),
+        phone: principalForm.phone.trim() || undefined,
+        qualification: principalForm.qualification.trim() || undefined,
+        yearsOfExperience: Number.isFinite(yearsOfExperience as number)
+          ? (yearsOfExperience as number)
+          : undefined,
+      });
+
+      setPrincipalData(principalForm);
+      setIsEditPrincipalOpen(false);
+      toast.success("Principal details updated successfully");
+    } catch (error: any) {
+      console.error("Failed to update principal:", error);
+      toast.error(
+        error?.message ||
+          "Failed to update principal details. Please try again."
+      );
+    }
   };
 
   const handleEditSchool = () => {
@@ -264,7 +360,9 @@ export default function PrincipalProfilePage() {
       <div className="min-h-screen bg-gradient-to-br from-gray-50 to-gray-100 dark:from-gray-900 dark:to-gray-800 flex items-center justify-center">
         <div className="text-center">
           <Loader2 className="w-12 h-12 animate-spin text-blue-500 mx-auto mb-4" />
-          <p className="text-gray-600 dark:text-gray-400 text-lg">Loading school profile...</p>
+          <p className="text-gray-600 dark:text-gray-400 text-lg">
+            Loading school profile...
+          </p>
         </div>
       </div>
     );
@@ -281,9 +379,13 @@ export default function PrincipalProfilePage() {
                 Failed to Load School Profile
               </h3>
               <p className="text-red-600/80 dark:text-red-400/80 mb-6 max-w-md">
-                {error?.message || 'An error occurred while loading your school profile. Please try again.'}
+                {error?.message ||
+                  "An error occurred while loading your school profile. Please try again."}
               </p>
-              <Button onClick={handleRetry} className="bg-gradient-to-br from-blue-600 to-indigo-600 text-white">
+              <Button
+                onClick={handleRetry}
+                className="bg-gradient-to-br from-blue-600 to-indigo-600 text-white"
+              >
                 Try Again
               </Button>
             </div>
@@ -304,7 +406,8 @@ export default function PrincipalProfilePage() {
                 No School Profile Found
               </h3>
               <p className="text-gray-600 dark:text-gray-400 max-w-md">
-                Your school profile could not be found. Please contact support for assistance.
+                Your school profile could not be found. Please contact support
+                for assistance.
               </p>
             </div>
           </div>
@@ -338,13 +441,21 @@ export default function PrincipalProfilePage() {
                     <Building2 className="w-8 h-8 text-white" />
                   </div>
                   <div>
-                    <h2 className="text-xl font-bold text-gray-900 dark:text-white">{schoolData.name || 'School Name'}</h2>
+                    <h2 className="text-xl font-bold text-gray-900 dark:text-white">
+                      {schoolData.name || "School Name"}
+                    </h2>
                     <p className="text-sm text-gray-600 dark:text-gray-400">
-                      {schoolData.board} • Est. {schoolData.established || 'N/A'}
+                      {schoolData.board} • Est.{" "}
+                      {schoolData.established || "N/A"}
                     </p>
                   </div>
                 </div>
-                <Button variant="ghost" size="sm" onClick={handleEditSchool} className="rounded-xl">
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={handleEditSchool}
+                  className="rounded-xl"
+                >
                   <Edit className="w-4 h-4" />
                 </Button>
               </div>
@@ -356,9 +467,11 @@ export default function PrincipalProfilePage() {
                       <Mail className="w-4 h-4 text-white" />
                     </div>
                     <div className="flex-1">
-                      <p className="text-xs text-gray-600 dark:text-gray-400 mb-1">Email</p>
+                      <p className="text-xs text-gray-600 dark:text-gray-400 mb-1">
+                        Email
+                      </p>
                       <p className="text-sm text-gray-900 dark:text-white font-medium break-all">
-                        {schoolData.email || 'N/A'}
+                        {schoolData.email || "N/A"}
                       </p>
                     </div>
                   </div>
@@ -368,9 +481,11 @@ export default function PrincipalProfilePage() {
                       <Phone className="w-4 h-4 text-white" />
                     </div>
                     <div className="flex-1">
-                      <p className="text-xs text-gray-600 dark:text-gray-400 mb-1">Phone</p>
+                      <p className="text-xs text-gray-600 dark:text-gray-400 mb-1">
+                        Phone
+                      </p>
                       <p className="text-sm text-gray-900 dark:text-white font-medium">
-                        {schoolData.phone || 'N/A'}
+                        {schoolData.phone || "N/A"}
                       </p>
                     </div>
                   </div>
@@ -380,13 +495,23 @@ export default function PrincipalProfilePage() {
                       <MapPin className="w-4 h-4 text-white" />
                     </div>
                     <div className="flex-1">
-                      <p className="text-xs text-gray-600 dark:text-gray-400 mb-1">Address</p>
-                      <p className="text-sm text-gray-900 dark:text-white font-medium">
-                        {schoolData.address || 'N/A'}
+                      <p className="text-xs text-gray-600 dark:text-gray-400 mb-1">
+                        Address
                       </p>
-                      {(schoolData.city || schoolData.state || schoolData.pincode) && (
+                      <p className="text-sm text-gray-900 dark:text-white font-medium">
+                        {schoolData.address || "N/A"}
+                      </p>
+                      {(schoolData.city ||
+                        schoolData.state ||
+                        schoolData.pincode) && (
                         <p className="text-sm text-gray-600 dark:text-gray-400 mt-1">
-                          {[schoolData.city, schoolData.state, schoolData.pincode].filter(Boolean).join(', ')}
+                          {[
+                            schoolData.city,
+                            schoolData.state,
+                            schoolData.pincode,
+                          ]
+                            .filter(Boolean)
+                            .join(", ")}
                         </p>
                       )}
                     </div>
@@ -395,16 +520,20 @@ export default function PrincipalProfilePage() {
 
                 <div className="space-y-4">
                   <div className="bg-gradient-to-br from-blue-50 to-indigo-100 dark:from-blue-900/30 dark:to-indigo-900/30 border border-blue-200/50 dark:border-blue-700/50 rounded-xl p-4 shadow-lg">
-                    <p className="text-xs text-gray-600 dark:text-gray-400 mb-1">School Code</p>
+                    <p className="text-xs text-gray-600 dark:text-gray-400 mb-1">
+                      School Code
+                    </p>
                     <p className="text-lg text-gray-900 dark:text-white font-bold">
-                      {schoolData.code || 'N/A'}
+                      {schoolData.code ?? "N/A"}
                     </p>
                   </div>
 
                   <div className="bg-gradient-to-br from-green-50 to-emerald-100 dark:from-green-900/30 dark:to-emerald-900/30 border border-green-200/50 dark:border-green-700/50 rounded-xl p-4 shadow-lg">
-                    <p className="text-xs text-gray-600 dark:text-gray-400 mb-1">Board</p>
+                    <p className="text-xs text-gray-600 dark:text-gray-400 mb-1">
+                      Board
+                    </p>
                     <p className="text-lg text-gray-900 dark:text-white font-bold">
-                      {schoolData.board || 'N/A'}
+                      {schoolData.board || "N/A"}
                     </p>
                   </div>
                 </div>
@@ -417,9 +546,16 @@ export default function PrincipalProfilePage() {
                   <div className="p-2 bg-gradient-to-br from-teal-600 to-cyan-600 rounded-lg shadow-lg">
                     <GraduationCap className="w-5 h-5 text-white" />
                   </div>
-                  <h3 className="text-lg font-bold text-gray-900 dark:text-white">Principal</h3>
+                  <h3 className="text-lg font-bold text-gray-900 dark:text-white">
+                    Principal
+                  </h3>
                 </div>
-                <Button variant="ghost" size="sm" onClick={handleEditPrincipal} className="rounded-xl">
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={handleEditPrincipal}
+                  className="rounded-xl"
+                >
                   <Edit className="w-4 h-4" />
                 </Button>
               </div>
@@ -429,7 +565,7 @@ export default function PrincipalProfilePage() {
                   <User className="w-12 h-12 text-white" />
                 </div>
                 <h4 className="text-lg font-bold text-gray-900 dark:text-white mb-1">
-                  {principalData.name || 'N/A'}
+                  {principalData.name || "N/A"}
                 </h4>
               </div>
 
@@ -437,26 +573,29 @@ export default function PrincipalProfilePage() {
                 <div className="flex items-center gap-2 text-sm p-3 rounded-xl bg-gray-50 dark:bg-gray-700/50">
                   <Mail className="w-4 h-4 text-gray-600 dark:text-gray-400 flex-shrink-0" />
                   <span className="text-gray-900 dark:text-white break-all">
-                    {principalData.email || 'N/A'}
+                    {principalData.email || "N/A"}
                   </span>
                 </div>
                 <div className="flex items-center gap-2 text-sm p-3 rounded-xl bg-gray-50 dark:bg-gray-700/50">
                   <Phone className="w-4 h-4 text-gray-600 dark:text-gray-400 flex-shrink-0" />
                   <span className="text-gray-900 dark:text-white">
-                    {principalData.phone || 'N/A'}
+                    {principalData.phone || "N/A"}
                   </span>
                 </div>
                 <div className="flex items-center gap-2 text-sm p-3 rounded-xl bg-gray-50 dark:bg-gray-700/50">
                   <GraduationCap className="w-4 h-4 text-gray-600 dark:text-gray-400 flex-shrink-0" />
                   <span className="text-gray-900 dark:text-white">
-                    {principalData.experience || 'N/A'}
+                    {principalData.experience || "N/A"}
                   </span>
                 </div>
                 {principalData.joinedDate && (
                   <div className="flex items-center gap-2 text-sm p-3 rounded-xl bg-gray-50 dark:bg-gray-700/50">
                     <Calendar className="w-4 h-4 text-gray-600 dark:text-gray-400 flex-shrink-0" />
                     <span className="text-gray-900 dark:text-white">
-                      Joined {new Date(principalData.joinedDate).toLocaleDateString()}
+                      Joined{" "}
+                      {new Date(principalData.joinedDate).toLocaleDateString(
+                        "en-GB"
+                      )}
                     </span>
                   </div>
                 )}
@@ -471,40 +610,64 @@ export default function PrincipalProfilePage() {
                   <CreditCard className="w-6 h-6 text-white" />
                 </div>
                 <div>
-                  <h3 className="text-lg font-bold text-gray-900 dark:text-white">Subscription Details</h3>
-                  <p className="text-sm text-gray-600 dark:text-gray-400">Manage your subscription plan</p>
+                  <h3 className="text-lg font-bold text-gray-900 dark:text-white">
+                    Subscription Details
+                  </h3>
+                  <p className="text-sm text-gray-600 dark:text-gray-400">
+                    Manage your subscription plan
+                  </p>
                 </div>
               </div>
               <div className="flex items-center gap-2 px-3 py-1.5 bg-gradient-to-br from-green-600 to-emerald-600 rounded-full shadow-lg">
                 <Check className="w-4 h-4 text-white" />
                 <span className="text-sm font-semibold text-white">
-                  {subscriptionData.status || 'Active'}
+                  {subscriptionData.status || "Active"}
                 </span>
               </div>
             </div>
 
             <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
               <div className="bg-gradient-to-br from-blue-50 to-indigo-100 dark:from-blue-900/30 dark:to-indigo-900/30 border border-blue-200/50 dark:border-blue-700/50 rounded-xl p-4 shadow-lg">
-                <p className="text-xs text-gray-600 dark:text-gray-400 mb-2">Current Plan</p>
-                <p className="text-xl font-bold text-gray-900 dark:text-white">{subscriptionData.planId}</p>
-                <p className="text-xs text-gray-600 dark:text-gray-400 mt-1">Premium Features</p>
+                <p className="text-xs text-gray-600 dark:text-gray-400 mb-2">
+                  Current Plan
+                </p>
+                <p className="text-xl font-bold text-gray-900 dark:text-white">
+                  {subscriptionData.planId}
+                </p>
+                <p className="text-xs text-gray-600 dark:text-gray-400 mt-1">
+                  Premium Features
+                </p>
               </div>
 
               <div className="bg-gradient-to-br from-green-50 to-emerald-100 dark:from-green-900/30 dark:to-emerald-900/30 border border-green-200/50 dark:border-green-700/50 rounded-xl p-4 shadow-lg">
-                <p className="text-xs text-gray-600 dark:text-gray-400 mb-2">Students</p>
-                <p className="text-xl font-bold text-gray-900 dark:text-white">{subscriptionData.billableStudents}</p>
+                <p className="text-xs text-gray-600 dark:text-gray-400 mb-2">
+                  Students
+                </p>
+                <p className="text-xl font-bold text-gray-900 dark:text-white">
+                  {subscriptionData.billableStudents}
+                </p>
               </div>
 
               <div className="bg-gradient-to-br from-purple-50 to-violet-100 dark:from-purple-900/30 dark:to-violet-900/30 border border-purple-200/50 dark:border-purple-700/50 rounded-xl p-4 shadow-lg">
-                <p className="text-xs text-gray-600 dark:text-gray-400 mb-2">Amount Paid</p>
-                <p className="text-xl font-bold text-gray-900 dark:text-white">₹{subscriptionData.paidAmount}</p>
-                <p className="text-xs text-gray-600 dark:text-gray-400 mt-1">Credit Card</p>
+                <p className="text-xs text-gray-600 dark:text-gray-400 mb-2">
+                  Amount Paid
+                </p>
+                <p className="text-xl font-bold text-gray-900 dark:text-white">
+                  ₹{subscriptionData.paidAmount}
+                </p>
+                <p className="text-xs text-gray-600 dark:text-gray-400 mt-1">
+                  Credit Card
+                </p>
               </div>
 
               <div className="bg-gradient-to-br from-orange-50 to-amber-100 dark:from-orange-900/30 dark:to-amber-900/30 border border-orange-200/50 dark:border-orange-700/50 rounded-xl p-4 shadow-lg">
-                <p className="text-xs text-gray-600 dark:text-gray-400 mb-2">Valid Until</p>
+                <p className="text-xs text-gray-600 dark:text-gray-400 mb-2">
+                  Valid Until
+                </p>
                 <p className="text-xl font-bold text-gray-900 dark:text-white">
-                  {subscriptionData.endDate ? new Date(subscriptionData.endDate).toLocaleDateString() : 'N/A'}
+                  {subscriptionData.endDate
+                    ? new Date(subscriptionData.endDate).toLocaleDateString()
+                    : "N/A"}
                 </p>
               </div>
             </div>
@@ -512,19 +675,19 @@ export default function PrincipalProfilePage() {
             <div className="flex flex-wrap gap-3">
               <button
                 className="px-4 sm:px-6 py-2.5 bg-gradient-to-br from-blue-600 to-indigo-600 text-white rounded-xl text-sm font-medium hover:opacity-90 transition-all shadow-lg"
-                onClick={() => toast('Invoice history feature coming soon')}
+                onClick={() => toast("Invoice history feature coming soon")}
               >
                 View Invoice History
               </button>
               <button
                 className="px-4 sm:px-6 py-2.5 bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 text-gray-900 dark:text-white rounded-xl text-sm font-medium hover:bg-gray-50 dark:hover:bg-gray-600 transition-all shadow-sm"
-                onClick={() => toast('Upgrade plan feature coming soon')}
+                onClick={() => toast("Upgrade plan feature coming soon")}
               >
                 Upgrade Plan
               </button>
               <button
                 className="px-4 sm:px-6 py-2.5 bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 text-gray-900 dark:text-white rounded-xl text-sm font-medium hover:bg-gray-50 dark:hover:bg-gray-600 transition-all shadow-sm"
-                onClick={() => toast('Billing management feature coming soon')}
+                onClick={() => toast("Billing management feature coming soon")}
               >
                 Manage Billing
               </button>
@@ -554,9 +717,16 @@ export default function PrincipalProfilePage() {
                   <div className="p-2 bg-gradient-to-br from-blue-600 to-indigo-600 rounded-xl shadow-lg">
                     <Edit className="w-5 h-5 text-white" />
                   </div>
-                  <h3 className="text-xl font-bold text-gray-900 dark:text-white">Edit School Details</h3>
+                  <h3 className="text-xl font-bold text-gray-900 dark:text-white">
+                    Edit School Details
+                  </h3>
                 </div>
-                <Button variant="ghost" size="sm" onClick={handleCancelSchoolEdit} className="rounded-xl">
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={handleCancelSchoolEdit}
+                  className="rounded-xl"
+                >
                   <X className="w-5 h-5" />
                 </Button>
               </div>
@@ -571,11 +741,15 @@ export default function PrincipalProfilePage() {
                       name="name"
                       value={schoolForm.name}
                       onChange={handleSchoolChange}
-                      className={`bg-white dark:bg-gray-700 border-gray-300 dark:border-gray-600 text-gray-900 dark:text-white rounded-xl ${schoolErrors.name ? 'border-red-500' : ''}`}
+                      className={`bg-white dark:bg-gray-700 border-gray-300 dark:border-gray-600 text-gray-900 dark:text-white rounded-xl ${
+                        schoolErrors.name ? "border-red-500" : ""
+                      }`}
                       placeholder="Enter school name"
                     />
                     {schoolErrors.name && (
-                      <p className="text-xs text-red-500 mt-1">{schoolErrors.name}</p>
+                      <p className="text-xs text-red-500 mt-1">
+                        {schoolErrors.name}
+                      </p>
                     )}
                   </div>
                   <div>
@@ -587,31 +761,45 @@ export default function PrincipalProfilePage() {
                       type="email"
                       value={schoolForm.email}
                       onChange={handleSchoolChange}
-                      className={`bg-white dark:bg-gray-700 border-gray-300 dark:border-gray-600 text-gray-900 dark:text-white rounded-xl ${schoolErrors.email ? 'border-red-500' : ''}`}
+                      disabled
+                      readOnly
+                      className={`bg-white dark:bg-gray-700 border-gray-300 dark:border-gray-600 text-gray-900 dark:text-white rounded-xl ${
+                        schoolErrors.email ? "border-red-500" : ""
+                      }`}
                       placeholder="school@example.com"
                     />
                     {schoolErrors.email && (
-                      <p className="text-xs text-red-500 mt-1">{schoolErrors.email}</p>
+                      <p className="text-xs text-red-500 mt-1">
+                        {schoolErrors.email}
+                      </p>
                     )}
                   </div>
                 </div>
 
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div>
-                    <label className="text-sm text-gray-600 dark:text-gray-400 mb-2 block font-medium">Phone</label>
+                    <label className="text-sm text-gray-600 dark:text-gray-400 mb-2 block font-medium">
+                      Phone
+                    </label>
                     <Input
                       name="phone"
                       value={schoolForm.phone}
                       onChange={handleSchoolChange}
-                      className={`bg-white dark:bg-gray-700 border-gray-300 dark:border-gray-600 text-gray-900 dark:text-white rounded-xl ${schoolErrors.phone ? 'border-red-500' : ''}`}
+                      className={`bg-white dark:bg-gray-700 border-gray-300 dark:border-gray-600 text-gray-900 dark:text-white rounded-xl ${
+                        schoolErrors.phone ? "border-red-500" : ""
+                      }`}
                       placeholder="+91 98765 43210"
                     />
                     {schoolErrors.phone && (
-                      <p className="text-xs text-red-500 mt-1">{schoolErrors.phone}</p>
+                      <p className="text-xs text-red-500 mt-1">
+                        {schoolErrors.phone}
+                      </p>
                     )}
                   </div>
                   <div>
-                    <label className="text-sm text-gray-600 dark:text-gray-400 mb-2 block font-medium">Board</label>
+                    <label className="text-sm text-gray-600 dark:text-gray-400 mb-2 block font-medium">
+                      Board
+                    </label>
                     <Input
                       name="board"
                       value={schoolForm.board}
@@ -630,17 +818,23 @@ export default function PrincipalProfilePage() {
                     name="address"
                     value={schoolForm.address}
                     onChange={handleSchoolChange}
-                    className={`bg-white dark:bg-gray-700 border-gray-300 dark:border-gray-600 text-gray-900 dark:text-white rounded-xl ${schoolErrors.address ? 'border-red-500' : ''}`}
+                    className={`bg-white dark:bg-gray-700 border-gray-300 dark:border-gray-600 text-gray-900 dark:text-white rounded-xl ${
+                      schoolErrors.address ? "border-red-500" : ""
+                    }`}
                     placeholder="123 Education Street"
                   />
                   {schoolErrors.address && (
-                    <p className="text-xs text-red-500 mt-1">{schoolErrors.address}</p>
+                    <p className="text-xs text-red-500 mt-1">
+                      {schoolErrors.address}
+                    </p>
                   )}
                 </div>
 
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                   <div>
-                    <label className="text-sm text-gray-600 dark:text-gray-400 mb-2 block font-medium">City</label>
+                    <label className="text-sm text-gray-600 dark:text-gray-400 mb-2 block font-medium">
+                      City
+                    </label>
                     <Input
                       name="city"
                       value={schoolForm.city}
@@ -650,7 +844,9 @@ export default function PrincipalProfilePage() {
                     />
                   </div>
                   <div>
-                    <label className="text-sm text-gray-600 dark:text-gray-400 mb-2 block font-medium">State</label>
+                    <label className="text-sm text-gray-600 dark:text-gray-400 mb-2 block font-medium">
+                      State
+                    </label>
                     <Input
                       name="state"
                       value={schoolForm.state}
@@ -660,23 +856,31 @@ export default function PrincipalProfilePage() {
                     />
                   </div>
                   <div>
-                    <label className="text-sm text-gray-600 dark:text-gray-400 mb-2 block font-medium">Pincode</label>
+                    <label className="text-sm text-gray-600 dark:text-gray-400 mb-2 block font-medium">
+                      Pincode
+                    </label>
                     <Input
                       name="pincode"
                       value={schoolForm.pincode}
                       onChange={handleSchoolChange}
-                      className={`bg-white dark:bg-gray-700 border-gray-300 dark:border-gray-600 text-gray-900 dark:text-white rounded-xl ${schoolErrors.pincode ? 'border-red-500' : ''}`}
+                      className={`bg-white dark:bg-gray-700 border-gray-300 dark:border-gray-600 text-gray-900 dark:text-white rounded-xl ${
+                        schoolErrors.pincode ? "border-red-500" : ""
+                      }`}
                       placeholder="400001"
                     />
                     {schoolErrors.pincode && (
-                      <p className="text-xs text-red-500 mt-1">{schoolErrors.pincode}</p>
+                      <p className="text-xs text-red-500 mt-1">
+                        {schoolErrors.pincode}
+                      </p>
                     )}
                   </div>
                 </div>
 
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div>
-                    <label className="text-sm text-gray-600 dark:text-gray-400 mb-2 block font-medium">Established Year</label>
+                    <label className="text-sm text-gray-600 dark:text-gray-400 mb-2 block font-medium">
+                      Established Year
+                    </label>
                     <Input
                       name="established"
                       value={schoolForm.established}
@@ -741,9 +945,16 @@ export default function PrincipalProfilePage() {
                   <div className="p-2 bg-gradient-to-br from-teal-600 to-cyan-600 rounded-xl shadow-lg">
                     <Edit className="w-5 h-5 text-white" />
                   </div>
-                  <h3 className="text-xl font-bold text-gray-900 dark:text-white">Edit Principal Details</h3>
+                  <h3 className="text-xl font-bold text-gray-900 dark:text-white">
+                    Edit Principal Details
+                  </h3>
                 </div>
-                <Button variant="ghost" size="sm" onClick={handleCancelPrincipalEdit} className="rounded-xl">
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={handleCancelPrincipalEdit}
+                  className="rounded-xl"
+                >
                   <X className="w-5 h-5" />
                 </Button>
               </div>
@@ -757,11 +968,15 @@ export default function PrincipalProfilePage() {
                     name="name"
                     value={principalForm.name}
                     onChange={handlePrincipalChange}
-                    className={`bg-white dark:bg-gray-700 border-gray-300 dark:border-gray-600 text-gray-900 dark:text-white rounded-xl ${principalErrors.name ? 'border-red-500' : ''}`}
+                    className={`bg-white dark:bg-gray-700 border-gray-300 dark:border-gray-600 text-gray-900 dark:text-white rounded-xl ${
+                      principalErrors.name ? "border-red-500" : ""
+                    }`}
                     placeholder="Dr. John Smith"
                   />
                   {principalErrors.name && (
-                    <p className="text-xs text-red-500 mt-1">{principalErrors.name}</p>
+                    <p className="text-xs text-red-500 mt-1">
+                      {principalErrors.name}
+                    </p>
                   )}
                 </div>
 
@@ -774,30 +989,42 @@ export default function PrincipalProfilePage() {
                     type="email"
                     value={principalForm.email}
                     onChange={handlePrincipalChange}
-                    className={`bg-white dark:bg-gray-700 border-gray-300 dark:border-gray-600 text-gray-900 dark:text-white rounded-xl ${principalErrors.email ? 'border-red-500' : ''}`}
+                    className={`bg-white dark:bg-gray-700 border-gray-300 dark:border-gray-600 text-gray-900 dark:text-white rounded-xl ${
+                      principalErrors.email ? "border-red-500" : ""
+                    }`}
                     placeholder="principal@school.edu"
                   />
                   {principalErrors.email && (
-                    <p className="text-xs text-red-500 mt-1">{principalErrors.email}</p>
+                    <p className="text-xs text-red-500 mt-1">
+                      {principalErrors.email}
+                    </p>
                   )}
                 </div>
 
                 <div>
-                  <label className="text-sm text-gray-600 dark:text-gray-400 mb-2 block font-medium">Phone</label>
+                  <label className="text-sm text-gray-600 dark:text-gray-400 mb-2 block font-medium">
+                    Phone
+                  </label>
                   <Input
                     name="phone"
                     value={principalForm.phone}
                     onChange={handlePrincipalChange}
-                    className={`bg-white dark:bg-gray-700 border-gray-300 dark:border-gray-600 text-gray-900 dark:text-white rounded-xl ${principalErrors.phone ? 'border-red-500' : ''}`}
+                    className={`bg-white dark:bg-gray-700 border-gray-300 dark:border-gray-600 text-gray-900 dark:text-white rounded-xl ${
+                      principalErrors.phone ? "border-red-500" : ""
+                    }`}
                     placeholder="+91 98765 43211"
                   />
                   {principalErrors.phone && (
-                    <p className="text-xs text-red-500 mt-1">{principalErrors.phone}</p>
+                    <p className="text-xs text-red-500 mt-1">
+                      {principalErrors.phone}
+                    </p>
                   )}
                 </div>
 
                 <div>
-                  <label className="text-sm text-gray-600 dark:text-gray-400 mb-2 block font-medium">Qualification</label>
+                  <label className="text-sm text-gray-600 dark:text-gray-400 mb-2 block font-medium">
+                    Qualification
+                  </label>
                   <Input
                     name="qualification"
                     value={principalForm.qualification}
@@ -808,7 +1035,9 @@ export default function PrincipalProfilePage() {
                 </div>
 
                 <div>
-                  <label className="text-sm text-gray-600 dark:text-gray-400 mb-2 block font-medium">Experience</label>
+                  <label className="text-sm text-gray-600 dark:text-gray-400 mb-2 block font-medium">
+                    Experience
+                  </label>
                   <Input
                     name="experience"
                     value={principalForm.experience}
@@ -819,7 +1048,9 @@ export default function PrincipalProfilePage() {
                 </div>
 
                 <div>
-                  <label className="text-sm text-gray-600 dark:text-gray-400 mb-2 block font-medium">Joined Date</label>
+                  <label className="text-sm text-gray-600 dark:text-gray-400 mb-2 block font-medium">
+                    Joined Date
+                  </label>
                   <Input
                     name="joinedDate"
                     type="date"
