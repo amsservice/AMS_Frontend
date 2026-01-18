@@ -4,6 +4,7 @@ import { useState, DragEvent, useEffect, useRef, type ChangeEvent } from 'react'
 import { Upload, UserPlus, Download, FileSpreadsheet, UploadCloud, X, CheckCircle, Users, Mail, Phone } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { toast } from 'sonner';
+import { apiFetch } from '@/lib/api';
 
 /* =====================================================
   IMPORT YOUR ACTUAL API HOOKS
@@ -11,6 +12,7 @@ import { toast } from 'sonner';
 import { useBulkUploadStudents, useBulkUploadStudentsSchoolWide, useCreateStudent, useStudentsByClass, useStudentsClassWiseStats, type Student } from '@/app/querry/useStudent';
 import { useClasses } from '@/app/querry/useClasses';
 import { useAuth } from '@/app/context/AuthContext';
+
 /* =====================================================
   DRAG DROP CSV COMPONENT
 ===================================================== */
@@ -262,6 +264,30 @@ export default function BulkStudentUploadPage() {
     isLoading: classWiseLoading,
     error: classWiseError
   } = useStudentsClassWiseStats();
+
+  const [capacity, setCapacity] = useState<number>(0);
+  const totalStudentsInSchool = classWiseStats.reduce(
+    (sum: number, c: any) => sum + Number(c.totalStudents || 0),
+    0
+  );
+  const remainingStudents = Math.max(0, capacity - totalStudentsInSchool);
+  const isCapacityFull = capacity > 0 && totalStudentsInSchool >= capacity;
+
+  useEffect(() => {
+    if (!user) return;
+    if (role !== 'principal') return;
+
+    const fetchCapacity = async () => {
+      try {
+        const res = await apiFetch('/api/subscription/billable-students');
+        setCapacity(Number(res?.billableStudents || 0));
+      } catch (err) {
+        console.error('Failed to fetch billable students', err);
+      }
+    };
+
+    fetchCapacity();
+  }, [user, role]);
 
   const [selectedClassId, setSelectedClassId] = useState<string | undefined>(undefined);
 
@@ -718,17 +744,36 @@ export default function BulkStudentUploadPage() {
               <p className="mt-2 text-sm sm:text-base text-blue-100 font-medium">
                 Manage school students
               </p>
+              {capacity > 0 && (
+                <p className="mt-1 text-xs sm:text-sm text-blue-100/90 font-medium">
+                  {totalStudentsInSchool}/{capacity} students ({remainingStudents} remaining)
+                </p>
+              )}
             </div>
             <div className="flex gap-3">
               <button
-                onClick={() => setOpenSingle(true)}
-                className="px-4 py-2 bg-white/10 hover:bg-white/20 text-white rounded-xl font-semibold transition-all flex items-center gap-2"
+                onClick={() => {
+                  if (isCapacityFull) {
+                    toast.error('Student limit reached. Upgrade required.');
+                    return;
+                  }
+                  setOpenSingle(true);
+                }}
+                disabled={isCapacityFull}
+                className="px-4 py-2 bg-white/10 hover:bg-white/20 text-white rounded-xl font-semibold transition-all flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 <UserPlus className="w-4 h-4" /> Add Student
               </button>
               <button
-                onClick={() => setOpenBulk(true)}
-                className="px-4 py-2 bg-white text-indigo-700 hover:bg-indigo-50 rounded-xl font-semibold transition-all flex items-center gap-2"
+                onClick={() => {
+                  if (isCapacityFull) {
+                    toast.error('Student limit reached. Upgrade required.');
+                    return;
+                  }
+                  setOpenBulk(true);
+                }}
+                disabled={isCapacityFull}
+                className="px-4 py-2 bg-white text-indigo-700 hover:bg-indigo-50 rounded-xl font-semibold transition-all flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 <Upload className="w-4 h-4" /> Bulk Upload
               </button>
