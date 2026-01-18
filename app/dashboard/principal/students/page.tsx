@@ -37,7 +37,7 @@ function DragDropCSV({ onFileSelect, onClear, selectedFile }: DragDropCSVProps) 
     if (!file) return;
 
     if (!file.name.endsWith('.csv')) {
-      alert('Only CSV files are allowed');
+      toast.error('Only CSV files are allowed');
       return;
     }
 
@@ -50,7 +50,7 @@ function DragDropCSV({ onFileSelect, onClear, selectedFile }: DragDropCSVProps) 
     if (!file) return;
 
     if (!file.name.endsWith('.csv')) {
-      alert('Only CSV files are allowed');
+      toast.error('Only CSV files are allowed');
       return;
     }
 
@@ -271,7 +271,6 @@ export default function BulkStudentUploadPage() {
     isLoading: studentsLoading,
     error: studentsError
   } = useStudentsByClass(selectedClassId);
-  
 
   const [searchTerm, setSearchTerm] = useState('');
   const [openSingle, setOpenSingle] = useState(false);
@@ -308,44 +307,41 @@ export default function BulkStudentUploadPage() {
   const [bulkClassName, setBulkClassName] = useState('');
   const [bulkSection, setBulkSection] = useState('');
 
+  const [bulkClientErrors, setBulkClientErrors] = useState<string[]>([]);
+  const [schoolWideClientErrors, setSchoolWideClientErrors] = useState<string[]>([]);
+
   const handleClearBulkClassWise = () => {
     setFile(null);
     setBulkClassId('');
     setBulkClassName('');
     setBulkSection('');
+    setBulkClientErrors([]);
   };
 
   const handleClearBulkSchoolWide = () => {
     setSchoolWideFile(null);
+    setSchoolWideClientErrors([]);
   };
 
-  /* =====================================================
-     HANDLERS
-  ===================================================== */
+  useEffect(() => {
+    if (!openBulk) {
+      handleClearBulkClassWise();
+      handleClearBulkSchoolWide();
+      setBulkMode('classWise');
+    }
+  }, [openBulk]);
 
   const handleSingleSubmit = () => {
-    const errors: Partial<Record<keyof SingleStudentForm | 'class', string>> =
-      {};
+    const errors: Partial<Record<keyof SingleStudentForm | 'class', string>> = {};
 
-    const {
-      name,
-      email,
-      password,
-      admissionNo,
-      fatherName,
-      motherName,
-      parentsPhone,
-      rollNo
-    } = student;
-
-    const trimmedName = name.trim();
-    const trimmedEmail = email.trim();
-    const trimmedPassword = password;
-    const trimmedAdmissionNo = admissionNo.trim();
-    const trimmedFatherName = fatherName.trim();
-    const trimmedMotherName = motherName.trim();
-    const trimmedParentsPhone = parentsPhone.trim();
-    const trimmedRollNo = rollNo.trim();
+    const trimmedName = student.name.trim();
+    const trimmedEmail = student.email.trim();
+    const trimmedPassword = student.password;
+    const trimmedAdmissionNo = student.admissionNo.trim();
+    const trimmedFatherName = student.fatherName.trim();
+    const trimmedMotherName = student.motherName.trim();
+    const trimmedParentsPhone = student.parentsPhone.trim();
+    const trimmedRollNo = student.rollNo.trim();
 
     if (trimmedName.length < 3) errors.name = 'Name must be at least 3 characters';
     if (trimmedPassword.length < 6) errors.password = 'Password must be at least 6 characters';
@@ -366,21 +362,29 @@ export default function BulkStudentUploadPage() {
       if (!emailOk) errors.email = 'Please enter a valid email';
     }
 
-    if (role === 'principal' && (!singleClassId || !singleClassName || !singleSection)) {
+    if (!singleClassId || !singleClassName || !singleSection) {
       errors.class = 'Please select class and section';
     }
 
     setSingleErrors(errors);
-    if (Object.keys(errors).length) return;
+    if (Object.keys(errors).length) {
+      toast.error(Object.values(errors)[0] || 'Please fix form errors');
+      return;
+    }
 
     createStudent(
       {
-        ...student,
-        email: trimmedEmail ? trimmedEmail : undefined,
+        name: trimmedName,
+        email: trimmedEmail ? trimmedEmail.toLowerCase() : undefined,
+        password: trimmedPassword,
+        admissionNo: trimmedAdmissionNo,
+        fatherName: trimmedFatherName,
+        motherName: trimmedMotherName,
+        parentsPhone: trimmedParentsPhone,
         rollNo: rollNoNum,
-        classId: role === 'principal' ? singleClassId : undefined,
-        className: role === 'principal' ? singleClassName : undefined,
-        section: role === 'principal' ? singleSection : undefined
+        classId: singleClassId,
+        className: singleClassName,
+        section: singleSection
       },
       {
         onSuccess: () => {
@@ -391,14 +395,166 @@ export default function BulkStudentUploadPage() {
           setSingleClassName('');
           setSingleSection('');
           setOpenSingle(false);
+        },
+        onError: (err: any) => {
+          toast.error(err?.message || 'Failed to add student');
         }
       }
     );
   };
 
-  const handleBulkUpload = () => {
+  const parseCsvLine = (line: string) => {
+    const out: string[] = [];
+    let cur = '';
+    let inQuotes = false;
+    for (let i = 0; i < line.length; i++) {
+      const ch = line[i];
+      if (ch === '"') {
+        if (inQuotes && line[i + 1] === '"') {
+          cur += '"';
+          i++;
+        } else {
+          inQuotes = !inQuotes;
+        }
+        continue;
+      }
+      if (ch === ',' && !inQuotes) {
+        out.push(cur);
+        cur = '';
+        continue;
+      }
+      cur += ch;
+    }
+    out.push(cur);
+    return out.map(v => v.trim());
+  };
+
+  const validateCsvFile = async (
+    csvFile: File,
+    mode: 'classWise' | 'schoolWide'
+  ) => {
+    const text = await csvFile.text();
+    const lines = text
+      .split(/\r?\n/)
+      .map(l => l.trim())
+      .filter(Boolean);
+
+    if (!lines.length) {
+      return { ok: false, errors: ['CSV file is empty'] };
+    }
+
+    const headers = parseCsvLine(lines[0]).map(h => h.trim());
+
+    const requiredHeadersClassWise = [
+      'name',
+      'password',
+      'admissionNo',
+      'fatherName',
+      'motherName',
+      'parentsPhone',
+      'rollNo'
+    ];
+
+    const requiredHeadersSchoolWide = [
+      ...requiredHeadersClassWise,
+      'className',
+      'section'
+    ];
+
+    const requiredHeaders =
+      mode === 'schoolWide' ? requiredHeadersSchoolWide : requiredHeadersClassWise;
+
+    const missingHeaders = requiredHeaders.filter(h => !headers.includes(h));
+    if (missingHeaders.length) {
+      return {
+        ok: false,
+        errors: [
+          `Missing required columns: ${missingHeaders.join(', ')}`,
+          'Please download the sample CSV and follow the same header names.'
+        ]
+      };
+    }
+
+    const idx = (name: string) => headers.indexOf(name);
+    const errors: string[] = [];
+    const seenAdmission = new Set<string>();
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+
+    for (let r = 1; r < lines.length; r++) {
+      const rowNo = r + 1;
+      const cells = parseCsvLine(lines[r]);
+
+      const get = (h: string) => (cells[idx(h)] ?? '').trim();
+
+      const name = get('name');
+      const password = get('password');
+      const admissionNo = get('admissionNo');
+      const fatherName = get('fatherName');
+      const motherName = get('motherName');
+      const parentsPhone = get('parentsPhone');
+      const rollNoRaw = get('rollNo');
+      const email = headers.includes('email') ? get('email') : '';
+
+      if (!name || name.length < 3) errors.push(`Row ${rowNo}: name must be at least 3 characters`);
+      if (!password || password.length < 6) errors.push(`Row ${rowNo}: password must be at least 6 characters`);
+      if (!admissionNo) errors.push(`Row ${rowNo}: admissionNo is required`);
+      if (!fatherName) errors.push(`Row ${rowNo}: fatherName is required`);
+      if (!motherName) errors.push(`Row ${rowNo}: motherName is required`);
+
+      const phoneDigits = parentsPhone.replace(/\D/g, '');
+      if (!parentsPhone || phoneDigits.length < 10) {
+        errors.push(`Row ${rowNo}: parentsPhone must be at least 10 digits`);
+      }
+
+      const rollNoNum = Number(rollNoRaw);
+      if (!rollNoRaw || Number.isNaN(rollNoNum) || rollNoNum <= 0 || !Number.isInteger(rollNoNum)) {
+        errors.push(`Row ${rowNo}: rollNo must be a positive integer`);
+      }
+
+      if (email && !emailRegex.test(email)) {
+        errors.push(`Row ${rowNo}: email is invalid`);
+      }
+
+      if (admissionNo) {
+        const key = admissionNo.toLowerCase();
+        if (seenAdmission.has(key)) {
+          errors.push(`Row ${rowNo}: duplicate admissionNo '${admissionNo}' in CSV`);
+        }
+        seenAdmission.add(key);
+      }
+
+      if (mode === 'schoolWide') {
+        const className = get('className');
+        const section = get('section');
+        if (!className) errors.push(`Row ${rowNo}: className is required`);
+        if (!section) errors.push(`Row ${rowNo}: section is required`);
+      }
+    }
+
+    if (errors.length) {
+      return { ok: false, errors };
+    }
+
+    return { ok: true, errors: [] as string[] };
+  };
+
+  const getApiErrorMessage = (err: unknown) => {
+    const e = err as any;
+    const msg = e?.message ? String(e.message) : 'Upload failed';
+    const invalidRows = e?.data?.invalidRows;
+    if (Array.isArray(invalidRows) && invalidRows.length) {
+      const firstFew = invalidRows
+        .slice(0, 5)
+        .map((r: any) => `Row ${r.row}: ${r.reason}`)
+        .join(' | ');
+      return `${msg}. ${firstFew}${invalidRows.length > 5 ? ' ...' : ''}`;
+    }
+    return msg;
+  };
+
+  const handleBulkUpload = async () => {
     if (!file) {
-      alert('Please select a CSV file');
+      toast.error('Please select a CSV file');
       return;
     }
 
@@ -406,9 +562,17 @@ export default function BulkStudentUploadPage() {
       role === 'principal' &&
       (!bulkClassId || !bulkClassName || !bulkSection)
     ) {
-      alert('Please select class and section');
+      toast.error('Please select class and section');
       return;
     }
+
+    const validation = await validateCsvFile(file, 'classWise');
+    if (!validation.ok) {
+      setBulkClientErrors(validation.errors);
+      toast.error(validation.errors[0] || 'CSV validation failed');
+      return;
+    }
+    setBulkClientErrors([]);
 
     uploadStudents(
       {
@@ -421,16 +585,27 @@ export default function BulkStudentUploadPage() {
         onSuccess: (resp: any) => {
           toast.success(resp?.message || 'Students uploaded successfully');
           handleClearBulkClassWise();
+        },
+        onError: (err: any) => {
+          toast.error(getApiErrorMessage(err));
         }
       }
     );
   };
 
-  const handleSchoolWideBulkUpload = () => {
+  const handleSchoolWideBulkUpload = async () => {
     if (!schoolWideFile) {
-      alert('Please select a CSV file');
+      toast.error('Please select a CSV file');
       return;
     }
+
+    const validation = await validateCsvFile(schoolWideFile, 'schoolWide');
+    if (!validation.ok) {
+      setSchoolWideClientErrors(validation.errors);
+      toast.error(validation.errors[0] || 'CSV validation failed');
+      return;
+    }
+    setSchoolWideClientErrors([]);
 
     uploadStudentsSchoolWide(
       {
@@ -440,6 +615,9 @@ export default function BulkStudentUploadPage() {
         onSuccess: (resp: any) => {
           toast.success(resp?.message || 'Students uploaded successfully');
           handleClearBulkSchoolWide();
+        },
+        onError: (err: any) => {
+          toast.error(getApiErrorMessage(err));
         }
       }
     );
@@ -942,6 +1120,26 @@ export default function BulkStudentUploadPage() {
                           </code>
                         </div>
 
+                        {bulkClientErrors.length > 0 && (
+                          <div className="p-4 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-xl">
+                            <p className="text-red-600 dark:text-red-400 text-sm font-semibold mb-2">
+                              Please fix the following issues in your CSV:
+                            </p>
+                            <div className="space-y-1">
+                              {bulkClientErrors.slice(0, 12).map((msg) => (
+                                <p key={msg} className="text-red-600 dark:text-red-400 text-xs">
+                                  {msg}
+                                </p>
+                              ))}
+                              {bulkClientErrors.length > 12 && (
+                                <p className="text-red-600 dark:text-red-400 text-xs">
+                                  And {bulkClientErrors.length - 12} more...
+                                </p>
+                              )}
+                            </div>
+                          </div>
+                        )}
+
                         <button
                           onClick={handleBulkUpload}
                           disabled={uploading || !file}
@@ -995,6 +1193,26 @@ export default function BulkStudentUploadPage() {
                             name, email, password, admissionNo, fatherName, motherName, parentsPhone, rollNo, className, section
                           </code>
                         </div>
+
+                        {schoolWideClientErrors.length > 0 && (
+                          <div className="p-4 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-xl">
+                            <p className="text-red-600 dark:text-red-400 text-sm font-semibold mb-2">
+                              Please fix the following issues in your CSV:
+                            </p>
+                            <div className="space-y-1">
+                              {schoolWideClientErrors.slice(0, 12).map((msg) => (
+                                <p key={msg} className="text-red-600 dark:text-red-400 text-xs">
+                                  {msg}
+                                </p>
+                              ))}
+                              {schoolWideClientErrors.length > 12 && (
+                                <p className="text-red-600 dark:text-red-400 text-xs">
+                                  And {schoolWideClientErrors.length - 12} more...
+                                </p>
+                              )}
+                            </div>
+                          </div>
+                        )}
 
                         <button
                           onClick={handleSchoolWideBulkUpload}
