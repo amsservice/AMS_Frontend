@@ -139,21 +139,25 @@ export default function PrincipalDashboard() {
     {
       icon: Calendar,
       title: "New Session",
+      href: "/dashboard/principal/session",
       bgGradient: "from-purple-500 to-blue-500"
     },
     {
       icon: BookOpen,
       title: "Add Class",
+      href: "/dashboard/principal/class",
       bgGradient: "from-blue-500 to-indigo-500"
     },
     {
       icon: UserPlus,
       title: "Add Teacher",
+      href: "/dashboard/principal/teachers",
       bgGradient: "from-indigo-500 to-purple-500"
     },
     {
       icon: FileText,
       title: "View Reports",
+      href: "/dashboard/principal/reports",
       bgGradient: "from-purple-400 to-blue-400"
     }
   ];
@@ -193,7 +197,7 @@ export default function PrincipalDashboard() {
           <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between space-y-4 lg:space-y-0">
             <div className="flex-1">
               <h1 className="text-2xl sm:text-3xl lg:text-4xl font-bold text-white tracking-tight drop-shadow-lg">
-                Welcome back, {user?.name?.split(" ")[0] || "Principal"}! 👋
+                Welcome back, {user?.name?.split(" ")[0] || "Principal"}! 
               </h1>
               <p className="mt-2 text-sm sm:text-base text-purple-100 font-medium">
                 Here's what's happening at your school today
@@ -288,6 +292,11 @@ export default function PrincipalDashboard() {
                   {quickActions.map((action) => (
                     <button
                       key={action.title}
+                      onClick={() => {
+                        if (!action.href) return;
+                        router.push(action.href);
+                      }}
+                      disabled={!action.href}
                       className="group flex flex-col items-center justify-center p-4 sm:p-5 rounded-xl bg-gradient-to-br from-purple-50/50 to-blue-50/50 dark:from-purple-900/20 dark:to-blue-900/20 hover:from-purple-100 hover:to-blue-100 dark:hover:from-purple-900/40 dark:hover:to-blue-900/40 transition-all duration-300 transform hover:-translate-y-1 hover:shadow-lg border border-purple-200/50 dark:border-purple-700/30"
                     >
                       <div
