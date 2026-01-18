@@ -46,6 +46,8 @@ export default function RegisterPage() {
     state: "",
     principalName: "",
     principalEmail: "",
+    principalPhone: "",
+    principalQualification: "",
     principalPassword: "",
     confirmPassword: "",
     gender: "",
@@ -123,6 +125,8 @@ export default function RegisterPage() {
         state: form.state,
         principalName: form.principalName,
         principalEmail: form.principalEmail,
+        principalPhone: form.principalPhone,
+        principalQualification: form.principalQualification,
         principalPassword: form.principalPassword,
         principalGender: form.gender || undefined,
         principalExperience: form.yearsOfExperience
@@ -444,6 +448,27 @@ export default function RegisterPage() {
                             className={`px-4 py-3 rounded-xl bg-white dark:bg-gray-700 border ${errors.principalEmail ? 'border-red-500' : 'border-gray-300 dark:border-gray-600'} text-gray-900 dark:text-white placeholder:text-gray-500 dark:placeholder:text-gray-400 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all w-full`}
                           />
                           {errors.principalEmail && <p className="text-red-500 text-xs mt-1">{errors.principalEmail}</p>}
+                        </div>
+                      </div>
+
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mt-4">
+                        <div>
+                          <input 
+                            name="principalPhone" 
+                            onChange={handleChange} 
+                            placeholder="Phone" 
+                            className={`px-4 py-3 rounded-xl bg-white dark:bg-gray-700 border ${errors.principalPhone ? 'border-red-500' : 'border-gray-300 dark:border-gray-600'} text-gray-900 dark:text-white placeholder:text-gray-500 dark:placeholder:text-gray-400 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all w-full`}
+                          />
+                          {errors.principalPhone && <p className="text-red-500 text-xs mt-1">{errors.principalPhone}</p>}
+                        </div>
+                        <div>
+                          <input 
+                            name="principalQualification" 
+                            onChange={handleChange} 
+                            placeholder="Qualification" 
+                            className={`px-4 py-3 rounded-xl bg-white dark:bg-gray-700 border ${errors.principalQualification ? 'border-red-500' : 'border-gray-300 dark:border-gray-600'} text-gray-900 dark:text-white placeholder:text-gray-500 dark:placeholder:text-gray-400 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all w-full`}
+                          />
+                          {errors.principalQualification && <p className="text-red-500 text-xs mt-1">{errors.principalQualification}</p>}
                         </div>
                       </div>
 

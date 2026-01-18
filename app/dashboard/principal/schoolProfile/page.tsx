@@ -22,6 +22,8 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { useMySchool, useUpdateSchool } from '@/app/querry/useSchool';
 import { toast } from "sonner";
+import { useMutation, useQueryClient } from '@tanstack/react-query';
+import { apiFetch } from '@/lib/api';
 
 interface SchoolFormData {
   name: string;
@@ -32,7 +34,7 @@ interface SchoolFormData {
   state: string;
   pincode: string;
   board: string;
-  code: number;
+  code: number | null;
   established: string;
 }
 
@@ -60,6 +62,23 @@ export default function PrincipalProfilePage() {
 
   const { data: schoolResponse, isLoading, error, refetch } = useMySchool();
   const updateSchoolMutation = useUpdateSchool();
+  const queryClient = useQueryClient();
+
+  const updatePrincipalMutation = useMutation({
+    mutationFn: (data: {
+      name?: string;
+      phone?: string;
+      qualification?: string;
+      yearsOfExperience?: number;
+    }) =>
+      apiFetch('/api/auth/principal/profile', {
+        method: 'PUT',
+        body: JSON.stringify(data)
+      }),
+    onSuccess: async () => {
+      await queryClient.invalidateQueries({ queryKey: ['school', 'me'] });
+    }
+  });
 
   const [schoolData, setSchoolData] = useState<SchoolFormData>({
     name: '',
@@ -70,7 +89,7 @@ export default function PrincipalProfilePage() {
     state: '',
     pincode: '',
     board: '',
-    code: 0,
+    code: null,
     established: ''
   });
 
@@ -114,19 +133,26 @@ export default function PrincipalProfilePage() {
         state: state,
         pincode: school.pincode || '',
         board: school.board,
-        code: school.schoolCode,
-        established: school.createdAt ? new Date(school.createdAt).getFullYear().toString() : ''
+        code: typeof school.schoolCode === 'number' ? school.schoolCode : null,
+        established:
+          typeof (school as any).establishedYear === 'number'
+            ? String((school as any).establishedYear)
+            : ''
       };
       setSchoolData(newSchoolData);
       setSchoolForm(newSchoolData);
 
       if (school.principal) {
+        const yearsOfExp =
+          typeof school.principal.yearsOfExperience === 'number'
+            ? String(school.principal.yearsOfExperience)
+            : '';
         const newPrincipalData: PrincipalFormData = {
           name: school.principal.name || '',
           email: school.principal.email || '',
           phone: school.principal.phone || '',
-          qualification: '',
-          experience: '',
+          qualification: (school.principal as any).qualification || '',
+          experience: yearsOfExp,
           joinedDate: school.createdAt ? new Date(school.createdAt).toISOString().split('T')[0] : ''
         };
         setPrincipalData(newPrincipalData);
@@ -206,8 +232,15 @@ export default function PrincipalProfilePage() {
 
     try {
       const fullAddress = [schoolForm.address, schoolForm.city, schoolForm.state].filter(Boolean).join(', ');
+
+      const est = schoolForm.established?.trim();
+      const establishedYear = est ? Number.parseInt(est, 10) : undefined;
+
       await updateSchoolMutation.mutateAsync({
         name: schoolForm.name.trim(),
+        establishedYear: Number.isFinite(establishedYear as number)
+          ? (establishedYear as number)
+          : undefined,
         phone: schoolForm.phone.trim() || undefined,
         address: fullAddress || undefined,
         pincode: schoolForm.pincode.trim() || undefined
@@ -221,14 +254,32 @@ export default function PrincipalProfilePage() {
     }
   };
 
-  const handlePrincipalSubmit = () => {
+  const handlePrincipalSubmit = async () => {
     if (!validatePrincipalForm()) {
       toast.error('Please fix the errors in the form');
       return;
     }
-    setPrincipalData(principalForm);
-    setIsEditPrincipalOpen(false);
-    toast.success('principal details updated successfully');
+
+    try {
+      const exp = principalForm.experience?.trim();
+      const yearsOfExperience = exp ? Number.parseInt(exp, 10) : undefined;
+
+      await updatePrincipalMutation.mutateAsync({
+        name: principalForm.name.trim(),
+        phone: principalForm.phone.trim() || undefined,
+        qualification: principalForm.qualification.trim() || undefined,
+        yearsOfExperience: Number.isFinite(yearsOfExperience as number)
+          ? (yearsOfExperience as number)
+          : undefined
+      });
+
+      setPrincipalData(principalForm);
+      setIsEditPrincipalOpen(false);
+      toast.success('Principal details updated successfully');
+    } catch (error: any) {
+      console.error('Failed to update principal:', error);
+      toast.error(error?.message || 'Failed to update principal details. Please try again.');
+    }
   };
 
   const handleEditSchool = () => {
@@ -397,7 +448,7 @@ export default function PrincipalProfilePage() {
                   <div className="bg-gradient-to-br from-blue-50 to-indigo-100 dark:from-blue-900/30 dark:to-indigo-900/30 border border-blue-200/50 dark:border-blue-700/50 rounded-xl p-4 shadow-lg">
                     <p className="text-xs text-gray-600 dark:text-gray-400 mb-1">School Code</p>
                     <p className="text-lg text-gray-900 dark:text-white font-bold">
-                      {schoolData.code || 'N/A'}
+                      {schoolData.code ?? 'N/A'}
                     </p>
                   </div>
 

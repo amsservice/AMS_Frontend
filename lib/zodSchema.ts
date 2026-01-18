@@ -75,6 +75,16 @@ export const registerSchoolSchema = z
 
     principalEmail: z.string().email("Invalid email address"),
 
+    principalPhone: z
+      .string()
+      .regex(/^\d{10}$/, "Principal phone number must be 10 digits"),
+
+    principalQualification: z
+      .string()
+      .trim()
+      .min(2, "Qualification must be at least 2 characters")
+      .max(100, "Qualification must be at most 100 characters"),
+
     principalPassword: z
       .string()
       .min(6, "Password must be at least 6 characters"),

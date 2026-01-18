@@ -11,6 +11,7 @@ export interface School {
   id: string;
   name: string;
   email: string;
+  establishedYear: number;
   phone?: string;
   address?: string;
   pincode?: string;
@@ -30,6 +31,7 @@ schoolCode:number;
     name: string;
     email: string;
     phone?: string;
+    qualification?: string;
     gender?: 'Male' | 'Female' | 'Other';
     yearsOfExperience?: number;
   } | null;
@@ -74,6 +76,7 @@ export const useMySchool = (enabled = true) =>
 
 interface UpdateSchoolPayload {
   name?: string;
+  establishedYear?: number;
   phone?: string;
   address?: string;
   pincode?: string;
