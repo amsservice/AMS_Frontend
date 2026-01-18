@@ -28,6 +28,13 @@ export interface Student {
   history: StudentHistory[];
 }
 
+export interface ClassWiseStudentCount {
+  classId: string;
+  className: string;
+  section: string;
+  totalStudents: number;
+}
+
 /* =====================================================
    TEACHER: LIST STUDENTS
    GET /api/students
@@ -42,6 +49,19 @@ export const useSchoolStudents = () =>
   useQuery<Student[]>({
     queryKey: ['school-students'],
     queryFn: () => apiFetch('/api/student/school-students')
+  });
+
+export const useStudentsClassWiseStats = () =>
+  useQuery<ClassWiseStudentCount[]>({
+    queryKey: ['students-class-wise-stats'],
+    queryFn: () => apiFetch('/api/student/stats/class-wise')
+  });
+
+export const useStudentsByClass = (classId?: string) =>
+  useQuery<Student[]>({
+    queryKey: ['students-by-class', classId],
+    queryFn: () => apiFetch(`/api/student/class/${classId}/students`),
+    enabled: Boolean(classId)
   });
 
 /* =====================================================

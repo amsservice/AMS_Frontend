@@ -8,7 +8,7 @@ import { toast } from 'sonner';
 /* =====================================================
   IMPORT YOUR ACTUAL API HOOKS
 ===================================================== */
-import { useBulkUploadStudents, useBulkUploadStudentsSchoolWide, useCreateStudent, useSchoolStudents, type Student } from '@/app/querry/useStudent';
+import { useBulkUploadStudents, useBulkUploadStudentsSchoolWide, useCreateStudent, useStudentsByClass, useStudentsClassWiseStats, type Student } from '@/app/querry/useStudent';
 import { useClasses } from '@/app/querry/useClasses';
 import { useAuth } from '@/app/context/AuthContext';
 
@@ -259,10 +259,19 @@ export default function BulkStudentUploadPage() {
   const { data: classes = [], isLoading: classesLoading } = useClasses();
 
   const {
-    data: schoolStudents = [],
+    data: classWiseStats = [],
+    isLoading: classWiseLoading,
+    error: classWiseError
+  } = useStudentsClassWiseStats();
+
+  const [selectedClassId, setSelectedClassId] = useState<string | undefined>(undefined);
+
+  const {
+    data: classStudents = [],
     isLoading: studentsLoading,
     error: studentsError
-  } = useSchoolStudents();
+  } = useStudentsByClass(selectedClassId);
+  
 
   const [searchTerm, setSearchTerm] = useState('');
   const [openSingle, setOpenSingle] = useState(false);
@@ -458,7 +467,7 @@ export default function BulkStudentUploadPage() {
     a.click();
   };
 
-  const filteredStudents = schoolStudents.filter((s: Student) => {
+  const filteredStudents = classStudents.filter((s: Student) => {
     const q = searchTerm.trim().toLowerCase();
     if (!q) return true;
     return (
@@ -523,15 +532,6 @@ export default function BulkStudentUploadPage() {
 
       <main className="max-w-7xl mx-auto py-6 px-4 sm:px-6 lg:px-8">
         <div className="space-y-6">
-          <div className="dashboard-card border dashboard-card-border rounded-2xl shadow-dashboard-lg p-4">
-            <input
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-              placeholder="Search students by name, email or admission no..."
-              className="w-full px-4 py-3 dashboard-card border dashboard-card-border rounded-xl dashboard-text focus:outline-none focus:ring-2 focus:ring-accent-blue transition-all"
-            />
-          </div>
-
           <div className="dashboard-card border dashboard-card-border rounded-2xl shadow-dashboard-lg overflow-hidden">
             <div className="px-6 py-5 border-b dashboard-card-border bg-gradient-to-r from-blue-50 to-indigo-50 dark:from-blue-900/20 dark:to-indigo-900/20">
               <div className="flex items-center gap-3">
@@ -539,92 +539,182 @@ export default function BulkStudentUploadPage() {
                   <Users className="h-6 w-6 text-white" />
                 </div>
                 <div>
-                  <h3 className="text-xl font-bold dashboard-text">Students ({schoolStudents.length})</h3>
-                  <p className="text-sm dashboard-text-muted">Active session students</p>
+                  <h3 className="text-xl font-bold dashboard-text">Classes</h3>
+                  <p className="text-sm dashboard-text-muted">Select a class to view students</p>
                 </div>
               </div>
             </div>
 
-            <div className="p-0">
-              {studentsLoading ? (
+            <div className="p-6">
+              {classWiseLoading ? (
                 <div className="p-8 text-center">
                   <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mx-auto"></div>
-                  <p className="mt-2 dashboard-text-muted">Loading students...</p>
+                  <p className="mt-2 dashboard-text-muted">Loading classes...</p>
                 </div>
-              ) : studentsError ? (
+              ) : classWiseError ? (
                 <div className="p-8 text-center">
-                  <p className="text-red-600 dark:text-red-400">Error loading students.</p>
+                  <p className="text-red-600 dark:text-red-400">Error loading classes.</p>
                 </div>
-              ) : filteredStudents.length === 0 ? (
+              ) : classWiseStats.length === 0 ? (
                 <div className="p-8 text-center">
-                  <Users className="w-12 h-12 text-gray-400 mx-auto mb-4" />
-                  <p className="dashboard-text-muted">
-                    {searchTerm ? 'No students found matching your search.' : 'No students added yet.'}
-                  </p>
+                  <p className="dashboard-text-muted">No classes found for active session.</p>
                 </div>
               ) : (
-                <div className="overflow-x-auto">
-                  <table className="w-full">
-                    <thead className="bg-gray-50 dark:bg-gray-800/40 border-b dashboard-card-border">
-                      <tr>
-                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                          Student
-                        </th>
-                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                          Admission No
-                        </th>
-                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                          Class
-                        </th>
-                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                          Roll No
-                        </th>
-                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                          Parent Contact
-                        </th>
-                      </tr>
-                    </thead>
-                    <tbody className="divide-y dashboard-card-border">
-                      {filteredStudents.map((s: Student) => {
-                        const active = s.history?.find(h => h.isActive) || s.history?.[0];
-                        return (
-                          <tr key={s._id} className="hover:bg-gray-50 dark:hover:bg-gray-800/30">
-                            <td className="px-6 py-4 whitespace-nowrap">
-                              <div>
-                                <div className="text-sm font-medium dashboard-text">{s.name}</div>
-                                <div className="text-sm dashboard-text-muted flex items-center gap-1">
-                                  <Mail className="w-3 h-3" />
-                                  {s.email}
-                                </div>
-                              </div>
-                            </td>
-                            <td className="px-6 py-4 whitespace-nowrap text-sm dashboard-text">
-                              {s.admissionNo}
-                            </td>
-                            <td className="px-6 py-4 whitespace-nowrap text-sm dashboard-text">
-                              {active ? `${active.className} - ${active.section}` : ''}
-                            </td>
-                            <td className="px-6 py-4 whitespace-nowrap text-sm dashboard-text">
-                              {active?.rollNo ?? ''}
-                            </td>
-                            <td className="px-6 py-4 whitespace-nowrap">
-                              <div className="text-sm dashboard-text">
-                                <div>Father: {s.fatherName}</div>
-                                <div className="flex items-center gap-1 dashboard-text-muted">
-                                  <Phone className="w-3 h-3" />
-                                  {s.parentsPhone}
-                                </div>
-                              </div>
-                            </td>
-                          </tr>
-                        );
-                      })}
-                    </tbody>
-                  </table>
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+                  {classWiseStats.map((c: any) => {
+                    const id = String(c.classId);
+                    const isSelected = selectedClassId === id;
+                    return (
+                      <button
+                        key={id}
+                        onClick={() => {
+                          setSelectedClassId(id);
+                          setSearchTerm('');
+                        }}
+                        className={`text-left p-4 rounded-2xl border transition-all shadow-sm hover:shadow-dashboard-lg ${
+                          isSelected
+                            ? 'border-accent-blue bg-blue-50 dark:bg-blue-900/20'
+                            : 'dashboard-card-border dashboard-card'
+                        }`}
+                      >
+                        <div className="flex items-start justify-between gap-3">
+                          <div>
+                            <p className="text-lg font-bold dashboard-text">{c.className} - {c.section}</p>
+                            <p className="text-sm dashboard-text-muted">Active session</p>
+                          </div>
+                          <div className="px-3 py-1 rounded-xl bg-indigo-100 dark:bg-indigo-900/30">
+                            <p className="text-sm font-semibold text-indigo-700 dark:text-indigo-300">{c.totalStudents}</p>
+                          </div>
+                        </div>
+                      </button>
+                    );
+                  })}
                 </div>
               )}
             </div>
           </div>
+
+          {selectedClassId && (
+            <div className="dashboard-card border dashboard-card-border rounded-2xl shadow-dashboard-lg p-4 flex items-center justify-between gap-3">
+              <p className="dashboard-text font-semibold">Selected class: {classWiseStats.find((c: any) => String(c.classId) === String(selectedClassId))?.className} - {classWiseStats.find((c: any) => String(c.classId) === String(selectedClassId))?.section}</p>
+              <button
+                onClick={() => {
+                  setSelectedClassId(undefined);
+                  setSearchTerm('');
+                }}
+                className="px-4 py-2 dashboard-card border dashboard-card-border rounded-xl dashboard-text hover:shadow-dashboard transition-all"
+              >
+                Back to classes
+              </button>
+            </div>
+          )}
+
+          {!selectedClassId ? null : (
+            <>
+              <div className="dashboard-card border dashboard-card-border rounded-2xl shadow-dashboard-lg p-4">
+                <input
+                  value={searchTerm}
+                  onChange={(e) => setSearchTerm(e.target.value)}
+                  placeholder="Search students by name, email or admission no..."
+                  className="w-full px-4 py-3 dashboard-card border dashboard-card-border rounded-xl dashboard-text focus:outline-none focus:ring-2 focus:ring-accent-blue transition-all"
+                />
+              </div>
+
+              <div className="dashboard-card border dashboard-card-border rounded-2xl shadow-dashboard-lg overflow-hidden">
+                <div className="px-6 py-5 border-b dashboard-card-border bg-gradient-to-r from-blue-50 to-indigo-50 dark:from-blue-900/20 dark:to-indigo-900/20">
+                  <div className="flex items-center gap-3">
+                    <div className="p-2 bg-gradient-to-br from-blue-600 to-indigo-600 rounded-xl shadow-lg">
+                      <Users className="h-6 w-6 text-white" />
+                    </div>
+                    <div>
+                      <h3 className="text-xl font-bold dashboard-text">Students ({classStudents.length})</h3>
+                      <p className="text-sm dashboard-text-muted">Active session students</p>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="p-0">
+                  {studentsLoading ? (
+                    <div className="p-8 text-center">
+                      <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mx-auto"></div>
+                      <p className="mt-2 dashboard-text-muted">Loading students...</p>
+                    </div>
+                  ) : studentsError ? (
+                    <div className="p-8 text-center">
+                      <p className="text-red-600 dark:text-red-400">Error loading students.</p>
+                    </div>
+                  ) : filteredStudents.length === 0 ? (
+                    <div className="p-8 text-center">
+                      <Users className="w-12 h-12 text-gray-400 mx-auto mb-4" />
+                      <p className="dashboard-text-muted">
+                        {searchTerm ? 'No students found matching your search.' : 'No students added yet.'}
+                      </p>
+                    </div>
+                  ) : (
+                    <div className="overflow-x-auto">
+                      <table className="w-full">
+                        <thead className="bg-gray-50 dark:bg-gray-800/40 border-b dashboard-card-border">
+                          <tr>
+                            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                              Student
+                            </th>
+                            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                              Admission No
+                            </th>
+                            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                              Class
+                            </th>
+                            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                              Roll No
+                            </th>
+                            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                              Parent Contact
+                            </th>
+                          </tr>
+                        </thead>
+                        <tbody className="divide-y dashboard-card-border">
+                          {filteredStudents.map((s: Student) => {
+                            const active = s.history?.find(h => h.isActive) || s.history?.[0];
+                            return (
+                              <tr key={s._id} className="hover:bg-gray-50 dark:hover:bg-gray-800/30">
+                                <td className="px-6 py-4 whitespace-nowrap">
+                                  <div>
+                                    <div className="text-sm font-medium dashboard-text">{s.name}</div>
+                                    <div className="text-sm dashboard-text-muted flex items-center gap-1">
+                                      <Mail className="w-3 h-3" />
+                                      {s.email}
+                                    </div>
+                                  </div>
+                                </td>
+                                <td className="px-6 py-4 whitespace-nowrap text-sm dashboard-text">
+                                  {s.admissionNo}
+                                </td>
+                                <td className="px-6 py-4 whitespace-nowrap text-sm dashboard-text">
+                                  {active ? `${active.className} - ${active.section}` : ''}
+                                </td>
+                                <td className="px-6 py-4 whitespace-nowrap text-sm dashboard-text">
+                                  {active?.rollNo ?? ''}
+                                </td>
+                                <td className="px-6 py-4 whitespace-nowrap">
+                                  <div className="text-sm dashboard-text">
+                                    <div>Father: {s.fatherName}</div>
+                                    <div className="flex items-center gap-1 dashboard-text-muted">
+                                      <Phone className="w-3 h-3" />
+                                      {s.parentsPhone}
+                                    </div>
+                                  </div>
+                                </td>
+                              </tr>
+                            );
+                          })}
+                        </tbody>
+                      </table>
+                    </div>
+                  )}
+                </div>
+              </div>
+            </>
+          )}
 
           <AnimatePresence>
             {openSingle && (
@@ -640,7 +730,6 @@ export default function BulkStudentUploadPage() {
                       <div className="p-2 bg-gradient-to-br from-blue-600 to-indigo-600 rounded-xl shadow-lg">
                         <UserPlus className="h-6 w-6 text-white" />
                       </div>
-
                       <div>
                         <h3 className="text-xl font-bold dashboard-text">Add Student</h3>
                         <p className="text-sm dashboard-text-muted">Create a student in a selected class</p>
@@ -660,7 +749,6 @@ export default function BulkStudentUploadPage() {
                         <div key={key}>
                           <label className="block text-sm font-semibold dashboard-text mb-2">
                             {fieldLabels[key as keyof SingleStudentForm]}
-
                           </label>
                           <input
                             type={
