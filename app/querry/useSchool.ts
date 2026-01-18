@@ -80,6 +80,11 @@ interface UpdateSchoolPayload {
   phone?: string;
   address?: string;
   pincode?: string;
+  schoolType?: 'Government' | 'Private' | 'Semi-Private';
+  board?: string;
+  city?: string;
+  district?: string;
+  state?: string;
 }
 
 export const useUpdateSchool = () => {
