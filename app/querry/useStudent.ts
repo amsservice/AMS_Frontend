@@ -80,6 +80,8 @@ export const useCreateStudent = () => {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['students'] });
       queryClient.invalidateQueries({ queryKey: ['school-students'] });
+      queryClient.invalidateQueries({ queryKey: ['students-class-wise-stats'] });
+      queryClient.invalidateQueries({ queryKey: ['students-by-class'] });
     }
   });
 };
@@ -103,6 +105,8 @@ export const useBulkUploadStudentsSchoolWide = () => {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['school-students'] });
       queryClient.invalidateQueries({ queryKey: ['students'] });
+      queryClient.invalidateQueries({ queryKey: ['students-class-wise-stats'] });
+      queryClient.invalidateQueries({ queryKey: ['students-by-class'] });
     }
   });
 };
@@ -122,6 +126,9 @@ export const useUpdateStudent = () => {
       }),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['students'] });
+      queryClient.invalidateQueries({ queryKey: ['school-students'] });
+      queryClient.invalidateQueries({ queryKey: ['students-class-wise-stats'] });
+      queryClient.invalidateQueries({ queryKey: ['students-by-class'] });
     }
   });
 };

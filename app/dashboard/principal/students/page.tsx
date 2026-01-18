@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, DragEvent, useEffect } from 'react';
+import { useState, DragEvent, useEffect, useRef, type ChangeEvent } from 'react';
 import { Upload, UserPlus, Download, FileSpreadsheet, UploadCloud, X, CheckCircle, Users, Mail, Phone } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { toast } from 'sonner';
@@ -11,7 +11,6 @@ import { toast } from 'sonner';
 import { useBulkUploadStudents, useBulkUploadStudentsSchoolWide, useCreateStudent, useStudentsByClass, useStudentsClassWiseStats, type Student } from '@/app/querry/useStudent';
 import { useClasses } from '@/app/querry/useClasses';
 import { useAuth } from '@/app/context/AuthContext';
-
 /* =====================================================
   DRAG DROP CSV COMPONENT
 ===================================================== */
@@ -45,7 +44,7 @@ function DragDropCSV({ onFileSelect, onClear, selectedFile }: DragDropCSVProps) 
     onFileSelect(file);
   };
 
-  const handleFileInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleFileInputChange = (e: ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
 
@@ -276,6 +275,10 @@ export default function BulkStudentUploadPage() {
   const [openSingle, setOpenSingle] = useState(false);
   const [openBulk, setOpenBulk] = useState(false);
   const [bulkMode, setBulkMode] = useState<'classWise' | 'schoolWide'>('classWise');
+
+  const studentsSectionRef = useRef<HTMLDivElement | null>(null);
+  const loadMoreRef = useRef<HTMLDivElement | null>(null);
+  const [visibleCount, setVisibleCount] = useState(10);
 
   /* ---------------- SINGLE STUDENT ---------------- */
   const initialStudent: SingleStudentForm = {
@@ -655,6 +658,32 @@ export default function BulkStudentUploadPage() {
     );
   });
 
+  useEffect(() => {
+    setVisibleCount(10);
+  }, [selectedClassId, searchTerm]);
+
+  useEffect(() => {
+    if (!selectedClassId) return;
+    if (visibleCount >= filteredStudents.length) return;
+
+    const el = loadMoreRef.current;
+    if (!el) return;
+
+    const observer = new IntersectionObserver(
+      (entries) => {
+        if (entries[0]?.isIntersecting) {
+          setVisibleCount((prev) => Math.min(prev + 10, filteredStudents.length));
+        }
+      },
+      { root: null, rootMargin: '200px', threshold: 0 }
+    );
+
+    observer.observe(el);
+    return () => observer.disconnect();
+  }, [selectedClassId, filteredStudents.length, visibleCount]);
+
+  const visibleStudents = filteredStudents.slice(0, visibleCount);
+
   /* =====================================================
      FIELD LABELS
   ===================================================== */
@@ -724,6 +753,18 @@ export default function BulkStudentUploadPage() {
             </div>
 
             <div className="p-6">
+              {!classWiseLoading && !classWiseError && classWiseStats.length > 0 && (
+                <div className="mb-4 flex items-center justify-between gap-3">
+                  <p className="dashboard-text font-semibold">
+                    Total Students:{' '}
+                    {classWiseStats.reduce(
+                      (sum: number, c: any) => sum + Number(c.totalStudents || 0),
+                      0
+                    )}
+                  </p>
+                </div>
+              )}
+
               {classWiseLoading ? (
                 <div className="p-8 text-center">
                   <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mx-auto"></div>
@@ -748,6 +789,12 @@ export default function BulkStudentUploadPage() {
                         onClick={() => {
                           setSelectedClassId(id);
                           setSearchTerm('');
+                          window.setTimeout(() => {
+                            studentsSectionRef.current?.scrollIntoView({
+                              behavior: 'smooth',
+                              block: 'start'
+                            });
+                          }, 50);
                         }}
                         className={`text-left p-4 rounded-2xl border transition-all shadow-sm hover:shadow-dashboard-lg ${
                           isSelected
@@ -775,6 +822,7 @@ export default function BulkStudentUploadPage() {
           {selectedClassId && (
             <div className="dashboard-card border dashboard-card-border rounded-2xl shadow-dashboard-lg p-4 flex items-center justify-between gap-3">
               <p className="dashboard-text font-semibold">Selected class: {classWiseStats.find((c: any) => String(c.classId) === String(selectedClassId))?.className} - {classWiseStats.find((c: any) => String(c.classId) === String(selectedClassId))?.section}</p>
+
               <button
                 onClick={() => {
                   setSelectedClassId(undefined);
@@ -788,7 +836,7 @@ export default function BulkStudentUploadPage() {
           )}
 
           {!selectedClassId ? null : (
-            <>
+            <div ref={studentsSectionRef}>
               <div className="dashboard-card border dashboard-card-border rounded-2xl shadow-dashboard-lg p-4">
                 <input
                   value={searchTerm}
@@ -851,7 +899,7 @@ export default function BulkStudentUploadPage() {
                           </tr>
                         </thead>
                         <tbody className="divide-y dashboard-card-border">
-                          {filteredStudents.map((s: Student) => {
+                          {visibleStudents.map((s: Student) => {
                             const active = s.history?.find(h => h.isActive) || s.history?.[0];
                             return (
                               <tr key={s._id} className="hover:bg-gray-50 dark:hover:bg-gray-800/30">
@@ -891,7 +939,13 @@ export default function BulkStudentUploadPage() {
                   )}
                 </div>
               </div>
-            </>
+
+              {visibleCount < filteredStudents.length && (
+                <div ref={loadMoreRef} className="p-4 text-center">
+                  <p className="text-sm dashboard-text-muted">Loading more...</p>
+                </div>
+              )}
+            </div>
           )}
 
           <AnimatePresence>
