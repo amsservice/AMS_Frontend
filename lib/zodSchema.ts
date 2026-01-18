@@ -2,6 +2,7 @@ import { z } from "zod";
 
 export const registerSchoolSchema = z
   .object({
+
     /* ===============================
        SCHOOL DETAILS
     =============================== */
@@ -9,13 +10,27 @@ export const registerSchoolSchema = z
 
     schoolEmail: z.string().email("Invalid email address"),
 
+    establishedYear: z.preprocess(
+      (value) => {
+        if (value === "" || value === null || value === undefined) return value;
+        return value;
+      },
+      z.coerce
+        .number()
+        .int("Established year must be a valid year")
+        .min(1900, "Established year must be 1900 or later")
+        .max(new Date().getFullYear(), "Established year cannot be in the future")
+    ),
+
     phone: z
       .string()
       .regex(/^\d{10}$/, "Phone number must be 10 digits"),
 
     address: z
       .string()
-      .min(10, "Address must be at least 10 characters"),
+      .trim()
+      .min(10, "Address must be at least 10 characters")
+      .regex(/[A-Za-z]/, "Address must contain at least 1 letter"),
 
     pincode: z
       .string()
@@ -27,11 +42,29 @@ export const registerSchoolSchema = z
 
     board: z.string().min(2, "Board is required"),
 
-    city: z.string().min(2, "City is required"),
+    city: z
+      .string()
+      .trim()
+      .min(3, "City must be at least 3 characters")
+      .refine(
+        (value) => (value.match(/[A-Za-z]/g) || []).length >= 3,
+        "City must contain at least 3 letters"
+      ),
 
-    district: z.string().min(2, "District is required"),
+    district: z
+      .string()
+      .trim()
+      .min(3, "District must be at least 3 characters")
+      .refine(
+        (value) => (value.match(/[A-Za-z]/g) || []).length >= 3,
+        "District must contain at least 3 letters"
+      ),
 
-    state: z.string().min(2, "State is required"),
+    state: z
+      .string()
+      .trim()
+      .min(3, "State is required")
+      .regex(/^[A-Za-z\s]+$/, "State must contain characters only"),
 
     /* ===============================
        PRINCIPAL DETAILS

@@ -35,6 +35,7 @@ export default function RegisterPage() {
   const [form, setForm] = useState({
     schoolName: "",
     schoolEmail: "",
+    establishedYear: "",
     phone: "",
     address: "",
     pincode: "",
@@ -111,6 +112,7 @@ export default function RegisterPage() {
       const payload = {
         schoolName: form.schoolName,
         schoolEmail: form.schoolEmail,
+        establishedYear: parseInt(form.establishedYear, 10),
         phone: form.phone,
         address: form.address,
         pincode: form.pincode,
@@ -315,6 +317,16 @@ export default function RegisterPage() {
                       </div>
 
                       <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mt-4">
+                        <div>
+                          <input 
+                            name="establishedYear" 
+                            type="number"
+                            onChange={handleChange} 
+                            placeholder="Established Year" 
+                            className={`px-4 py-3 rounded-xl bg-white dark:bg-gray-700 border ${errors.establishedYear ? 'border-red-500' : 'border-gray-300 dark:border-gray-600'} text-gray-900 dark:text-white placeholder:text-gray-500 dark:placeholder:text-gray-400 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all w-full`}
+                          />
+                          {errors.establishedYear && <p className="text-red-500 text-xs mt-1">{errors.establishedYear}</p>}
+                        </div>
                         <div>
                           <select
                             name="schoolType"
