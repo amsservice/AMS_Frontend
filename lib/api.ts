@@ -14,13 +14,12 @@ export async function apiFetch(
   endpoint: string,
   options: RequestInit = {}
 ) {
-  const token = localStorage.getItem('accessToken');
+  // const token = localStorage.getItem('accessToken');
 
   const isFormData = options.body instanceof FormData;
 
   // ✅ Explicitly typed
   const headers: Record<string, string> = {
-    ...(token ? { Authorization: `Bearer ${token}` } : {}),
     ...(options.headers as Record<string, string> | undefined)
   };
 
@@ -33,18 +32,16 @@ export async function apiFetch(
     `${process.env.NEXT_PUBLIC_API_URL}${endpoint}`,
     {
       ...options,
-      headers
+      headers,
+      credentials: 'include'
     }
   );
   
 
   const data = await res.json().catch(() => ({}));
 
-  if (!res.ok) {
-    const message =
-      typeof data === "object" && data !== null && "message" in data
-        ? String((data as { message: unknown }).message)
-        : "unauthorized";
+if (!res.ok) {
+    const message = data?.message || "unauthorized";
     throw new ApiError(message, res.status, data);
   }
 
