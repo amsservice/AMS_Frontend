@@ -1,3 +1,9 @@
+
+
+
+
+
+
 'use client';
 
 import { useState } from 'react';
@@ -39,13 +45,20 @@ export default function AddHolidayForm() {
   const { data: sessions = [] } = useSessions();
   const { mutate: createHoliday, isPending } = useCreateHoliday();
 
-  const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
+  const handleSubmit = () => {
+    // Check if there's an active session
     const hasActive = sessions.some((s: any) => s.isActive);
     if (!hasActive) {
-      toast.error('Make a new session first');
+      toast.error('No active session found. Please create or activate a session first.');
       return;
     }
+
+    // Validate holiday name
+    if (!form.name.trim()) {
+      toast.error('Please enter a holiday name');
+      return;
+    }
+
     // Single mode
     if (form.mode === 'single') {
       if (!form.startDate) {
@@ -60,12 +73,44 @@ export default function AddHolidayForm() {
         return;
       }
 
-      createHoliday({
-        name: form.name,
-        date: form.startDate,
-        category: form.category,
-        description: form.description
-      } as any);
+      const toastId = toast.loading('Adding holiday...');
+
+      createHoliday(
+        {
+          name: form.name,
+          date: form.startDate,
+          category: form.category,
+          description: form.description
+        } as any,
+        {
+          onSuccess: () => {
+            toast.dismiss(toastId);
+            toast.success('Holiday added successfully!');
+            // Reset form
+            setForm({
+              name: '',
+              startDate: '',
+              endDate: '',
+              mode: 'single',
+              category: 'SCHOOL',
+              description: ''
+            });
+          },
+          onError: (error: any) => {
+            toast.dismiss(toastId);
+            const errorMessage = error?.response?.data?.message || error?.message || 'Failed to add holiday';
+            
+            if (errorMessage.includes('No active session') || errorMessage.includes('session')) {
+              toast.error('No active session found. Please create or activate a session first.');
+            } else if (errorMessage.includes('already exists')) {
+              toast.error('A holiday already exists on this date');
+            } else {
+              toast.error(errorMessage);
+            }
+          }
+        }
+      );
+      return;
     }
 
     // Range mode -> create a holiday for each date in range
@@ -96,26 +141,61 @@ export default function AddHolidayForm() {
         return;
       }
 
-      // no conflicts: create for each date
-      dates.forEach((dt) =>
-        createHoliday({
-          name: form.name,
-          date: dt,
-          category: form.category,
-          description: form.description
-        } as any)
-      );
-    }
+      const toastId = toast.loading(`Adding ${dates.length} holidays...`);
+      let successCount = 0;
+      let errorCount = 0;
 
-    // reset form
-    setForm({
-      name: '',
-      startDate: '',
-      endDate: '',
-      mode: 'single',
-      category: 'SCHOOL',
-      description: ''
-    });
+      // Create holidays for each date
+      dates.forEach((dt, index) => {
+        createHoliday(
+          {
+            name: form.name,
+            date: dt,
+            category: form.category,
+            description: form.description
+          } as any,
+          {
+            onSuccess: () => {
+              successCount++;
+              // If this is the last one
+              if (index === dates.length - 1) {
+                toast.dismiss(toastId);
+                if (errorCount === 0) {
+                  toast.success(`${successCount} holidays added successfully!`);
+                } else {
+                  toast.warning(`${successCount} holidays added, ${errorCount} failed`);
+                }
+                // Reset form
+                setForm({
+                  name: '',
+                  startDate: '',
+                  endDate: '',
+                  mode: 'single',
+                  category: 'SCHOOL',
+                  description: ''
+                });
+              }
+            },
+            onError: (error: any) => {
+              errorCount++;
+              // If this is the last one
+              if (index === dates.length - 1) {
+                toast.dismiss(toastId);
+                const errorMessage = error?.response?.data?.message || error?.message;
+                
+                if (errorMessage?.includes('No active session') || errorMessage?.includes('session')) {
+                  toast.error('No active session found. Please create or activate a session first.');
+                } else if (successCount > 0) {
+                  toast.warning(`${successCount} holidays added, ${errorCount} failed`);
+                } else {
+                  toast.error(errorMessage || 'Failed to add holidays');
+                }
+              }
+            }
+          }
+        );
+      });
+    }
   };
 
   return (
@@ -142,7 +222,6 @@ export default function AddHolidayForm() {
           <Input
             value={form.name}
             onChange={(e) => setForm({ ...form, name: e.target.value })}
-            required
             placeholder="Holiday name"
             className="w-full bg-white dark:bg-gray-700 border-gray-300 dark:border-gray-600 text-gray-900 dark:text-white rounded-xl"
           />
@@ -157,7 +236,6 @@ export default function AddHolidayForm() {
               type="date"
               value={form.startDate}
               onChange={(e) => setForm({ ...form, startDate: e.target.value })}
-              required
               className="w-full bg-white dark:bg-gray-700 border-gray-300 dark:border-gray-600 text-gray-900 dark:text-white rounded-xl"
             />
           ) : (
@@ -166,37 +244,39 @@ export default function AddHolidayForm() {
                 type="date"
                 value={form.startDate}
                 onChange={(e) => setForm({ ...form, startDate: e.target.value })}
-                required
+                placeholder="Start date"
                 className="w-full bg-white dark:bg-gray-700 border-gray-300 dark:border-gray-600 text-gray-900 dark:text-white rounded-xl"
               />
               <Input
                 type="date"
                 value={form.endDate}
                 onChange={(e) => setForm({ ...form, endDate: e.target.value })}
-                required
+                placeholder="End date"
                 className="w-full bg-white dark:bg-gray-700 border-gray-300 dark:border-gray-600 text-gray-900 dark:text-white rounded-xl"
               />
             </div>
           )}
 
           <div className="flex items-center gap-3 mt-2">
-            <label className="inline-flex items-center gap-2">
+            <label className="inline-flex items-center gap-2 cursor-pointer">
               <input
                 type="radio"
                 name="mode"
                 checked={form.mode === 'single'}
-                onChange={() => setForm({ ...form, mode: 'single' })}
+                onChange={() => setForm({ ...form, mode: 'single', endDate: '' })}
+                className="text-teal-600 focus:ring-teal-500"
               />
-              <span className="text-sm">Single</span>
+              <span className="text-sm text-gray-700 dark:text-gray-300">Single</span>
             </label>
-            <label className="inline-flex items-center gap-2">
+            <label className="inline-flex items-center gap-2 cursor-pointer">
               <input
                 type="radio"
                 name="mode"
                 checked={form.mode === 'range'}
                 onChange={() => setForm({ ...form, mode: 'range' })}
+                className="text-teal-600 focus:ring-teal-500"
               />
-              <span className="text-sm">Range</span>
+              <span className="text-sm text-gray-700 dark:text-gray-300">Range</span>
             </label>
           </div>
         </div>
@@ -206,7 +286,7 @@ export default function AddHolidayForm() {
             Category
           </Label>
           <select
-            className="w-full bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 p-1.5 rounded-xl text-gray-900 dark:text-white focus:ring-2 focus:ring-teal-500 focus:border-teal-500"
+            className="w-full bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 p-2.5 rounded-xl text-gray-900 dark:text-white focus:ring-2 focus:ring-teal-500 focus:border-teal-500"
             value={form.category}
             onChange={(e) =>
               setForm({
@@ -246,8 +326,17 @@ export default function AddHolidayForm() {
         disabled={isPending}
         className="mt-6 px-4 sm:px-6 py-2.5 sm:py-3 bg-gradient-to-br from-teal-600 to-cyan-600 text-white rounded-xl text-sm font-medium hover:opacity-90 transition-all disabled:opacity-50 disabled:cursor-not-allowed shadow-lg flex items-center justify-center gap-2"
       >
-        <Plus className="w-4 h-4" />
-        Add Holiday
+        {isPending ? (
+          <>
+            <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
+            Adding...
+          </>
+        ) : (
+          <>
+            <Plus className="w-4 h-4" />
+            Add Holiday
+          </>
+        )}
       </button>
     </div>
   );
