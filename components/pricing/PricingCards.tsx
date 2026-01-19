@@ -6,66 +6,69 @@ import { Sparkles } from "lucide-react";
 
 type PricingCardsProps = {
   isDark: boolean;
+  upgradeMode?: boolean;
 };
 
-export default function PricingCards({ isDark }: PricingCardsProps) {
+export default function PricingCards({ isDark, upgradeMode }: PricingCardsProps) {
   return (
     <div className="max-w-7xl mx-auto mb-16">
       <div className="grid grid-cols-1 lg:grid-cols-4 gap-6 mb-8">
         {/* Starter Plan - 6 Month Trial at ₹1 - MATCHED THEME */}
-        <div className="relative rounded-3xl p-8 transition-all duration-300 bg-white/80 dark:bg-gray-800/80 backdrop-blur-sm border-2 border-purple-500 dark:border-purple-400 shadow-2xl hover:shadow-purple-500/30 hover:-translate-y-2 transform">
-          <div className="absolute -top-4 left-1/2 -translate-x-1/2 px-6 py-2 rounded-full text-sm font-bold shadow-lg bg-gradient-to-r from-purple-500 to-violet-500 text-white flex items-center gap-2 whitespace-nowrap">
-            <Sparkles className="w-4 h-4" />
-            Beginners Friendly
-          </div>
-
-          {/* <div className="absolute top-6 right-6 px-3 py-1.5 rounded-full text-xs font-bold bg-gradient-to-r from-yellow-400 to-orange-400 text-white shadow-md">
-            Limited Time
-          </div> */}
-
-          <div className="text-center mt-6">
-            <h3 className="text-2xl font-bold mb-2 text-purple-600 dark:text-purple-400">
-              Starter Plan
-            </h3>
-
-            <div className="flex items-baseline justify-center mb-2">
-              <span className="mr-3 text-lg font-semibold line-through text-gray-500 dark:text-gray-400">
-                ₹4,999
-              </span>
-
-              <span className="text-5xl sm:text-6xl font-extrabold bg-gradient-to-r from-purple-600 to-violet-600 dark:from-purple-400 dark:to-violet-400 bg-clip-text text-transparent">
-                ₹1
-              </span>
+        {!upgradeMode ? (
+          <div className="relative rounded-3xl p-8 transition-all duration-300 bg-white/80 dark:bg-gray-800/80 backdrop-blur-sm border-2 border-purple-500 dark:border-purple-400 shadow-2xl hover:shadow-purple-500/30 hover:-translate-y-2 transform">
+            <div className="absolute -top-4 left-1/2 -translate-x-1/2 px-6 py-2 rounded-full text-sm font-bold shadow-lg bg-gradient-to-r from-purple-500 to-violet-500 text-white flex items-center gap-2 whitespace-nowrap">
+              <Sparkles className="w-4 h-4" />
+              Beginners Friendly
             </div>
 
-            <p className="text-sm mb-2 text-purple-600 dark:text-purple-400 font-semibold">
-              For 6 months trial
-            </p>
-            <p className="text-xs mb-6 text-gray-600 dark:text-gray-400">
-              Per student/month (paid upfront)
-            </p>
+            {/* <div className="absolute top-6 right-6 px-3 py-1.5 rounded-full text-xs font-bold bg-gradient-to-r from-yellow-400 to-orange-400 text-white shadow-md">
+              Limited Time
+            </div> */}
 
-            <div className="p-4 rounded-xl mb-6 bg-gradient-to-br from-purple-50 to-violet-50 dark:from-purple-900/30 dark:to-violet-900/30 border border-purple-200 dark:border-purple-700 shadow-inner">
-              <p className="text-xs mb-1 text-gray-600 dark:text-gray-400 font-medium">Perfect for:</p>
-              <p className="text-2xl font-bold text-purple-600 dark:text-purple-400">
-                Unlimited Students
+            <div className="text-center mt-6">
+              <h3 className="text-2xl font-bold mb-2 text-purple-600 dark:text-purple-400">
+                Starter Plan
+              </h3>
+
+              <div className="flex items-baseline justify-center mb-2">
+                <span className="mr-3 text-lg font-semibold line-through text-gray-500 dark:text-gray-400">
+                  ₹4,999
+                </span>
+
+                <span className="text-5xl sm:text-6xl font-extrabold bg-gradient-to-r from-purple-600 to-violet-600 dark:from-purple-400 dark:to-violet-400 bg-clip-text text-transparent">
+                  ₹1
+                </span>
+              </div>
+
+              <p className="text-sm mb-2 text-purple-600 dark:text-purple-400 font-semibold">
+                For 6 months trial
               </p>
-              <p className="text-xs mt-2 text-gray-600 dark:text-gray-400">
-                Core features included • Ideal for small & growing schools
+              <p className="text-xs mb-6 text-gray-600 dark:text-gray-400">
+                Per student/month (paid upfront)
+              </p>
+
+              <div className="p-4 rounded-xl mb-6 bg-gradient-to-br from-purple-50 to-violet-50 dark:from-purple-900/30 dark:to-violet-900/30 border border-purple-200 dark:border-purple-700 shadow-inner">
+                <p className="text-xs mb-1 text-gray-600 dark:text-gray-400 font-medium">Perfect for:</p>
+                <p className="text-2xl font-bold text-purple-600 dark:text-purple-400">
+                  Unlimited Students
+                </p>
+                <p className="text-xs mt-2 text-gray-600 dark:text-gray-400">
+                  Core features included • Ideal for small & growing schools
+                </p>
+              </div>
+
+              <Link href="/auth/register" className="block">
+                <button className="w-full py-4 rounded-xl font-bold text-base transition-all duration-300 transform hover:scale-[1.05] active:scale-[0.98] shadow-lg bg-gradient-to-r from-purple-600 via-violet-600 to-indigo-600 text-white hover:shadow-purple-500/50 hover:shadow-2xl">
+                  Start Trial for ₹1
+                </button>
+              </Link>
+
+              <p className="text-xs mt-3 text-gray-600 dark:text-gray-400 font-medium">
+                Full access • Cancel anytime
               </p>
             </div>
-
-            <Link href="/auth/register" className="block">
-              <button className="w-full py-4 rounded-xl font-bold text-base transition-all duration-300 transform hover:scale-[1.05] active:scale-[0.98] shadow-lg bg-gradient-to-r from-purple-600 via-violet-600 to-indigo-600 text-white hover:shadow-purple-500/50 hover:shadow-2xl">
-                Start Trial for ₹1
-              </button>
-            </Link>
-
-            <p className="text-xs mt-3 text-gray-600 dark:text-gray-400 font-medium">
-              Full access • Cancel anytime
-            </p>
           </div>
-        </div>
+        ) : null}
 
         {/* Regular Plans */}
         {PRICING_PLANS.map((plan) => {
@@ -123,7 +126,14 @@ export default function PricingCards({ isDark }: PricingCardsProps) {
                   <p className="text-xs mt-1 text-gray-500 dark:text-gray-400">Only ₹{yearlyFor500.toLocaleString()}/year</p>
                 </div>
 
-                <Link href={`/auth/register`} className="block">
+                <Link
+                  href={
+                    upgradeMode
+                      ? `/subscription/payment?mode=upgrade&plan=${plan.id}`
+                      : `/auth/register`
+                  }
+                  className="block"
+                >
                   <button
                     className={`w-full py-4 rounded-xl font-bold text-base transition-all duration-300 transform hover:scale-[1.05] active:scale-[0.98] shadow-lg ${
                       plan.highlighted

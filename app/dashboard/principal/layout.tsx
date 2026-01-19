@@ -17,6 +17,7 @@ export default function PrincipalLayout({
 
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [darkMode, setDarkMode] = useState(false);
+  const [themeInitialized, setThemeInitialized] = useState(false);
 
   /* 🔐 Role Guard (Incoming Functionality) */
   useEffect(() => {
@@ -30,7 +31,6 @@ export default function PrincipalLayout({
     try {
       // 1. On mount, check LocalStorage using Upastithi key
       const savedTheme = window.localStorage.getItem("Upastithi-theme");
-      
       if (savedTheme === "dark") {
         setDarkMode(true);
         document.documentElement.classList.add("dark");
@@ -48,18 +48,21 @@ export default function PrincipalLayout({
       }
     } catch (e) {
       // ignore (Incoming safety functionality)
+    } finally {
+      setThemeInitialized(true);
     }
   }, []);
 
   /* 3. Watch for manual toggles (Upastithi Logic with Incoming safety) */
   useEffect(() => {
+    if (!themeInitialized) return;
     document.documentElement.classList.toggle("dark", darkMode);
     try {
       window.localStorage.setItem("Upastithi-theme", darkMode ? "dark" : "light");
     } catch (e) {
       // ignore
     }
-  }, [darkMode]);
+  }, [darkMode, themeInitialized]);
 
   if (loading || !user) return null;
 

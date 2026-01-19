@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import { useRouter } from "next/navigation";
 import { motion, AnimatePresence } from "framer-motion";
 import {
   Building2,
@@ -53,12 +54,39 @@ interface SubscriptionData {
   paidAmount: number;
   startDate: string;
   endDate: string;
-  status: "active" | "grace" | "expired";
+  status: "active" | "grace" | "queued" | "expired";
 }
 
+type InvoiceItem = {
+  id: string;
+  planId: "1Y" | "2Y" | "3Y";
+  orderId: string;
+  paymentId: string;
+  enteredStudents: number;
+  futureStudents: number;
+  billableStudents: number;
+  pricePerStudentPerMonth: number;
+  totalMonths: number;
+  monthlyCost: number;
+  originalAmount: number;
+  discountAmount: number;
+  paidAmount: number;
+  couponCode?: "FREE_3M" | "FREE_6M";
+  startDate: string;
+  endDate: string;
+  status: "active" | "grace" | "queued" | "expired";
+  createdAt: string;
+};
+
 export default function PrincipalProfilePage() {
+  const router = useRouter();
   const [isEditSchoolOpen, setIsEditSchoolOpen] = useState(false);
   const [isEditPrincipalOpen, setIsEditPrincipalOpen] = useState(false);
+  const [isInvoiceHistoryOpen, setIsInvoiceHistoryOpen] = useState(false);
+  const [invoiceLoading, setInvoiceLoading] = useState(false);
+  const [invoices, setInvoices] = useState<InvoiceItem[]>([]);
+  const [selectedInvoiceId, setSelectedInvoiceId] = useState<string | null>(null);
+  const [upcomingPlans, setUpcomingPlans] = useState<InvoiceItem[]>([]);
 
   const { data: schoolResponse, isLoading, error, refetch } = useMySchool();
   const updateSchoolMutation = useUpdateSchool();
@@ -110,6 +138,102 @@ export default function PrincipalProfilePage() {
     endDate: "",
     status: "active",
   });
+
+  const selectedInvoice = selectedInvoiceId
+    ? invoices.find((i) => i.id === selectedInvoiceId) ?? null
+    : null;
+
+  const formatSubStatus = (s: InvoiceItem["status"] | SubscriptionData["status"]) => {
+    if (s === "queued") return "Upcoming";
+    if (s === "grace") return "Grace";
+    if (s === "expired") return "Expired";
+    return "Active";
+  };
+
+  const formatDDMMYYYY = (date: string) => {
+    return date ? new Date(date).toLocaleDateString("en-GB") : "-";
+  };
+
+  useEffect(() => {
+    // Used for showing upcoming queued plans in the subscription section.
+    // (Invoice modal still refetches when opened.)
+    (async () => {
+      try {
+        const res = await apiFetch("/api/subscription/invoices");
+        const list =
+          res && typeof res === "object" && "invoices" in res && Array.isArray((res as any).invoices)
+            ? ((res as any).invoices as InvoiceItem[])
+            : [];
+
+        const queued = list
+          .filter((inv) => inv.status === "queued")
+          .sort(
+            (a, b) => new Date(a.startDate).getTime() - new Date(b.startDate).getTime()
+          );
+
+        setUpcomingPlans(queued);
+      } catch {
+        setUpcomingPlans([]);
+      }
+    })();
+  }, []);
+
+  useEffect(() => {
+    if (!isInvoiceHistoryOpen) return;
+
+    const fetchInvoices = async () => {
+      setInvoiceLoading(true);
+      try {
+        const res = await apiFetch("/api/subscription/invoices");
+        const list =
+          res && typeof res === "object" && "invoices" in res && Array.isArray((res as any).invoices)
+            ? ((res as any).invoices as InvoiceItem[])
+            : [];
+        setInvoices(list);
+      } catch (err: any) {
+        toast.error(err?.message || "Failed to load invoices");
+      } finally {
+        setInvoiceLoading(false);
+      }
+    };
+
+    fetchInvoices();
+  }, [isInvoiceHistoryOpen]);
+
+  const downloadInvoicePdf = async (invoiceId: string) => {
+    try {
+      const res = await fetch(
+        `${process.env.NEXT_PUBLIC_API_URL}/api/subscription/invoices/${encodeURIComponent(
+          invoiceId
+        )}/pdf`,
+        {
+          method: "GET",
+          credentials: "include",
+        }
+      );
+
+      if (!res.ok) {
+        const msg = await res.json().catch(() => ({}));
+        const message =
+          msg && typeof msg === "object" && "message" in msg
+            ? String((msg as any).message)
+            : "Failed to download invoice";
+        throw new Error(message);
+      }
+
+      const blob = await res.blob();
+      const url = window.URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = `invoice_${invoiceId}.pdf`;
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      window.URL.revokeObjectURL(url);
+    } catch (e: any) {
+      toast.error(e?.message || "Failed to download invoice");
+    }
+  };
 
   const [schoolForm, setSchoolForm] = useState<SchoolFormData>(schoolData);
   const [principalForm, setPrincipalForm] =
@@ -621,7 +745,7 @@ export default function PrincipalProfilePage() {
               <div className="flex items-center gap-2 px-3 py-1.5 bg-gradient-to-br from-green-600 to-emerald-600 rounded-full shadow-lg">
                 <Check className="w-4 h-4 text-white" />
                 <span className="text-sm font-semibold text-white">
-                  {subscriptionData.status || "Active"}
+                  {formatSubStatus(subscriptionData.status)}
                 </span>
               </div>
             </div>
@@ -662,26 +786,65 @@ export default function PrincipalProfilePage() {
 
               <div className="bg-gradient-to-br from-orange-50 to-amber-100 dark:from-orange-900/30 dark:to-amber-900/30 border border-orange-200/50 dark:border-orange-700/50 rounded-xl p-4 shadow-lg">
                 <p className="text-xs text-gray-600 dark:text-gray-400 mb-2">
-                  Valid Until
+                  Validity
                 </p>
                 <p className="text-xl font-bold text-gray-900 dark:text-white">
-                  {subscriptionData.endDate
-                    ? new Date(subscriptionData.endDate).toLocaleDateString()
+                  {subscriptionData.startDate && subscriptionData.endDate
+                    ? `${formatDDMMYYYY(subscriptionData.startDate)} - ${formatDDMMYYYY(subscriptionData.endDate)}`
                     : "N/A"}
                 </p>
               </div>
             </div>
 
+            {upcomingPlans.length > 0 && (
+              <div className="mb-6">
+                <div className="text-sm font-bold text-gray-900 dark:text-white mb-3">
+                  Upcoming Plans
+                </div>
+                <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
+                  {upcomingPlans.map((p) => (
+                    <div
+                      key={p.id}
+                      className="bg-white/70 dark:bg-white/5 border border-gray-200/60 dark:border-white/10 rounded-xl p-4 shadow-lg"
+                    >
+                      <div className="flex items-center justify-between gap-3">
+                        <div className="text-sm font-bold text-gray-900 dark:text-white">
+                          Plan {p.planId}
+                        </div>
+                        <div className="text-xs px-3 py-1 rounded-full bg-indigo-600 text-white font-semibold">
+                          {formatSubStatus(p.status)}
+                        </div>
+                      </div>
+                      <div className="mt-3 text-xs text-gray-600 dark:text-gray-400 space-y-1">
+                        <div>
+                          <span className="font-semibold">Validity:</span> {formatDDMMYYYY(p.startDate)} - {formatDDMMYYYY(p.endDate)}
+                        </div>
+                        <div>
+                          <span className="font-semibold">Students:</span> {p.billableStudents}
+                        </div>
+                        <div>
+                          <span className="font-semibold">Amount:</span> ₹{p.paidAmount}
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+
             <div className="flex flex-wrap gap-3">
               <button
                 className="px-4 sm:px-6 py-2.5 bg-gradient-to-br from-blue-600 to-indigo-600 text-white rounded-xl text-sm font-medium hover:opacity-90 transition-all shadow-lg"
-                onClick={() => toast("Invoice history feature coming soon")}
+                onClick={() => {
+                  setSelectedInvoiceId(null);
+                  setIsInvoiceHistoryOpen(true);
+                }}
               >
                 View Invoice History
               </button>
               <button
                 className="px-4 sm:px-6 py-2.5 bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 text-gray-900 dark:text-white rounded-xl text-sm font-medium hover:bg-gray-50 dark:hover:bg-gray-600 transition-all shadow-sm"
-                onClick={() => toast("Upgrade plan feature coming soon")}
+                onClick={() => router.push("/dashboard/principal/upgrade-plan")}
               >
                 Upgrade Plan
               </button>
@@ -1077,6 +1240,216 @@ export default function PrincipalProfilePage() {
                   Save Changes
                 </button>
               </div>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      <AnimatePresence>
+        {isInvoiceHistoryOpen && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 p-4"
+            onClick={() => setIsInvoiceHistoryOpen(false)}
+          >
+            <motion.div
+              initial={{ scale: 0.95 }}
+              animate={{ scale: 1 }}
+              exit={{ scale: 0.95 }}
+              onClick={(e) => e.stopPropagation()}
+              className="bg-white/95 dark:bg-gray-800/95 backdrop-blur-sm border border-gray-200/50 dark:border-gray-700/50 rounded-2xl shadow-2xl p-6 w-full max-w-4xl max-h-[90vh] overflow-y-auto"
+            >
+              <div className="flex items-center justify-between mb-6">
+                <div>
+                  <h3 className="text-xl font-bold text-gray-900 dark:text-white">
+                    Invoice History
+                  </h3>
+                  <p className="text-sm text-gray-600 dark:text-gray-400">
+                    {schoolData.name || "School"}
+                  </p>
+                </div>
+                <div className="flex items-center gap-2">
+                  {selectedInvoice && (
+                    <Button
+                      variant="outline"
+                      onClick={() => setSelectedInvoiceId(null)}
+                      className="rounded-xl"
+                    >
+                      Back
+                    </Button>
+                  )}
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => setIsInvoiceHistoryOpen(false)}
+                    className="rounded-xl"
+                  >
+                    <X className="w-5 h-5" />
+                  </Button>
+                </div>
+              </div>
+
+              {invoiceLoading ? (
+                <div className="py-12 flex items-center justify-center">
+                  <Loader2 className="w-10 h-10 animate-spin text-blue-500" />
+                </div>
+              ) : selectedInvoice ? (
+                <div>
+                  <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mb-6">
+                    <div>
+                      <p className="text-sm text-gray-600 dark:text-gray-400">
+                        Invoice Date
+                      </p>
+                      <p className="text-base font-semibold text-gray-900 dark:text-white">
+                        {selectedInvoice.createdAt
+                          ? new Date(selectedInvoice.createdAt).toLocaleDateString("en-GB")
+                          : "-"}
+                      </p>
+                    </div>
+                    <div className="flex flex-wrap gap-2">
+                      <button
+                        className="px-4 py-2 bg-gradient-to-br from-blue-600 to-indigo-600 text-white rounded-xl text-sm font-semibold hover:opacity-90 transition-all shadow-lg"
+                        onClick={() => {
+                          if (!selectedInvoice) return;
+                          downloadInvoicePdf(selectedInvoice.id);
+                        }}
+                      >
+                        Download PDF
+                      </button>
+                    </div>
+                  </div>
+
+                  <div id="invoice-print-area">
+                    <div className="card">
+                      <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-4 mb-4">
+                        <div>
+                          <div className="h">Upastithi Subscription Invoice</div>
+                          <div className="muted">{schoolData.name || "School"}</div>
+                        </div>
+                        <div className="text-left sm:text-right">
+                          <div className="muted">Order ID</div>
+                          <div className="mono">{selectedInvoice.orderId}</div>
+                          <div className="muted" style={{ marginTop: 8 }}>Payment ID</div>
+                          <div className="mono">{selectedInvoice.paymentId}</div>
+                        </div>
+                      </div>
+
+                      <div className="row">
+                        <div className="muted">Plan : <b>{selectedInvoice.planId}</b></div>
+                        <div></div>
+                      </div>
+                      <div className="row">
+                        <div className="muted">Entered Students : <b>{selectedInvoice.enteredStudents}</b></div>
+                        <div></div>
+                      </div>
+                      <div className="row">
+                        <div className="muted">Future Students : <b>{selectedInvoice.futureStudents}</b></div>
+                        <div></div>
+                      </div>
+                      <div className="row">
+                        <div className="muted">Billable Students : <b>{selectedInvoice.billableStudents}</b></div>
+                        <div></div>
+                      </div>
+                      <div className="row">
+                        <div className="muted">Price / Student / Month : <b>₹{selectedInvoice.pricePerStudentPerMonth}</b></div>
+                        <div></div>
+                      </div>
+                      <div className="row">
+                        <div className="muted">Total Months : <b>{selectedInvoice.totalMonths}</b></div>
+                        <div></div>
+                      </div>
+                      <div className="row">
+                        <div className="muted">Monthly Cost : <b>₹{selectedInvoice.monthlyCost}</b></div>
+                        <div></div>
+                      </div>
+                      <div className="row">
+                        <div className="muted">Original Amount : <b>₹{selectedInvoice.originalAmount}</b></div>
+                        <div></div>
+                      </div>
+                      <div className="row">
+                        <div className="muted">Discount : <b>- ₹{selectedInvoice.discountAmount}</b></div>
+                        <div></div>
+                      </div>
+                      <div className="row">
+                        <div className="muted">Amount Paid : <b>₹{selectedInvoice.paidAmount}</b></div>
+                        <div></div>
+                      </div>
+                      <div className="row">
+                        <div className="muted">Coupon : <b>{selectedInvoice.couponCode || "-"}</b></div>
+                        <div></div>
+                      </div>
+                      <div className="row">
+                        <div className="muted">Subscription Period : <b>
+                            {selectedInvoice.startDate
+                              ? new Date(selectedInvoice.startDate).toLocaleDateString("en-GB")
+                              : "-"}
+                            {" "}to{" "}
+                            {selectedInvoice.endDate
+                              ? new Date(selectedInvoice.endDate).toLocaleDateString("en-GB")
+                              : "-"}
+                          </b></div>
+                        <div>
+                          
+                        </div>
+                      </div>
+                      <div className="row">
+                        <div className="muted">Status : <b>{formatSubStatus(selectedInvoice.status)}</b></div>
+                        <div></div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              ) : (
+                <div className="space-y-3">
+                  {invoices.length === 0 ? (
+                    <div className="py-12 text-center">
+                      <p className="text-gray-600 dark:text-gray-400">
+                        No invoices found.
+                      </p>
+                    </div>
+                  ) : (
+                    invoices.map((inv) => (
+                      <div
+                        key={inv.id}
+                        className="p-4 rounded-2xl border border-gray-200/60 dark:border-white/10 bg-white/60 dark:bg-white/5 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3"
+                      >
+                        <div>
+                          <p className="text-sm font-bold text-gray-900 dark:text-white">
+                            {inv.createdAt
+                              ? new Date(inv.createdAt).toLocaleDateString("en-GB")
+                              : "-"}
+                            {" "}• Plan {inv.planId}
+                          </p>
+                          <p className="text-xs text-gray-600 dark:text-gray-400">
+                            Paid: ₹{inv.paidAmount} • Students: {inv.billableStudents} • Status: {formatSubStatus(inv.status)}
+                          </p>
+                          <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
+                            <span className="font-semibold">Order:</span> {inv.orderId}
+                          </p>
+                        </div>
+                        <div className="flex gap-2">
+                          <button
+                            className="px-4 py-2 bg-gradient-to-br from-blue-600 to-indigo-600 text-white rounded-xl text-sm font-semibold hover:opacity-90 transition-all shadow-lg"
+                            onClick={() => setSelectedInvoiceId(inv.id)}
+                          >
+                            View
+                          </button>
+                          <button
+                            className="px-4 py-2 bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 text-gray-900 dark:text-white rounded-xl text-sm font-semibold hover:bg-gray-50 dark:hover:bg-gray-600 transition-all shadow-sm"
+                            onClick={() => {
+                              downloadInvoicePdf(inv.id);
+                            }}
+                          >
+                            Download
+                          </button>
+                        </div>
+                      </div>
+                    ))
+                  )}
+                </div>
+              )}
             </motion.div>
           </motion.div>
         )}
