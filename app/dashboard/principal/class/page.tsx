@@ -1,3 +1,6 @@
+
+
+
 'use client';
 
 import { useState } from 'react';
@@ -6,6 +9,7 @@ import { BookOpen, Plus, X, Users, Edit, Trash2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import { toast } from 'sonner';
 
 import {
   useClasses,
@@ -33,8 +37,8 @@ export default function ClassesPage() {
   });
 
   const { data: classes = [], isLoading } = useClasses();
-  const { mutate: createClass } = useCreateClass();
-  const { mutate: updateClass } = useUpdateClass();
+  const { mutate: createClass, isPending: isCreating } = useCreateClass();
+  const { mutate: updateClass, isPending: isUpdating } = useUpdateClass();
   const { mutate: deleteClass } = useDeleteClass();
 
   const stats = {
@@ -56,15 +60,42 @@ export default function ClassesPage() {
   };
 
   const handleSubmit = () => {
-    if (!formData.className || !formData.section) return;
+    if (!formData.className || !formData.section) {
+      toast.error('Please fill in all required fields');
+      return;
+    }
 
-    createClass({
-      name: formData.className,
-      section: formData.section
-    });
+    const toastId = toast.loading('Creating class...');
 
-    setFormData({ className: '', section: '' });
-    setIsAddClassOpen(false);
+    createClass(
+      {
+        name: formData.className,
+        section: formData.section
+      },
+      {
+        onSuccess: () => {
+          toast.dismiss(toastId);
+          toast.success('Class created successfully!');
+          setFormData({ className: '', section: '' });
+          setIsAddClassOpen(false);
+        },
+        onError: (error: any) => {
+          toast.dismiss(toastId);
+          
+          // Handle different error scenarios
+          const errorMessage = error?.response?.data?.message || error?.message || 'Failed to create class';
+          
+          // Check for specific error messages
+          if (errorMessage.includes('No active academic session')) {
+            toast.error('No active session found. Please create or activate a session first.');
+          } else if (errorMessage.includes('already exists')) {
+            toast.error('This class already exists for the current session');
+          } else {
+            toast.error(errorMessage);
+          }
+        }
+      }
+    );
   };
 
   const handleEditClick = (cls: Class) => {
@@ -79,21 +110,104 @@ export default function ClassesPage() {
   const handleEditSubmit = () => {
     if (!editingClass) return;
 
-    updateClass({
-      id: editingClass.id,
-      data: {
-        name: formData.className,
-        section: formData.section
-      }
-    });
+    if (!formData.className || !formData.section) {
+      toast.error('Please fill in all required fields');
+      return;
+    }
 
-    setIsEditOpen(false);
-    setEditingClass(null);
+    const toastId = toast.loading('Updating class...');
+
+    updateClass(
+      {
+        id: editingClass.id,
+        data: {
+          name: formData.className,
+          section: formData.section
+        }
+      },
+      {
+        onSuccess: () => {
+          toast.dismiss(toastId);
+          toast.success('Class updated successfully!');
+          setIsEditOpen(false);
+          setEditingClass(null);
+        },
+        onError: (error: any) => {
+          toast.dismiss(toastId);
+          
+          const errorMessage = error?.response?.data?.message || error?.message || 'Failed to update class';
+          
+          if (errorMessage.includes('No active session')) {
+            toast.error('No active session found. Please activate a session first.');
+          } else {
+            toast.error(errorMessage);
+          }
+        }
+      }
+    );
   };
 
-  const handleDelete = (id: string) => {
-    if (!confirm('Are you sure you want to delete this class?')) return;
-    deleteClass(id);
+  const handleDelete = (id: string, className: string, section: string) => {
+    toast.custom(
+      (t) => (
+        <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-2xl border border-gray-200 dark:border-gray-700 p-6 max-w-md w-full">
+          <div className="flex items-start gap-4">
+            <div className="p-3 bg-red-100 dark:bg-red-900/30 rounded-xl">
+              <Trash2 className="w-6 h-6 text-red-600 dark:text-red-400" />
+            </div>
+            <div className="flex-1">
+              <h3 className="text-lg font-bold text-gray-900 dark:text-white mb-2">
+                Delete Class
+              </h3>
+              <p className="text-sm text-gray-600 dark:text-gray-400 mb-4">
+                Are you sure you want to delete <span className="font-semibold text-gray-900 dark:text-white">{className} - {section}</span>? This action cannot be undone.
+              </p>
+              <div className="flex gap-3">
+                <button
+                  onClick={() => {
+                    toast.dismiss(t);
+                  }}
+                  className="flex-1 px-4 py-2.5 bg-gray-100 dark:bg-gray-700 text-gray-900 dark:text-white rounded-xl font-medium hover:bg-gray-200 dark:hover:bg-gray-600 transition-all"
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={() => {
+                    toast.dismiss(t);
+                    const loadingId = toast.loading('Deleting class...');
+                    
+                    deleteClass(id, {
+                      onSuccess: () => {
+                        toast.dismiss(loadingId);
+                        toast.success('Class deleted successfully!');
+                      },
+                      onError: (error: any) => {
+                        toast.dismiss(loadingId);
+                        
+                        const errorMessage = error?.response?.data?.message || error?.message || 'Failed to delete class';
+                        
+                        if (errorMessage.includes('No active session')) {
+                          toast.error('No active session found. Please activate a session first.');
+                        } else {
+                          toast.error(errorMessage);
+                        }
+                      }
+                    });
+                  }}
+                  className="flex-1 px-4 py-2.5 bg-gradient-to-br from-red-600 to-red-700 text-white rounded-xl font-medium hover:opacity-90 transition-all shadow-lg"
+                >
+                  Delete
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      ),
+      {
+        duration: Infinity,
+        position: 'top-center',
+      }
+    );
   };
 
   const statsData = [
@@ -204,9 +318,10 @@ export default function ClassesPage() {
 
                   <button
                     onClick={handleSubmit}
-                    className="mt-6 px-4 sm:px-6 py-2.5 sm:py-3 bg-gradient-to-br from-blue-600 to-indigo-600 text-white rounded-xl text-sm font-medium hover:opacity-90 transition-all shadow-lg"
+                    disabled={isCreating}
+                    className="mt-6 px-4 sm:px-6 py-2.5 sm:py-3 bg-gradient-to-br from-blue-600 to-indigo-600 text-white rounded-xl text-sm font-medium hover:opacity-90 transition-all shadow-lg disabled:opacity-50 disabled:cursor-not-allowed"
                   >
-                    Create Class
+                    {isCreating ? 'Creating...' : 'Create Class'}
                   </button>
                 </div>
               </motion.div>
@@ -217,6 +332,11 @@ export default function ClassesPage() {
           {isLoading ? (
             <div className="bg-white/80 dark:bg-gray-800/80 backdrop-blur-sm shadow-xl rounded-2xl border border-gray-200/50 dark:border-gray-700/50 p-8 text-center">
               <p className="text-gray-600 dark:text-gray-400">Loading classes...</p>
+            </div>
+          ) : classes.length === 0 ? (
+            <div className="bg-white/80 dark:bg-gray-800/80 backdrop-blur-sm shadow-xl rounded-2xl border border-gray-200/50 dark:border-gray-700/50 p-8 text-center">
+              <BookOpen className="w-12 h-12 mx-auto text-gray-400 mb-3" />
+              <p className="text-gray-600 dark:text-gray-400">No classes found. Create your first class to get started!</p>
             </div>
           ) : (
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 sm:gap-6">
@@ -255,7 +375,7 @@ export default function ClassesPage() {
                     <Button
                       variant="ghost"
                       size="sm"
-                      onClick={() => handleDelete(cls.id)}
+                      onClick={() => handleDelete(cls.id, cls.name, cls.section)}
                       className="text-red-500 flex-1 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-xl"
                     >
                       <Trash2 size={14} />
@@ -347,9 +467,10 @@ export default function ClassesPage() {
                 </Button>
                 <button
                   onClick={handleEditSubmit}
-                  className="flex-1 px-6 py-2.5 bg-gradient-to-br from-purple-600 to-violet-600 text-white font-semibold rounded-xl hover:opacity-90 transition-all shadow-lg"
+                  disabled={isUpdating}
+                  className="flex-1 px-6 py-2.5 bg-gradient-to-br from-purple-600 to-violet-600 text-white font-semibold rounded-xl hover:opacity-90 transition-all shadow-lg disabled:opacity-50 disabled:cursor-not-allowed"
                 >
-                  Update
+                  {isUpdating ? 'Updating...' : 'Update'}
                 </button>
               </div>
             </motion.div>
