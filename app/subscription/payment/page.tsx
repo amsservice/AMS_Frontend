@@ -80,6 +80,8 @@ export default function PaymentPage() {
   const RAZORPAY_KEY = process.env.NEXT_PUBLIC_RAZORPAY_KEY!;
 
   const schoolEmail = searchParams.get("email");
+  const mode = searchParams.get("mode");
+  const isUpgradeMode = mode === "upgrade";
   const [planId, setPlanId] = useState<PlanId>("1Y");
   const [enteredStudents, setEnteredStudents] = useState<number | "">("");
   const [futureStudents, setFutureStudents] = useState<number | "">("");
@@ -96,13 +98,15 @@ export default function PaymentPage() {
 
   /* 🔐 BLOCK ACCESS WITHOUT OTP */
   useEffect(() => {
+    if (isUpgradeMode) return;
     if (!schoolEmail) {
       alert("Please verify email before payment");
       router.replace("/auth/register");
     }
-  }, [schoolEmail, router]);
+  }, [schoolEmail, router, isUpgradeMode]);
 
   useEffect(() => {
+    if (isUpgradeMode) return;
     if (!schoolEmail) return;
 
     (async () => {
@@ -128,7 +132,7 @@ export default function PaymentPage() {
       } catch {
       }
     })();
-  }, [API_URL, router, schoolEmail]);
+  }, [API_URL, router, schoolEmail, isUpgradeMode]);
 
   useEffect(() => {
     setPrice(null);
@@ -233,7 +237,7 @@ export default function PaymentPage() {
      PRICE PREVIEW
   =============================== */
   const previewPrice = async () => {
-    if (alreadyPaid) {
+    if (!isUpgradeMode && alreadyPaid) {
       router.replace("/");
       return;
     }
@@ -311,17 +315,23 @@ export default function PaymentPage() {
 
       /* 1️⃣.5️⃣ Create PaymentIntent (CRITICAL STEP) */
 
-      await fetch(`${API_URL}/api/payment/create-intent`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          orderId: order.orderId,
-          planId,
-          enteredStudents,
-          futureStudents: futureStudents || undefined,
-          couponCode: couponCode || undefined,
-        }),
-      });
+      await fetch(
+        isUpgradeMode
+          ? `${API_URL}/api/payment/create-intent-upgrade`
+          : `${API_URL}/api/payment/create-intent`,
+        {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            orderId: order.orderId,
+            planId,
+            enteredStudents,
+            futureStudents: futureStudents || undefined,
+            couponCode: couponCode || undefined,
+          }),
+          credentials: isUpgradeMode ? "include" : undefined,
+        }
+      );
 
       const paidAmount = order.paidAmount;
 
@@ -342,16 +352,22 @@ export default function PaymentPage() {
 
         handler: async function (response: RazorpayHandlerResponse) {
           /* 3️⃣ Verify payment */
-          const verifyRes = await fetch(`${API_URL}/api/payment/verify`, {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({
-              razorpay_order_id: response.razorpay_order_id,
-              razorpay_payment_id: response.razorpay_payment_id,
-              razorpay_signature: response.razorpay_signature,
-              schoolEmail
-            }),
-          });
+          const verifyRes = await fetch(
+            isUpgradeMode
+              ? `${API_URL}/api/payment/verify-upgrade`
+              : `${API_URL}/api/payment/verify`,
+            {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({
+                razorpay_order_id: response.razorpay_order_id,
+                razorpay_payment_id: response.razorpay_payment_id,
+                razorpay_signature: response.razorpay_signature,
+                ...(isUpgradeMode ? {} : { schoolEmail }),
+              }),
+              credentials: isUpgradeMode ? "include" : undefined,
+            }
+          );
 
           const verifyData = (await verifyRes.json()) as VerifyPaymentResponse;
 
@@ -360,11 +376,12 @@ export default function PaymentPage() {
             return;
           }
 
-          localStorage.setItem("accessToken", verifyData.accessToken);
-          localStorage.setItem("role", "principal");
+          if (!isUpgradeMode) {
+            localStorage.setItem("accessToken", verifyData.accessToken);
+            localStorage.setItem("role", "principal");
+          }
           await refetchUser();
-          router.replace("/dashboard/principal");
-
+          router.replace("/dashboard/principal/schoolProfile");
         },
         theme: { color: "#2563eb" },
       });

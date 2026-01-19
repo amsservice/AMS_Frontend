@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import { useRouter } from "next/navigation";
 import { motion, AnimatePresence } from "framer-motion";
 import {
   Building2,
@@ -53,7 +54,7 @@ interface SubscriptionData {
   paidAmount: number;
   startDate: string;
   endDate: string;
-  status: "active" | "grace" | "expired";
+  status: "active" | "grace" | "queued" | "expired";
 }
 
 type InvoiceItem = {
@@ -73,17 +74,19 @@ type InvoiceItem = {
   couponCode?: "FREE_3M" | "FREE_6M";
   startDate: string;
   endDate: string;
-  status: "active" | "grace" | "expired";
+  status: "active" | "grace" | "queued" | "expired";
   createdAt: string;
 };
 
 export default function PrincipalProfilePage() {
+  const router = useRouter();
   const [isEditSchoolOpen, setIsEditSchoolOpen] = useState(false);
   const [isEditPrincipalOpen, setIsEditPrincipalOpen] = useState(false);
   const [isInvoiceHistoryOpen, setIsInvoiceHistoryOpen] = useState(false);
   const [invoiceLoading, setInvoiceLoading] = useState(false);
   const [invoices, setInvoices] = useState<InvoiceItem[]>([]);
   const [selectedInvoiceId, setSelectedInvoiceId] = useState<string | null>(null);
+  const [upcomingPlans, setUpcomingPlans] = useState<InvoiceItem[]>([]);
 
   const { data: schoolResponse, isLoading, error, refetch } = useMySchool();
   const updateSchoolMutation = useUpdateSchool();
@@ -139,6 +142,41 @@ export default function PrincipalProfilePage() {
   const selectedInvoice = selectedInvoiceId
     ? invoices.find((i) => i.id === selectedInvoiceId) ?? null
     : null;
+
+  const formatSubStatus = (s: InvoiceItem["status"] | SubscriptionData["status"]) => {
+    if (s === "queued") return "Upcoming";
+    if (s === "grace") return "Grace";
+    if (s === "expired") return "Expired";
+    return "Active";
+  };
+
+  const formatDDMMYYYY = (date: string) => {
+    return date ? new Date(date).toLocaleDateString("en-GB") : "-";
+  };
+
+  useEffect(() => {
+    // Used for showing upcoming queued plans in the subscription section.
+    // (Invoice modal still refetches when opened.)
+    (async () => {
+      try {
+        const res = await apiFetch("/api/subscription/invoices");
+        const list =
+          res && typeof res === "object" && "invoices" in res && Array.isArray((res as any).invoices)
+            ? ((res as any).invoices as InvoiceItem[])
+            : [];
+
+        const queued = list
+          .filter((inv) => inv.status === "queued")
+          .sort(
+            (a, b) => new Date(a.startDate).getTime() - new Date(b.startDate).getTime()
+          );
+
+        setUpcomingPlans(queued);
+      } catch {
+        setUpcomingPlans([]);
+      }
+    })();
+  }, []);
 
   useEffect(() => {
     if (!isInvoiceHistoryOpen) return;
@@ -707,7 +745,7 @@ export default function PrincipalProfilePage() {
               <div className="flex items-center gap-2 px-3 py-1.5 bg-gradient-to-br from-green-600 to-emerald-600 rounded-full shadow-lg">
                 <Check className="w-4 h-4 text-white" />
                 <span className="text-sm font-semibold text-white">
-                  {subscriptionData.status || "Active"}
+                  {formatSubStatus(subscriptionData.status)}
                 </span>
               </div>
             </div>
@@ -748,15 +786,51 @@ export default function PrincipalProfilePage() {
 
               <div className="bg-gradient-to-br from-orange-50 to-amber-100 dark:from-orange-900/30 dark:to-amber-900/30 border border-orange-200/50 dark:border-orange-700/50 rounded-xl p-4 shadow-lg">
                 <p className="text-xs text-gray-600 dark:text-gray-400 mb-2">
-                  Valid Until
+                  Validity
                 </p>
                 <p className="text-xl font-bold text-gray-900 dark:text-white">
-                  {subscriptionData.endDate
-                    ? new Date(subscriptionData.endDate).toLocaleDateString()
+                  {subscriptionData.startDate && subscriptionData.endDate
+                    ? `${formatDDMMYYYY(subscriptionData.startDate)} - ${formatDDMMYYYY(subscriptionData.endDate)}`
                     : "N/A"}
                 </p>
               </div>
             </div>
+
+            {upcomingPlans.length > 0 && (
+              <div className="mb-6">
+                <div className="text-sm font-bold text-gray-900 dark:text-white mb-3">
+                  Upcoming Plans
+                </div>
+                <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
+                  {upcomingPlans.map((p) => (
+                    <div
+                      key={p.id}
+                      className="bg-white/70 dark:bg-white/5 border border-gray-200/60 dark:border-white/10 rounded-xl p-4 shadow-lg"
+                    >
+                      <div className="flex items-center justify-between gap-3">
+                        <div className="text-sm font-bold text-gray-900 dark:text-white">
+                          Plan {p.planId}
+                        </div>
+                        <div className="text-xs px-3 py-1 rounded-full bg-indigo-600 text-white font-semibold">
+                          {formatSubStatus(p.status)}
+                        </div>
+                      </div>
+                      <div className="mt-3 text-xs text-gray-600 dark:text-gray-400 space-y-1">
+                        <div>
+                          <span className="font-semibold">Validity:</span> {formatDDMMYYYY(p.startDate)} - {formatDDMMYYYY(p.endDate)}
+                        </div>
+                        <div>
+                          <span className="font-semibold">Students:</span> {p.billableStudents}
+                        </div>
+                        <div>
+                          <span className="font-semibold">Amount:</span> ₹{p.paidAmount}
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
 
             <div className="flex flex-wrap gap-3">
               <button
@@ -770,7 +844,7 @@ export default function PrincipalProfilePage() {
               </button>
               <button
                 className="px-4 sm:px-6 py-2.5 bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 text-gray-900 dark:text-white rounded-xl text-sm font-medium hover:bg-gray-50 dark:hover:bg-gray-600 transition-all shadow-sm"
-                onClick={() => toast("Upgrade plan feature coming soon")}
+                onClick={() => router.push("/dashboard/principal/upgrade-plan")}
               >
                 Upgrade Plan
               </button>
@@ -1321,7 +1395,7 @@ export default function PrincipalProfilePage() {
                         </div>
                       </div>
                       <div className="row">
-                        <div className="muted">Status : <b>{selectedInvoice.status}</b></div>
+                        <div className="muted">Status : <b>{formatSubStatus(selectedInvoice.status)}</b></div>
                         <div></div>
                       </div>
                     </div>
@@ -1349,7 +1423,7 @@ export default function PrincipalProfilePage() {
                             {" "}• Plan {inv.planId}
                           </p>
                           <p className="text-xs text-gray-600 dark:text-gray-400">
-                            Paid: ₹{inv.paidAmount} • Students: {inv.billableStudents} • Status: {inv.status}
+                            Paid: ₹{inv.paidAmount} • Students: {inv.billableStudents} • Status: {formatSubStatus(inv.status)}
                           </p>
                           <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
                             <span className="font-semibold">Order:</span> {inv.orderId}

@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { useSearchParams } from "next/navigation";
 import dynamic from "next/dynamic";
 import { Sparkles } from "lucide-react";
 import MainNavbar from "@/components/main/MainNavbar";
@@ -14,8 +15,11 @@ const UpastithiPageLoader = dynamic(
 );
 
 export default function PricingPage() {
+  const searchParams = useSearchParams();
   const [isDark, setIsDark] = useState(false);
   const [showLoader, setShowLoader] = useState(true);
+
+  const upgradeMode = searchParams.get("mode") === "upgrade";
 
   useEffect(() => {
     const start = Date.now();
@@ -96,7 +100,7 @@ export default function PricingPage() {
             <p className="mt-3 text-sm text-gray-500 dark:text-gray-500">No setup fees. Cancel anytime. Taxes may apply.</p>
           </div>
 
-          <PricingCards isDark={isDark} />
+          <PricingCards isDark={isDark} upgradeMode={upgradeMode} />
 
           <div className="rounded-3xl p-8 sm:p-12 bg-white/80 dark:bg-gray-800/80 backdrop-blur-sm border border-gray-200/50 dark:border-gray-700/50 shadow-2xl">
             <div className="text-center mb-10">
