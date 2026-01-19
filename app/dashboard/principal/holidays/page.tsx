@@ -38,6 +38,16 @@ export default function HolidayPage() {
       setDeleting(null);
     }
   };
+  const formatHolidayDate = (h: any) => {
+  if (!h.endDate || h.startDate === h.endDate) {
+    return new Date(h.startDate).toDateString();
+  }
+
+  return `${new Date(h.startDate).toDateString()} → ${new Date(
+    h.endDate
+  ).toDateString()}`;
+};
+
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-gray-50 to-gray-100 dark:from-gray-900 dark:to-gray-800">
@@ -123,7 +133,7 @@ export default function HolidayPage() {
                       </h3>
                       <p className="text-xs lg:text-sm text-gray-600 dark:text-gray-400 flex items-center gap-2">
                         <Calendar className="w-3 h-3" />
-                        {new Date(h.date).toDateString()}
+                       {formatHolidayDate(h)}
                       </p>
                     </div>
                     <button
