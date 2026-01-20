@@ -2,7 +2,7 @@
 
 import { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Calendar, Plus, X, Trash2, CheckCircle2, Clock } from 'lucide-react';
+import { Calendar, Plus, X, Trash2, CheckCircle2, Clock, Pencil } from 'lucide-react';
 import { toast } from 'sonner';
 
 import { apiFetch } from '@/lib/api';
@@ -26,6 +26,13 @@ export default function SessionsPage() {
     startDate: '',
     endDate: ''
   });
+  const [isEditSessionOpen, setIsEditSessionOpen] = useState(false);
+  const [editSessionId, setEditSessionId] = useState<string | null>(null);
+  const [editFormData, setEditFormData] = useState({
+    sessionName: '',
+    startDate: '',
+    endDate: ''
+  });
   const [focusedField, setFocusedField] = useState<string | null>(null);
   const [deleteSessionId, setDeleteSessionId] = useState<string | null>(null);
 
@@ -36,6 +43,16 @@ export default function SessionsPage() {
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     setFormData({ ...formData, [e.target.name]: e.target.value });
+  };
+
+  const handleEditInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    setEditFormData({ ...editFormData, [e.target.name]: e.target.value });
+  };
+
+  const toDateInputValue = (dateValue: any) => {
+    const d = new Date(dateValue);
+    if (isNaN(d.getTime())) return '';
+    return d.toISOString().slice(0, 10);
   };
 
   const validateSessionDates = (start: string, end: string) => {
@@ -97,6 +114,61 @@ export default function SessionsPage() {
   const handleCancel = () => {
     setFormData({ sessionName: '', startDate: '', endDate: '' });
     setIsAddSessionOpen(false);
+  };
+
+  const handleEditCancel = () => {
+    setIsEditSessionOpen(false);
+    setEditSessionId(null);
+    setEditFormData({ sessionName: '', startDate: '', endDate: '' });
+  };
+
+  const handleEditOpen = (session: any) => {
+    setEditSessionId(session._id);
+    setEditFormData({
+      sessionName: session.name || '',
+      startDate: toDateInputValue(session.startDate),
+      endDate: toDateInputValue(session.endDate)
+    });
+    setIsEditSessionOpen(true);
+  };
+
+  const handleEditSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+
+    if (!editSessionId) {
+      toast.error('Invalid session');
+      return;
+    }
+
+    const validationError = validateSessionDates(
+      editFormData.startDate,
+      editFormData.endDate
+    );
+
+    if (validationError) {
+      toast.error(validationError);
+      return;
+    }
+
+    updateSession(
+      {
+        id: editSessionId,
+        data: {
+          name: editFormData.sessionName,
+          startDate: editFormData.startDate,
+          endDate: editFormData.endDate
+        }
+      },
+      {
+        onSuccess: () => {
+          toast.success('Session updated successfully');
+          handleEditCancel();
+        },
+        onError: (err: any) => {
+          toast.error(err?.message || 'Failed to update session');
+        }
+      }
+    );
   };
 
   const handleSetActive = (id: string) => {
@@ -174,6 +246,115 @@ export default function SessionsPage() {
           });
         }}
       />
+
+      <AnimatePresence>
+        {isEditSessionOpen && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 px-4"
+          >
+            <motion.div
+              initial={{ scale: 0.98, y: 10, opacity: 0 }}
+              animate={{ scale: 1, y: 0, opacity: 1 }}
+              exit={{ scale: 0.98, y: 10, opacity: 0 }}
+              transition={{ duration: 0.2 }}
+              className="w-full max-w-xl bg-white dark:bg-gray-800 rounded-2xl shadow-2xl border border-gray-200 dark:border-gray-700 overflow-hidden"
+            >
+              <div className="p-6">
+                <div className="flex items-center justify-between gap-4 mb-6">
+                  <div className="flex items-center gap-3">
+                    <div className="p-3 bg-gradient-to-br from-blue-500 to-purple-600 rounded-xl">
+                      <Pencil className="w-6 h-6 text-white" />
+                    </div>
+                    <div>
+                      <h2 className="text-2xl font-bold text-gray-900 dark:text-white">
+                        Edit Session
+                      </h2>
+                      <p className="text-sm text-gray-500 dark:text-gray-400">
+                        Update session name and dates
+                      </p>
+                    </div>
+                  </div>
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    onClick={handleEditCancel}
+                    className="h-10 w-10 rounded-xl"
+                  >
+                    <X className="w-5 h-5" />
+                  </Button>
+                </div>
+
+                <form onSubmit={handleEditSubmit} className="space-y-6">
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                    <div className="space-y-2">
+                      <Label className="text-sm font-semibold text-gray-700 dark:text-gray-300">
+                        Session Name
+                      </Label>
+                      <Input
+                        name="sessionName"
+                        placeholder="e.g., 2024-2025"
+                        value={editFormData.sessionName}
+                        onChange={handleEditInputChange}
+                        required
+                        className="h-12 border-2 focus:border-blue-500 transition-all duration-200"
+                      />
+                    </div>
+
+                    <div className="space-y-2">
+                      <Label className="text-sm font-semibold text-gray-700 dark:text-gray-300">
+                        Start Date
+                      </Label>
+                      <Input
+                        type="date"
+                        name="startDate"
+                        value={editFormData.startDate}
+                        onChange={handleEditInputChange}
+                        required
+                        className="h-12 border-2 focus:border-blue-500 transition-all duration-200"
+                      />
+                    </div>
+
+                    <div className="space-y-2">
+                      <Label className="text-sm font-semibold text-gray-700 dark:text-gray-300">
+                        End Date
+                      </Label>
+                      <Input
+                        type="date"
+                        name="endDate"
+                        value={editFormData.endDate}
+                        onChange={handleEditInputChange}
+                        required
+                        className="h-12 border-2 focus:border-blue-500 transition-all duration-200"
+                      />
+                    </div>
+                  </div>
+
+                  <div className="flex gap-4 pt-4 border-t border-gray-200 dark:border-gray-700">
+                    <Button
+                      type="submit"
+                      className="flex-1 h-12 bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white font-semibold rounded-xl shadow-lg"
+                    >
+                      Save Changes
+                    </Button>
+                    <Button
+                      type="button"
+                      variant="outline"
+                      onClick={handleEditCancel}
+                      className="h-12 px-8 border-2 rounded-xl font-semibold hover:bg-gray-50 dark:hover:bg-gray-700"
+                    >
+                      Cancel
+                    </Button>
+                  </div>
+                </form>
+              </div>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
       {/* Header */}
       <header className="bg-gradient-to-r from-blue-600 via-purple-600 to-indigo-700 shadow-2xl relative overflow-hidden">
         <div className="absolute inset-0 bg-black opacity-5"></div>
@@ -448,6 +629,18 @@ export default function SessionsPage() {
                           </Button>
                         </motion.div>
                       )}
+
+                      <motion.div whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}>
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          title="Edit session"
+                          className="h-11 w-11 rounded-xl transition-all duration-200 text-blue-600 hover:bg-blue-50 hover:text-blue-700 dark:hover:bg-blue-950"
+                          onClick={() => handleEditOpen(session)}
+                        >
+                          <Pencil className="w-5 h-5" />
+                        </Button>
+                      </motion.div>
 
                       <motion.div
                         whileHover={{ scale: session.isActive ? 1 : 1.05 }}
