@@ -364,48 +364,7 @@ export default function BulkStudentUploadPage() {
   const handleSingleSubmit = () => {
     const errors: Partial<Record<keyof SingleStudentForm | 'class', string>> = {};
 
-    // const trimmedName = student.name.trim();
-    // const trimmedEmail = student.email.trim();
-    // const trimmedPassword = student.password;
-    // const trimmedAdmissionNo = student.admissionNo.trim();
-    // const trimmedFatherName = student.fatherName.trim();
-    // const trimmedMotherName = student.motherName.trim();
-    // const trimmedParentsPhone = student.parentsPhone.trim();
-    // const trimmedRollNo = student.rollNo.trim();
-
-    // if (trimmedName.length < 3) errors.name = 'Name must be at least 3 characters';
-    // if (trimmedPassword.length < 6) errors.password = 'Password must be at least 6 characters';
-    // if (!trimmedAdmissionNo) errors.admissionNo = 'Admission number is required';
-    // if (trimmedFatherName.length < 3) errors.fatherName = "Father's name must be at least 3 characters";
-    // if (trimmedMotherName.length < 3) errors.motherName = "Mother's name must be at least 3 characters";
-
-    // const phoneDigits = trimmedParentsPhone.replace(/\D/g, '');
-
-    // if (phoneDigits.length !== 10) {
-    //   errors.parentsPhone = 'Phone number must be exactly 10 digits';
-    // }
-
-    // const rollNoNum = Number(trimmedRollNo);
-    // if (!trimmedRollNo || Number.isNaN(rollNoNum) || rollNoNum <= 0 || !Number.isInteger(rollNoNum)) {
-    //   errors.rollNo = 'Roll number must be a positive integer';
-    // }
-
-    // if (trimmedEmail) {
-    //   const emailOk = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(trimmedEmail);
-    //   if (!emailOk) errors.email = 'Please enter a valid email';
-    // }
-
-    // if (!singleClassId || !singleClassName || !singleSection) {
-    //   errors.class = 'Please select class and section';
-    // }
-
-    // setSingleErrors(errors);
-    // if (Object.keys(errors).length) {
-    //   toast.error(Object.values(errors)[0] || 'Please fix form errors');
-    //   return;
-    // }
-
-    const trimmedName = student.name.trim();
+  const trimmedName = student.name.trim();
   const trimmedEmail = student.email.trim();
   const trimmedPassword = student.password;
   const trimmedAdmissionNo = student.admissionNo.trim();
