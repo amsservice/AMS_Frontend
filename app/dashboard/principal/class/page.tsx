@@ -491,6 +491,8 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { toast } from 'sonner';
+import { useStudentsClassWiseStats } from '@/app/querry/useStudent';
+
 
 import {
   useClasses,
@@ -521,19 +523,60 @@ export default function ClassesPage() {
   const { mutate: createClass, isPending: isCreating } = useCreateClass();
   const { mutate: updateClass, isPending: isUpdating } = useUpdateClass();
   const { mutate: deleteClass } = useDeleteClass();
+  const { data: classWiseStats = [] } = useStudentsClassWiseStats();
+
+
+  // const stats = {
+  //   total: classes.length,
+  //   withTeacher: classes.filter((c: Class) => c.teacher).length,
+  //   totalStudents: classes.reduce(
+  //     (sum: number, c: Class) => sum + c.studentCount,
+  //     0
+  //   ),
+  //   needTeacher: classes.filter((c: Class) => !c.teacher).length
+  // };
 
   const stats = {
-    total: classes.length,
-    withTeacher: classes.filter((c: Class) => c.teacher).length,
-    totalStudents: classes.reduce(
-      (sum: number, c: Class) => sum + c.studentCount,
-      0
-    ),
-    needTeacher: classes.filter((c: Class) => !c.teacher).length
-  };
+  total: classes.length,
+  withTeacher: classes.filter((c: Class) => c.teacher).length,
+
+  // ✅ REAL student count from students API
+  totalStudents: classWiseStats.reduce(
+    (sum, c) => sum + c.totalStudents,
+    0
+  ),
+
+  needTeacher: classes.filter((c: Class) => !c.teacher).length
+};
+
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    setFormData({ ...formData, [e.target.name]: e.target.value });
+
+    // const { name, value } = e.target;
+    
+    // // If it's the section field, validate for uppercase
+    // if (name === 'section') {
+    //   // Check if value contains lowercase letters
+    //   if (/[a-z]/.test(value)) {
+    //     toast.error('Section must be in UPPERCASE only');
+    //     return;
+    //   }
+    // setFormData({ ...formData, [e.target.name]: e.target.value });
+
+    const { name, value } = e.target;
+    
+    // If it's the section field, validate for uppercase
+    if (name === 'section') {
+      // Check if value contains lowercase letters
+      if (/[a-z]/.test(value)) {
+        toast.error('Section must be in UPPERCASE only');
+        return;
+      }
+      // Auto-convert to uppercase as they type
+      setFormData({ ...formData, [name]: value.toUpperCase() });
+    } else {
+      setFormData({ ...formData, [name]: value });
+    }
   };
 
   const handleSelectChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
@@ -691,6 +734,16 @@ export default function ClassesPage() {
     );
   };
 
+  //total student count class wise
+  const studentCountMap = classWiseStats.reduce<Record<string, number>>(
+  (acc, stat) => {
+    acc[`${stat.classId}`] = stat.totalStudents;
+    return acc;
+  },
+  {}
+);
+
+
   const statsData = [
     { label: 'Total Classes', value: stats.total, bgGradient: 'from-purple-500 to-blue-500', icon: BookOpen },
     { label: 'Total Students', value: stats.totalStudents, bgGradient: 'from-blue-500 to-indigo-500', icon: Users },
@@ -840,7 +893,8 @@ export default function ClassesPage() {
 
                   <div className="flex items-center text-sm text-gray-600 dark:text-gray-400 mb-4 p-2 rounded-lg bg-gray-50 dark:bg-gray-700/50">
                     <Users size={14} className="mr-1" />
-                    {cls.studentCount} students
+                    {/* {cls.studentCount} students */}
+                      {studentCountMap[cls.id] ?? 0} students
                   </div>
 
                   <div className="mt-auto flex gap-2">
