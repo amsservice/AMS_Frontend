@@ -76,10 +76,9 @@ function DragDropCSV({ onFileSelect, onClear, selectedFile }: DragDropCSVProps) 
         onDragLeave={() => setIsDragging(false)}
         onDrop={handleDrop}
         className={`relative border-2 border-dashed rounded-2xl p-8 sm:p-12 text-center cursor-pointer transition-all duration-300 transform
-          ${
-            isDragging
-              ? 'border-accent-blue bg-blue-50 dark:bg-blue-900/30 scale-[1.02] shadow-lg'
-              : fileName
+          ${isDragging
+            ? 'border-accent-blue bg-blue-50 dark:bg-blue-900/30 scale-[1.02] shadow-lg'
+            : fileName
               ? 'dashboard-card-border bg-green-50 dark:bg-green-900/20 hover:border-accent-green'
               : 'dashboard-card-border hover:border-accent-blue hover:shadow-dashboard'
           }`}
@@ -104,7 +103,7 @@ function DragDropCSV({ onFileSelect, onClear, selectedFile }: DragDropCSVProps) 
                     <CheckCircle className="w-5 h-5 text-green-600" />
                   </div>
                 </div>
-                
+
                 <div className="space-y-2">
                   <p className="text-base sm:text-lg font-bold dashboard-text">
                     {fileName}
@@ -125,16 +124,14 @@ function DragDropCSV({ onFileSelect, onClear, selectedFile }: DragDropCSVProps) 
               </>
             ) : (
               <>
-                <div className={`p-4 rounded-2xl shadow-lg transition-all duration-300 ${
-                  isDragging 
-                    ? 'bg-gradient-to-br from-blue-600 to-indigo-600 scale-110' 
+                <div className={`p-4 rounded-2xl shadow-lg transition-all duration-300 ${isDragging
+                    ? 'bg-gradient-to-br from-blue-600 to-indigo-600 scale-110'
                     : 'bg-gradient-to-br from-blue-500 to-indigo-500'
-                }`}>
-                  <UploadCloud className={`w-10 h-10 sm:w-12 sm:h-12 text-white transition-transform duration-300 ${
-                    isDragging ? 'animate-bounce' : ''
-                  }`} />
+                  }`}>
+                  <UploadCloud className={`w-10 h-10 sm:w-12 sm:h-12 text-white transition-transform duration-300 ${isDragging ? 'animate-bounce' : ''
+                    }`} />
                 </div>
-                
+
                 <div className="space-y-2">
                   <p className="text-base sm:text-lg font-bold dashboard-text">
                     {isDragging ? 'Drop your CSV file here' : 'Drag & drop CSV file here'}
@@ -224,6 +221,10 @@ interface SingleStudentForm {
   parentsPhone: string;
   rollNo: string;
 }
+// const nameRegex = /^[A-Za-z ]+$/;
+const strictEmailRegex =
+  /^[a-zA-Z0-9._%+-]+@(gmail|yahoo|outlook|hotmail)\.(com|in)$/;
+
 
 /* =====================================================
   MAIN PAGE COMPONENT
@@ -234,13 +235,13 @@ export default function BulkStudentUploadPage() {
   // UNCOMMENT AND USE YOUR ACTUAL HOOKS:
   const { user } = useAuth();
   const role = user?.role;
-  
+
   const {
     mutate: createStudent,
     isPending: creatingStudent,
     error: singleError
   } = useCreateStudent();
-  
+
   const {
     mutate: uploadStudents,
     isPending: uploading,
@@ -256,7 +257,7 @@ export default function BulkStudentUploadPage() {
     data: schoolWideData,
     error: schoolWideError
   } = useBulkUploadStudentsSchoolWide();
-  
+
   const { data: classes = [], isLoading: classesLoading } = useClasses();
 
   const {
@@ -363,43 +364,125 @@ export default function BulkStudentUploadPage() {
   const handleSingleSubmit = () => {
     const errors: Partial<Record<keyof SingleStudentForm | 'class', string>> = {};
 
+    // const trimmedName = student.name.trim();
+    // const trimmedEmail = student.email.trim();
+    // const trimmedPassword = student.password;
+    // const trimmedAdmissionNo = student.admissionNo.trim();
+    // const trimmedFatherName = student.fatherName.trim();
+    // const trimmedMotherName = student.motherName.trim();
+    // const trimmedParentsPhone = student.parentsPhone.trim();
+    // const trimmedRollNo = student.rollNo.trim();
+
+    // if (trimmedName.length < 3) errors.name = 'Name must be at least 3 characters';
+    // if (trimmedPassword.length < 6) errors.password = 'Password must be at least 6 characters';
+    // if (!trimmedAdmissionNo) errors.admissionNo = 'Admission number is required';
+    // if (trimmedFatherName.length < 3) errors.fatherName = "Father's name must be at least 3 characters";
+    // if (trimmedMotherName.length < 3) errors.motherName = "Mother's name must be at least 3 characters";
+
+    // const phoneDigits = trimmedParentsPhone.replace(/\D/g, '');
+
+    // if (phoneDigits.length !== 10) {
+    //   errors.parentsPhone = 'Phone number must be exactly 10 digits';
+    // }
+
+    // const rollNoNum = Number(trimmedRollNo);
+    // if (!trimmedRollNo || Number.isNaN(rollNoNum) || rollNoNum <= 0 || !Number.isInteger(rollNoNum)) {
+    //   errors.rollNo = 'Roll number must be a positive integer';
+    // }
+
+    // if (trimmedEmail) {
+    //   const emailOk = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(trimmedEmail);
+    //   if (!emailOk) errors.email = 'Please enter a valid email';
+    // }
+
+    // if (!singleClassId || !singleClassName || !singleSection) {
+    //   errors.class = 'Please select class and section';
+    // }
+
+    // setSingleErrors(errors);
+    // if (Object.keys(errors).length) {
+    //   toast.error(Object.values(errors)[0] || 'Please fix form errors');
+    //   return;
+    // }
+
     const trimmedName = student.name.trim();
-    const trimmedEmail = student.email.trim();
-    const trimmedPassword = student.password;
-    const trimmedAdmissionNo = student.admissionNo.trim();
-    const trimmedFatherName = student.fatherName.trim();
-    const trimmedMotherName = student.motherName.trim();
-    const trimmedParentsPhone = student.parentsPhone.trim();
-    const trimmedRollNo = student.rollNo.trim();
+  const trimmedEmail = student.email.trim();
+  const trimmedPassword = student.password;
+  const trimmedAdmissionNo = student.admissionNo.trim();
+  const trimmedFatherName = student.fatherName.trim();
+  const trimmedMotherName = student.motherName.trim();
+  const trimmedParentsPhone = student.parentsPhone.trim();
+  const trimmedRollNo = student.rollNo.trim();
 
-    if (trimmedName.length < 3) errors.name = 'Name must be at least 3 characters';
-    if (trimmedPassword.length < 6) errors.password = 'Password must be at least 6 characters';
-    if (!trimmedAdmissionNo) errors.admissionNo = 'Admission number is required';
-    if (trimmedFatherName.length < 3) errors.fatherName = "Father's name must be at least 3 characters";
-    if (trimmedMotherName.length < 3) errors.motherName = "Mother's name must be at least 3 characters";
+  // 🔒 Name validations (NO numbers allowed)
+  if (trimmedName.length < 3) {
+    errors.name = 'Name must be at least 3 characters';
+  } 
+  // else if (!nameRegex.test(trimmedName)) {
+  //   errors.name = 'Name must not contain numbers';
+  // }
 
-    const phoneDigits = trimmedParentsPhone.replace(/\D/g, '');
-    if (phoneDigits.length < 10) errors.parentsPhone = 'Parent phone must be at least 10 digits';
+  if (trimmedFatherName.length < 3) {
+    errors.fatherName = "Father's name must be at least 3 characters";
+  } 
+  // else if (!nameRegex.test(trimmedFatherName)) {
+  //   errors.fatherName = "Father's name must not contain numbers";
+  // }
 
-    const rollNoNum = Number(trimmedRollNo);
-    if (!trimmedRollNo || Number.isNaN(rollNoNum) || rollNoNum <= 0 || !Number.isInteger(rollNoNum)) {
-      errors.rollNo = 'Roll number must be a positive integer';
+  if (trimmedMotherName.length < 3) {
+    errors.motherName = "Mother's name must be at least 3 characters";
+  } 
+  // else if (!nameRegex.test(trimmedMotherName)) {
+  //   errors.motherName = "Mother's name must not contain numbers";
+  // }
+
+  // 🔒 Password
+  if (trimmedPassword.length < 6) {
+    errors.password = 'Password must be at least 6 characters';
+  }
+
+  // 🔒 Admission No
+  if (!trimmedAdmissionNo) {
+    errors.admissionNo = 'Admission number is required';
+  }
+
+  // 🔒 Phone validation (exact 10 digits)
+  const phoneDigits = trimmedParentsPhone.replace(/\D/g, '');
+  if (phoneDigits.length !== 10) {
+    errors.parentsPhone = 'Phone number must be exactly 10 digits';
+  }
+
+  // 🔒 Roll number (limit size)
+  const rollNoNum = Number(trimmedRollNo);
+  if (
+    !trimmedRollNo ||
+    Number.isNaN(rollNoNum) ||
+    rollNoNum <= 0 ||
+    !Number.isInteger(rollNoNum)
+  ) {
+    errors.rollNo = 'Roll number must be a positive integer';
+  } else if (rollNoNum > 200) {
+    errors.rollNo = 'Roll number cannot be greater than 100';
+  }
+
+  // 🔒 Email validation (STRICT)
+  if (trimmedEmail) {
+    if (!strictEmailRegex.test(trimmedEmail)) {
+      errors.email = 'Please enter a valid email address';
     }
+  }
 
-    if (trimmedEmail) {
-      const emailOk = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(trimmedEmail);
-      if (!emailOk) errors.email = 'Please enter a valid email';
-    }
+  // 🔒 Class validation
+  if (!singleClassId || !singleClassName || !singleSection) {
+    errors.class = 'Please select class and section';
+  }
 
-    if (!singleClassId || !singleClassName || !singleSection) {
-      errors.class = 'Please select class and section';
-    }
+  setSingleErrors(errors);
 
-    setSingleErrors(errors);
-    if (Object.keys(errors).length) {
-      toast.error(Object.values(errors)[0] || 'Please fix form errors');
-      return;
-    }
+  if (Object.keys(errors).length) {
+    toast.error(Object.values(errors)[0] || 'Please fix form errors');
+    return;
+  }
 
     createStudent(
       {
@@ -841,11 +924,10 @@ export default function BulkStudentUploadPage() {
                             });
                           }, 50);
                         }}
-                        className={`text-left p-4 rounded-2xl border transition-all shadow-sm hover:shadow-dashboard-lg ${
-                          isSelected
+                        className={`text-left p-4 rounded-2xl border transition-all shadow-sm hover:shadow-dashboard-lg ${isSelected
                             ? 'border-accent-blue bg-blue-50 dark:bg-blue-900/20'
                             : 'dashboard-card-border dashboard-card'
-                        }`}
+                          }`}
                       >
                         <div className="flex items-start justify-between gap-3">
                           <div>
@@ -1032,13 +1114,13 @@ export default function BulkStudentUploadPage() {
                               key === 'password'
                                 ? 'password'
                                 : key === 'email'
-                                ? 'email'
-                                : 'text'
+                                  ? 'email'
+                                  : 'text'
                             }
                             placeholder={`Enter ${fieldLabels[key as keyof SingleStudentForm].toLowerCase()}`}
                             value={value}
                             onChange={(e) =>
-                              (setStudent({ ...student, [key]: e.target.value }),
+                            (setStudent({ ...student, [key]: e.target.value }),
                               setSingleErrors(prev => ({ ...prev, [key]: undefined })))
                             }
                             className="w-full px-4 py-3 dashboard-card border dashboard-card-border rounded-xl dashboard-text focus:outline-none focus:ring-2 focus:ring-accent-blue transition-all"
@@ -1145,22 +1227,20 @@ export default function BulkStudentUploadPage() {
                     <div className="flex flex-wrap gap-3">
                       <button
                         onClick={() => setBulkMode('classWise')}
-                        className={`flex-1 min-w-[220px] px-6 py-4 rounded-xl font-medium transition-all duration-200 flex items-center justify-center gap-2 ${
-                          bulkMode === 'classWise'
+                        className={`flex-1 min-w-[220px] px-6 py-4 rounded-xl font-medium transition-all duration-200 flex items-center justify-center gap-2 ${bulkMode === 'classWise'
                             ? 'bg-gradient-to-br from-teal-500 to-cyan-600 text-white shadow-lg transform scale-[1.02]'
                             : 'dashboard-card border dashboard-card-border dashboard-text hover:border-accent-teal'
-                        }`}
+                          }`}
                       >
                         <Upload className="w-5 h-5" /> Class-wise Upload
                       </button>
 
                       <button
                         onClick={() => setBulkMode('schoolWide')}
-                        className={`flex-1 min-w-[220px] px-6 py-4 rounded-xl font-medium transition-all duration-200 flex items-center justify-center gap-2 ${
-                          bulkMode === 'schoolWide'
+                        className={`flex-1 min-w-[220px] px-6 py-4 rounded-xl font-medium transition-all duration-200 flex items-center justify-center gap-2 ${bulkMode === 'schoolWide'
                             ? 'bg-gradient-to-br from-blue-600 to-indigo-600 text-white shadow-lg transform scale-[1.02]'
                             : 'dashboard-card border dashboard-card-border dashboard-text hover:border-accent-blue'
-                        }`}
+                          }`}
                       >
                         <Upload className="w-5 h-5" /> Whole-school Upload
                       </button>
