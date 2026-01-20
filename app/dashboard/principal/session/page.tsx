@@ -5,10 +5,12 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { Calendar, Plus, X, Trash2, CheckCircle2, Clock } from 'lucide-react';
 import { toast } from 'sonner';
 
+import { apiFetch } from '@/lib/api';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import ConfirmDangerModal from '@/components/admin/ConfirmDangerModal';
 
 import {
   useSessions,
@@ -25,6 +27,7 @@ export default function SessionsPage() {
     endDate: ''
   });
   const [focusedField, setFocusedField] = useState<string | null>(null);
+  const [deleteSessionId, setDeleteSessionId] = useState<string | null>(null);
 
   const { data: sessions = [], isLoading } = useSessions();
   const { mutate: createSession } = useCreateSession();
@@ -71,11 +74,21 @@ export default function SessionsPage() {
       return;
     }
 
-    createSession({
-      name: formData.sessionName,
-      startDate: formData.startDate,
-      endDate: formData.endDate
-    });
+    createSession(
+      {
+        name: formData.sessionName,
+        startDate: formData.startDate,
+        endDate: formData.endDate
+      },
+      {
+        onSuccess: () => {
+          toast.success('Session created successfully');
+        },
+        onError: (err: any) => {
+          toast.error(err?.message || 'Failed to create session');
+        }
+      }
+    );
 
     setFormData({ sessionName: '', startDate: '', endDate: '' });
     setIsAddSessionOpen(false);
@@ -87,14 +100,40 @@ export default function SessionsPage() {
   };
 
   const handleSetActive = (id: string) => {
-    updateSession({
-      id,
-      data: { isActive: true }
-    });
+    updateSession(
+      {
+        id,
+        data: { isActive: true }
+      },
+      {
+        onSuccess: () => {
+          toast.success('Session switched successfully');
+        },
+        onError: (err: any) => {
+          toast.error(err?.message || 'Failed to switch session');
+        }
+      }
+    );
   };
 
   const handleDelete = (id: string) => {
-    deleteSession(id);
+    const checkDeleteStatus = async () => {
+      try {
+        const res = await apiFetch(`/api/session/${id}/delete-status`);
+        const canDelete = Boolean(res?.data?.canDelete);
+
+        if (!canDelete) {
+          toast.error('Cannot delete session because data is associated with it');
+          return;
+        }
+
+        setDeleteSessionId(id);
+      } catch (err: any) {
+        toast.error(err?.message || 'Failed to check session delete status');
+      }
+    };
+
+    checkDeleteStatus();
   };
 
   const formatDate = (dateString: string) => {
@@ -110,6 +149,31 @@ export default function SessionsPage() {
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-gray-50 to-gray-100 dark:from-gray-900 dark:to-gray-800">
+      <ConfirmDangerModal
+        open={Boolean(deleteSessionId)}
+        title="Delete Session"
+        description="Are you sure you want to delete this session? This action cannot be undone."
+        confirmLabel="Delete"
+        dangerLevel="high"
+        onClose={() => setDeleteSessionId(null)}
+        onConfirm={async () => {
+          if (!deleteSessionId) return;
+
+          await new Promise<void>((resolve) => {
+            deleteSession(deleteSessionId, {
+              onSuccess: () => {
+                toast.success('Session deleted successfully');
+                setDeleteSessionId(null);
+                resolve();
+              },
+              onError: (err: any) => {
+                toast.error(err?.message || 'Failed to delete session');
+                resolve();
+              }
+            });
+          });
+        }}
+      />
       {/* Header */}
       <header className="bg-gradient-to-r from-blue-600 via-purple-600 to-indigo-700 shadow-2xl relative overflow-hidden">
         <div className="absolute inset-0 bg-black opacity-5"></div>
