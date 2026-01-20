@@ -8,6 +8,7 @@ import { apiFetch } from '@/lib/api';
 ===================================================== */
 
 export interface StudentHistory {
+    _id?: string;  
   sessionId: string;
   classId: string;
   className: string;
@@ -182,3 +183,12 @@ export const useBulkUploadStudents = () => {
     }
   });
 };
+
+
+// get full details of students
+export const useStudentById = (studentId?: string) =>
+  useQuery<Student>({
+    queryKey: ['student', studentId],
+    queryFn: () => apiFetch(`/api/student/${studentId}`),
+    enabled: Boolean(studentId)
+  });

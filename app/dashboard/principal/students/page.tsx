@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, DragEvent, useEffect, useRef, type ChangeEvent } from 'react';
-import { Upload, UserPlus, Download, FileSpreadsheet, UploadCloud, X, CheckCircle, Users, Mail, Phone } from 'lucide-react';
+import { Upload, UserPlus, Download, FileSpreadsheet, UploadCloud, X, CheckCircle, Users, Mail, Phone, Edit2 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { toast } from 'sonner';
 import { apiFetch } from '@/lib/api';
@@ -12,6 +12,8 @@ import { apiFetch } from '@/lib/api';
 import { useBulkUploadStudents, useBulkUploadStudentsSchoolWide, useCreateStudent, useStudentsByClass, useStudentsClassWiseStats, type Student } from '@/app/querry/useStudent';
 import { useClasses } from '@/app/querry/useClasses';
 import { useAuth } from '@/app/context/AuthContext';
+import StudentDetailsModal from '@/components/reports/StudentDetailsModal';
+
 
 /* =====================================================
   DRAG DROP CSV COMPONENT
@@ -125,8 +127,8 @@ function DragDropCSV({ onFileSelect, onClear, selectedFile }: DragDropCSVProps) 
             ) : (
               <>
                 <div className={`p-4 rounded-2xl shadow-lg transition-all duration-300 ${isDragging
-                    ? 'bg-gradient-to-br from-blue-600 to-indigo-600 scale-110'
-                    : 'bg-gradient-to-br from-blue-500 to-indigo-500'
+                  ? 'bg-gradient-to-br from-blue-600 to-indigo-600 scale-110'
+                  : 'bg-gradient-to-br from-blue-500 to-indigo-500'
                   }`}>
                   <UploadCloud className={`w-10 h-10 sm:w-12 sm:h-12 text-white transition-transform duration-300 ${isDragging ? 'animate-bounce' : ''
                     }`} />
@@ -339,6 +341,8 @@ export default function BulkStudentUploadPage() {
 
   const [bulkClientErrors, setBulkClientErrors] = useState<string[]>([]);
   const [schoolWideClientErrors, setSchoolWideClientErrors] = useState<string[]>([]);
+  const [selectedStudentId, setSelectedStudentId] = useState<string | null>(null);//get full dtials of studnet
+
 
   const handleClearBulkClassWise = () => {
     setFile(null);
@@ -364,7 +368,9 @@ export default function BulkStudentUploadPage() {
   const handleSingleSubmit = () => {
     const errors: Partial<Record<keyof SingleStudentForm | 'class', string>> = {};
 
-  const trimmedName = student.name.trim();
+   
+
+    const trimmedName = student.name.trim();
   const trimmedEmail = student.email.trim();
   const trimmedPassword = student.password;
   const trimmedAdmissionNo = student.admissionNo.trim();
@@ -373,75 +379,75 @@ export default function BulkStudentUploadPage() {
   const trimmedParentsPhone = student.parentsPhone.trim();
   const trimmedRollNo = student.rollNo.trim();
 
-  // 🔒 Name validations (NO numbers allowed)
-  if (trimmedName.length < 3) {
-    errors.name = 'Name must be at least 3 characters';
-  } 
-  // else if (!nameRegex.test(trimmedName)) {
-  //   errors.name = 'Name must not contain numbers';
-  // }
-
-  if (trimmedFatherName.length < 3) {
-    errors.fatherName = "Father's name must be at least 3 characters";
-  } 
-  // else if (!nameRegex.test(trimmedFatherName)) {
-  //   errors.fatherName = "Father's name must not contain numbers";
-  // }
-
-  if (trimmedMotherName.length < 3) {
-    errors.motherName = "Mother's name must be at least 3 characters";
-  } 
-  // else if (!nameRegex.test(trimmedMotherName)) {
-  //   errors.motherName = "Mother's name must not contain numbers";
-  // }
-
-  // 🔒 Password
-  if (trimmedPassword.length < 6) {
-    errors.password = 'Password must be at least 6 characters';
-  }
-
-  // 🔒 Admission No
-  if (!trimmedAdmissionNo) {
-    errors.admissionNo = 'Admission number is required';
-  }
-
-  // 🔒 Phone validation (exact 10 digits)
-  const phoneDigits = trimmedParentsPhone.replace(/\D/g, '');
-  if (phoneDigits.length !== 10) {
-    errors.parentsPhone = 'Phone number must be exactly 10 digits';
-  }
-
-  // 🔒 Roll number (limit size)
-  const rollNoNum = Number(trimmedRollNo);
-  if (
-    !trimmedRollNo ||
-    Number.isNaN(rollNoNum) ||
-    rollNoNum <= 0 ||
-    !Number.isInteger(rollNoNum)
-  ) {
-    errors.rollNo = 'Roll number must be a positive integer';
-  } else if (rollNoNum > 200) {
-    errors.rollNo = 'Roll number cannot be greater than 100';
-  }
-
-  // 🔒 Email validation (STRICT)
-  if (trimmedEmail) {
-    if (!strictEmailRegex.test(trimmedEmail)) {
-      errors.email = 'Please enter a valid email address';
+    // 🔒 Name validations (NO numbers allowed)
+    if (trimmedName.length < 3) {
+      errors.name = 'Name must be at least 3 characters';
     }
-  }
+    // else if (!nameRegex.test(trimmedName)) {
+    //   errors.name = 'Name must not contain numbers';
+    // }
 
-  // 🔒 Class validation
-  if (!singleClassId || !singleClassName || !singleSection) {
-    errors.class = 'Please select class and section';
-  }
+    if (trimmedFatherName.length < 3) {
+      errors.fatherName = "Father's name must be at least 3 characters";
+    }
+    // else if (!nameRegex.test(trimmedFatherName)) {
+    //   errors.fatherName = "Father's name must not contain numbers";
+    // }
 
-  setSingleErrors(errors);
+    if (trimmedMotherName.length < 3) {
+      errors.motherName = "Mother's name must be at least 3 characters";
+    }
+    // else if (!nameRegex.test(trimmedMotherName)) {
+    //   errors.motherName = "Mother's name must not contain numbers";
+    // }
 
-  if (Object.keys(errors).length) {
-    toast.error(Object.values(errors)[0] || 'Please fix form errors');
-    return;
-  }
+    // 🔒 Password
+    if (trimmedPassword.length < 6) {
+      errors.password = 'Password must be at least 6 characters';
+    }
+
+    // 🔒 Admission No
+    if (!trimmedAdmissionNo) {
+      errors.admissionNo = 'Admission number is required';
+    }
+
+    // 🔒 Phone validation (exact 10 digits)
+    const phoneDigits = trimmedParentsPhone.replace(/\D/g, '');
+    if (phoneDigits.length !== 10) {
+      errors.parentsPhone = 'Phone number must be exactly 10 digits';
+    }
+
+    // 🔒 Roll number (limit size)
+    const rollNoNum = Number(trimmedRollNo);
+    if (
+      !trimmedRollNo ||
+      Number.isNaN(rollNoNum) ||
+      rollNoNum <= 0 ||
+      !Number.isInteger(rollNoNum)
+    ) {
+      errors.rollNo = 'Roll number must be a positive integer';
+    } else if (rollNoNum > 200) {
+      errors.rollNo = 'Roll number cannot be greater than 100';
+    }
+
+    // 🔒 Email validation (STRICT)
+    if (trimmedEmail) {
+      if (!strictEmailRegex.test(trimmedEmail)) {
+        errors.email = 'Please enter a valid email address';
+      }
+    }
+
+    // 🔒 Class validation
+    if (!singleClassId || !singleClassName || !singleSection) {
+      errors.class = 'Please select class and section';
+    }
+
+    setSingleErrors(errors);
+
+    if (Object.keys(errors).length) {
+      toast.error(Object.values(errors)[0] || 'Please fix form errors');
+      return;
+    }
 
     createStudent(
       {
@@ -884,8 +890,8 @@ export default function BulkStudentUploadPage() {
                           }, 50);
                         }}
                         className={`text-left p-4 rounded-2xl border transition-all shadow-sm hover:shadow-dashboard-lg ${isSelected
-                            ? 'border-accent-blue bg-blue-50 dark:bg-blue-900/20'
-                            : 'dashboard-card-border dashboard-card'
+                          ? 'border-accent-blue bg-blue-50 dark:bg-blue-900/20'
+                          : 'dashboard-card-border dashboard-card'
                           }`}
                       >
                         <div className="flex items-start justify-between gap-3">
@@ -982,11 +988,17 @@ export default function BulkStudentUploadPage() {
                             <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                               Parent Contact
                             </th>
+                            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                              Action
+                            </th>
                           </tr>
                         </thead>
+                       
+
                         <tbody className="divide-y dashboard-card-border">
                           {visibleStudents.map((s: Student) => {
                             const active = s.history?.find(h => h.isActive) || s.history?.[0];
+
                             return (
                               <tr key={s._id} className="hover:bg-gray-50 dark:hover:bg-gray-800/30">
                                 <td className="px-6 py-4 whitespace-nowrap">
@@ -998,15 +1010,19 @@ export default function BulkStudentUploadPage() {
                                     </div>
                                   </div>
                                 </td>
+
                                 <td className="px-6 py-4 whitespace-nowrap text-sm dashboard-text">
                                   {s.admissionNo}
                                 </td>
+
                                 <td className="px-6 py-4 whitespace-nowrap text-sm dashboard-text">
                                   {active ? `${active.className} - ${active.section}` : ''}
                                 </td>
+
                                 <td className="px-6 py-4 whitespace-nowrap text-sm dashboard-text">
                                   {active?.rollNo ?? ''}
                                 </td>
+
                                 <td className="px-6 py-4 whitespace-nowrap">
                                   <div className="text-sm dashboard-text">
                                     <div>Father: {s.fatherName}</div>
@@ -1016,14 +1032,36 @@ export default function BulkStudentUploadPage() {
                                     </div>
                                   </div>
                                 </td>
+
+                                <td className="px-6 py-4 whitespace-nowrap text-sm">
+                                  <button
+                                    onClick={() => setSelectedStudentId(s._id)}
+                                    className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-blue-600 text-white hover:bg-blue-700 transition-colors"
+                                  >
+                                    <Edit2 className="w-4 h-4" />
+                                    View
+                                  </button>
+                                </td>
                               </tr>
                             );
                           })}
                         </tbody>
+
+                        
                       </table>
                     </div>
+                    
                   )}
+                  {/* MODAL */}
+                        {selectedStudentId && (
+                          <StudentDetailsModal
+                            studentId={selectedStudentId}
+                            onClose={() => setSelectedStudentId(null)}
+                          />
+                        )}
                 </div>
+
+
               </div>
 
               {visibleCount < filteredStudents.length && (
@@ -1187,8 +1225,8 @@ export default function BulkStudentUploadPage() {
                       <button
                         onClick={() => setBulkMode('classWise')}
                         className={`flex-1 min-w-[220px] px-6 py-4 rounded-xl font-medium transition-all duration-200 flex items-center justify-center gap-2 ${bulkMode === 'classWise'
-                            ? 'bg-gradient-to-br from-teal-500 to-cyan-600 text-white shadow-lg transform scale-[1.02]'
-                            : 'dashboard-card border dashboard-card-border dashboard-text hover:border-accent-teal'
+                          ? 'bg-gradient-to-br from-teal-500 to-cyan-600 text-white shadow-lg transform scale-[1.02]'
+                          : 'dashboard-card border dashboard-card-border dashboard-text hover:border-accent-teal'
                           }`}
                       >
                         <Upload className="w-5 h-5" /> Class-wise Upload
@@ -1197,8 +1235,8 @@ export default function BulkStudentUploadPage() {
                       <button
                         onClick={() => setBulkMode('schoolWide')}
                         className={`flex-1 min-w-[220px] px-6 py-4 rounded-xl font-medium transition-all duration-200 flex items-center justify-center gap-2 ${bulkMode === 'schoolWide'
-                            ? 'bg-gradient-to-br from-blue-600 to-indigo-600 text-white shadow-lg transform scale-[1.02]'
-                            : 'dashboard-card border dashboard-card-border dashboard-text hover:border-accent-blue'
+                          ? 'bg-gradient-to-br from-blue-600 to-indigo-600 text-white shadow-lg transform scale-[1.02]'
+                          : 'dashboard-card border dashboard-card-border dashboard-text hover:border-accent-blue'
                           }`}
                       >
                         <Upload className="w-5 h-5" /> Whole-school Upload
