@@ -279,6 +279,11 @@ export interface TeacherFullProfile {
   name: string;
   email: string;
   phone?: string;
+  dob?: string;
+  gender?: 'male' | 'female' | 'other';
+  highestQualification?: string;
+  experienceYears?: number;
+  address?: string;
 
   isActive: boolean;
   leftAt?: string;
@@ -306,6 +311,12 @@ export const useCreateTeacher = () => {
       name: string;
       email: string;
       password: string;
+      phone?: string;
+      dob?: string;
+      gender?: 'male' | 'female' | 'other';
+      highestQualification?: string;
+      experienceYears?: number;
+      address?: string;
     }) =>
       apiFetch('/api/teacher', {
         method: 'POST',
@@ -538,6 +549,11 @@ export const useUpdateTeacherProfileByPrincipal = (teacherId: string) => {
       name?: string;
       phone?: string;
       email?: string;
+      dob?: string;
+      gender?: 'male' | 'female' | 'other';
+      highestQualification?: string;
+      experienceYears?: number;
+      address?: string;
     }) =>
       apiFetch(`/api/teacher/${teacherId}/profile`, {
         method: 'PUT',
