@@ -311,9 +311,9 @@ export const useCreateTeacher = () => {
       name: string;
       email: string;
       password: string;
-      phone?: string;
-      dob?: string;
-      gender?: 'male' | 'female' | 'other';
+      phone: string;
+      dob: string;
+      gender: 'male' | 'female' | 'other';
       highestQualification?: string;
       experienceYears?: number;
       address?: string;
