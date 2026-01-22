@@ -8,6 +8,7 @@ import { Toaster } from '@/components/ui/sonner';
 import { useHolidays, useDeleteHoliday } from '@/app/querry/useHolidays'; // PGhosal 13th
 import AddHolidayForm from '@/components/holidays/AddHolidayForm';
 import EditHolidayModal from '@/components/holidays/EditHolidaModal';
+import SchoolCalendar from "@/components/holidays/SchoolCalendar";
 
 import ConfirmDialog from '@/components/holidays/ConfirmDialog'; // PGhosal 13th
 import { motion, AnimatePresence } from 'framer-motion';
@@ -21,7 +22,7 @@ export default function HolidayPage() {
   const { data: holidays = [] } = useHolidays();
   // PGhosal 13th
   const { mutate: deleteHoliday } = useDeleteHoliday();
-  
+
   const [editing, setEditing] = useState<any>(null);
   const [deleting, setDeleting] = useState<any>(null); // PGhosal 13th
   const [filter, setFilter] = useState<'ALL' | HolidayCategory>('ALL');
@@ -39,23 +40,23 @@ export default function HolidayPage() {
     }
   };
   const formatHolidayDate = (h: any) => {
-  if (!h.endDate || h.startDate === h.endDate) {
-    return new Date(h.startDate).toDateString();
-  }
+    if (!h.endDate || h.startDate === h.endDate) {
+      return new Date(h.startDate).toDateString();
+    }
 
-  return `${new Date(h.startDate).toDateString()} → ${new Date(
-    h.endDate
-  ).toDateString()}`;
-};
+    return `${new Date(h.startDate).toDateString()} → ${new Date(
+      h.endDate
+    ).toDateString()}`;
+  };
 
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-gray-50 to-gray-100 dark:from-gray-900 dark:to-gray-800">
+    <div className="relative bg-gradient-to-br from-purple-50 via-white to-blue-50 dark:from-purple-900 dark:via-gray-900 dark:to-blue-950 overflow-hidden min-h-screen">
       <header className="bg-gradient-to-r from-blue-600 via-purple-600 to-indigo-700 dark:from-blue-800 dark:via-purple-800 dark:to-indigo-900 shadow-xl">
         <div className="max-w-7xl mx-auto py-6 sm:py-8 px-4 sm:px-6 lg:px-8">
           <div className="flex-1">
             <h1 className="text-2xl sm:text-3xl lg:text-4xl font-bold text-white tracking-tight">
-              Holiday Management 📅
+              Holiday Management
             </h1>
             <p className="mt-2 text-sm sm:text-base text-blue-100 font-medium">
               Manage school holidays and events
@@ -70,8 +71,8 @@ export default function HolidayPage() {
 
           {/* FILTER */}
           <div className="bg-white/80 dark:bg-gray-800/80 backdrop-blur-sm shadow-xl rounded-2xl border border-gray-200/50 dark:border-gray-700/50 p-4 sm:p-6">
-             {/* ... existing filter code ... */}
-             <div className="flex items-center gap-3 mb-4">
+            {/* ... existing filter code ... */}
+            <div className="flex items-center gap-3 mb-4">
               <div className="p-2 bg-gradient-to-br from-purple-600 to-violet-600 rounded-xl shadow-lg">
                 <Calendar className="h-5 w-5 sm:h-6 sm:w-6 text-white" />
               </div>
@@ -87,11 +88,10 @@ export default function HolidayPage() {
             <div className="flex gap-2 flex-wrap">
               <button
                 onClick={() => setFilter('ALL')}
-                className={`px-4 py-2 rounded-xl font-medium transition-all duration-200 transform hover:scale-105 shadow-sm ${
-                  filter === 'ALL'
+                className={`px-4 py-2 rounded-xl font-medium transition-all duration-200 transform hover:scale-105 shadow-sm ${filter === 'ALL'
                     ? 'bg-gradient-to-br from-blue-600 to-indigo-600 text-white shadow-lg'
                     : 'bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 text-gray-900 dark:text-white hover:bg-gray-50 dark:hover:bg-gray-600'
-                }`}
+                  }`}
               >
                 All
               </button>
@@ -99,11 +99,10 @@ export default function HolidayPage() {
                 <button
                   key={k}
                   onClick={() => setFilter(k as HolidayCategory)}
-                  className={`px-4 py-2 rounded-xl font-medium transition-all duration-200 transform hover:scale-105 shadow-sm ${
-                    filter === k
+                  className={`px-4 py-2 rounded-xl font-medium transition-all duration-200 transform hover:scale-105 shadow-sm ${filter === k
                       ? 'bg-gradient-to-br from-blue-600 to-indigo-600 text-white shadow-lg'
                       : 'bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 text-gray-900 dark:text-white hover:bg-gray-50 dark:hover:bg-gray-600'
-                  }`}
+                    }`}
                 >
                   {v}
                 </button>
@@ -133,7 +132,7 @@ export default function HolidayPage() {
                       </h3>
                       <p className="text-xs lg:text-sm text-gray-600 dark:text-gray-400 flex items-center gap-2">
                         <Calendar className="w-3 h-3" />
-                       {formatHolidayDate(h)}
+                        {formatHolidayDate(h)}
                       </p>
                     </div>
                     <button
@@ -142,7 +141,7 @@ export default function HolidayPage() {
                     >
                       <Pencil className="w-4 h-4 text-gray-900 dark:text-white" />
                     </button>
-                    
+
                     {/* Added Trash button */}
                     <button
                       onClick={() => setDeleting(h)}
@@ -164,6 +163,10 @@ export default function HolidayPage() {
                 </motion.div>
               ))
             )}
+          </div>
+
+          <div className="relative">
+            <SchoolCalendar />
           </div>
         </div>
       </main>
