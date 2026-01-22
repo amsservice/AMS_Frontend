@@ -59,18 +59,23 @@ export default function SchoolCalendar() {
      BUILD HOLIDAY DATE MAP
   =============================== */
   const holidayDateMap = useMemo(() => {
-    const map = new Map<string, Holiday>();
+    const map = new Map<string, Holiday[]>();
 
     holidays.forEach((h) => {
       expandHolidayDates(h).forEach((date) => {
-        map.set(date, h);
+        const existing = map.get(date);
+        if (existing) {
+          existing.push(h);
+        } else {
+          map.set(date, [h]);
+        }
       });
     });
 
     return map;
   }, [holidays]);
 
-  const selectedHoliday = holidayDateMap.get(selectedDate);
+  const selectedHolidays = holidayDateMap.get(selectedDate) ?? [];
 
   /* ===============================
      CALENDAR GRID
@@ -86,7 +91,7 @@ export default function SchoolCalendar() {
     return {
       day,
       dateKey,
-      holiday: holidayDateMap.get(dateKey)
+      holidays: holidayDateMap.get(dateKey) ?? []
     };
   });
 
@@ -175,7 +180,7 @@ export default function SchoolCalendar() {
     transition-all duration-200
     ${cell.dateKey === selectedDate
                         ? "bg-teal-600 text-white shadow-lg"
-                        : cell.holiday
+                        : cell.holidays.length > 0
                           ? "rounded-lg border border-red-400 bg-red-100/70 dark:bg-red-900/30 text-red-700 dark:text-red-300"
                           : "rounded-xl text-gray-900 dark:text-white hover:bg-gray-100 dark:hover:bg-gray-700"
                       }
@@ -200,14 +205,21 @@ export default function SchoolCalendar() {
                 {new Date(selectedDate).toDateString()}
               </h3>
 
-              {selectedHoliday ? (
-                <div className="p-4 rounded-xl bg-red-100/60 dark:bg-red-900/30 border border-red-300">
-                  <div className="font-bold text-red-700">
-                    {selectedHoliday.name}
-                  </div>
-                  <div className="text-sm">
-                    {HOLIDAY_CATEGORIES[selectedHoliday.category]}
-                  </div>
+              {selectedHolidays.length > 0 ? (
+                <div className="space-y-3">
+                  {selectedHolidays.map((h) => (
+                    <div
+                      key={h._id}
+                      className="p-4 rounded-xl bg-red-100/60 dark:bg-red-900/30 border border-red-300"
+                    >
+                      <div className="font-bold text-red-700">
+                        {h.name}
+                      </div>
+                      <div className="text-sm">
+                        {HOLIDAY_CATEGORIES[h.category]}
+                      </div>
+                    </div>
+                  ))}
                 </div>
               ) : (
                 <div className="flex items-center gap-2 text-gray-500">

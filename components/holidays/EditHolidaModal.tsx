@@ -213,6 +213,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { motion } from 'framer-motion';
+import { toast } from 'sonner';
 
 import {
   Holiday,
@@ -245,6 +246,10 @@ export default function EditHolidayModal({
   const today = new Date();
   today.setHours(0, 0, 0, 0);
 
+  const tomorrow = new Date(today);
+  tomorrow.setDate(tomorrow.getDate() + 1);
+  const minDate = tomorrow.toISOString().split('T')[0];
+
   const holidayStart = new Date(holiday.startDate);
   const isPastHoliday = holidayStart.getTime() < today.getTime();
 
@@ -264,11 +269,43 @@ export default function EditHolidayModal({
   const handleSave = () => {
     if (isPastHoliday) return;
 
+    const trimmedName = form.name.trim();
+    if (!/^[A-Za-z0-9\s]+$/.test(trimmedName)) {
+      toast.error('Holiday name can contain only letters, numbers, and spaces');
+      return;
+    }
+
+    const lettersCount = (trimmedName.match(/[A-Za-z]/g) || []).length;
+    if (lettersCount < 3) {
+      toast.error('Holiday name must contain at least 3 letters');
+      return;
+    }
+
+    const start = new Date(form.startDate);
+    start.setHours(0, 0, 0, 0);
+    if (start.getTime() <= today.getTime()) {
+      toast.error('Holiday can be marked only on future dates');
+      return;
+    }
+
+    if (form.endDate) {
+      const end = new Date(form.endDate);
+      end.setHours(0, 0, 0, 0);
+      if (end.getTime() <= today.getTime()) {
+        toast.error('Holiday can be marked only on future dates');
+        return;
+      }
+      if (end.getTime() < start.getTime()) {
+        toast.error('End date must be greater than or equal to start date');
+        return;
+      }
+    }
+
     updateHoliday(
       {
         id: holiday._id,
         data: {
-          name: form.name,
+          name: trimmedName,
           startDate: form.startDate,
           endDate: form.endDate || undefined,
           category: form.category,
@@ -333,6 +370,7 @@ export default function EditHolidayModal({
                 onChange={(e) =>
                   setForm({ ...form, startDate: e.target.value })
                 }
+                min={minDate}
                 className="dashboard-card border dashboard-card-border dashboard-text"
               />
             </div>
@@ -347,6 +385,7 @@ export default function EditHolidayModal({
                 onChange={(e) =>
                   setForm({ ...form, endDate: e.target.value })
                 }
+                min={minDate}
                 className="dashboard-card border dashboard-card-border dashboard-text"
               />
             </div>
