@@ -1,0 +1,36 @@
+name: PR Direction Guard
+
+on:
+  pull_request:
+    types: [opened, edited, synchronize, reopened]
+
+jobs:
+  validate-branch-flow:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Validate branch flow
+        run: |
+          BASE="${{ github.base_ref }}"
+          HEAD="${{ github.head_ref }}"
+
+          echo "PR from $HEAD → $BASE"
+
+          if [[ "$HEAD" =~ ^task/|^defect/ ]]; then
+            if [[ "$BASE" != "dev" ]]; then
+              echo "❌ task/* and defect/* must target dev"
+              exit 1
+            fi
+          fi
+
+          if [[ "$HEAD" == "dev" && "$BASE" != "qa" ]]; then
+            echo "❌ dev must merge into qa"
+            exit 1
+          fi
+
+          if [[ "$HEAD" == "qa" && "$BASE" != "main" ]]; then
+            echo "❌ qa must merge into main"
+            exit 1
+          fi
+
+          echo "✅ Branch flow valid"
