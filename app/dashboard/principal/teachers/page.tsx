@@ -11,12 +11,14 @@ import {
   Trash2,
   Edit,
   UserX,
+  UserCheck,
   Eye,
   Phone,
   Calendar,
   MapPin,
   User
 } from 'lucide-react';
+
 import { toast } from 'sonner';
 
 import { Button } from '@/components/ui/button';
@@ -31,6 +33,7 @@ import {
   useDeleteTeacher,
   useAssignClassToTeacher,
   useDeactivateTeacher,
+  useActivateTeacher,
   useSwapTeacherClasses,
   useTeacherFullProfile,
   useUpdateTeacherProfileByPrincipal
@@ -65,6 +68,9 @@ export default function TeachersPage() {
   const [viewingTeacherId, setViewingTeacherId] = useState<string | null>(null);
   const [isEditing, setIsEditing] = useState(false);
   const [selectedClassId, setSelectedClassId] = useState('');
+  const [confirmDelete, setConfirmDelete] = useState<{ id: string; name: string } | null>(
+    null
+  );
 
   const [formData, setFormData] = useState({
     name: '',
@@ -95,6 +101,7 @@ export default function TeachersPage() {
   const { mutate: createTeacher } = useCreateTeacher();
   const { mutate: deleteTeacher } = useDeleteTeacher();
   const { mutate: deactivateTeacher } = useDeactivateTeacher();
+  const { mutate: activateTeacher } = useActivateTeacher();
   const assignClassMutation = useAssignClassToTeacher();
   const swapClassMutation = useSwapTeacherClasses();
 
@@ -114,8 +121,12 @@ export default function TeachersPage() {
     experienceYears?: string;
     address?: string;
   }) => {
-    if (data.name !== undefined && data.name.trim().length < 3) {
-      return 'Name must be at least 3 characters';
+    if (data.name !== undefined) {
+      const trimmed = data.name.trim();
+      const lettersCount = (trimmed.match(/[A-Za-z]/g) || []).length;
+      if (lettersCount < 3) {
+        return 'Name must contain at least 3 letters';
+      }
     }
 
     if (data.email !== undefined && data.email.trim().length > 0) {
@@ -128,7 +139,7 @@ export default function TeachersPage() {
     }
 
     const phoneOk = /^[0-9]{10}$/.test(data.phone);
-    if (!phoneOk) return 'Phone must be exactly 10 digits';
+    if (!phoneOk) return 'Phone must be exactly 10 digits (numbers only)';
 
     if (data.dob === undefined || data.dob.trim().length === 0) {
       return 'DOB is required';
@@ -147,7 +158,7 @@ export default function TeachersPage() {
         ? 1
         : 0);
 
-    if (age < 18) return 'Teacher must be at least 18 years old';
+    if (age < 18) return 'DOB must be at least 18 years ago';
 
     if (data.gender === undefined || data.gender.trim().length === 0) {
       return 'Gender is required';
@@ -161,9 +172,12 @@ export default function TeachersPage() {
       data.highestQualification !== undefined &&
       data.highestQualification.trim().length > 0
     ) {
-      const len = data.highestQualification.trim().length;
-      if (len < 2) return 'Highest qualification must be at least 2 characters';
-      if (len > 100) return 'Highest qualification cannot exceed 100 characters';
+      const trimmed = data.highestQualification.trim();
+      const lettersCount = (trimmed.match(/[A-Za-z]/g) || []).length;
+      if (lettersCount < 2)
+        return 'Highest qualification must contain at least 2 letters';
+      if (trimmed.length > 100)
+        return 'Highest qualification cannot exceed 100 characters';
     }
 
     if (
@@ -174,13 +188,15 @@ export default function TeachersPage() {
       if (!Number.isFinite(n) || !Number.isInteger(n)) {
         return 'Experience years must be a whole number';
       }
-      if (n < 0 || n > 60) return 'Experience years must be between 0 and 60';
+      if (n < 0) return 'Experience cannot be negative';
+      if (n > 42) return 'Experience cannot be greater than 42 years';
     }
 
     if (data.address !== undefined && data.address.trim().length > 0) {
-      const len = data.address.trim().length;
-      if (len < 5) return 'Address must be at least 5 characters';
-      if (len > 250) return 'Address cannot exceed 250 characters';
+      const trimmed = data.address.trim();
+      const lettersCount = (trimmed.match(/[a-zA-Z]/g) || []).length;
+      if (lettersCount < 5) return 'Address must contain at least 5 letters';
+      if (trimmed.length > 250) return 'Address cannot exceed 250 characters';
     }
 
     return null;
@@ -413,6 +429,12 @@ export default function TeachersPage() {
       bgGradient: 'from-purple-500 to-violet-600'
     }
   ];
+
+  const swappingTeacherCurrentClassId =
+    swappingTeacherId && teachers?.length
+      ? (teachers.find((t: Teacher) => t.id === swappingTeacherId)?.currentClass
+          ?.classId ?? null)
+      : null;
 
   return (
     <div className="relative bg-gradient-to-br from-purple-50 via-white to-blue-50 dark:from-purple-900 dark:via-gray-900 dark:to-blue-950 overflow-hidden min-h-screen">
@@ -720,7 +742,7 @@ export default function TeachersPage() {
                   <p className="text-gray-600 dark:text-gray-400">No teachers found</p>
                 </div>
               ) : (
-                (teachers as any).map((teacher: Teacher) => (
+                teachers.map((teacher: Teacher) => (
                   <div
                     key={teacher.id}
                     className="p-4 sm:p-5 lg:px-6 hover:bg-gray-50/50 dark:hover:bg-gray-700/50 transition-colors"
@@ -728,17 +750,17 @@ export default function TeachersPage() {
                     <div className="lg:hidden space-y-3">
                       <div className="flex items-center gap-3">
                         <Avatar className="bg-gradient-to-br from-teal-500 to-cyan-600 w-12 h-12">
-                          <AvatarFallback className="text-white font-semibold bg-transparent">
+                          <AvatarFallback className="text-white font-bold text-2xl bg-white">
                             {teacher.name[0]}
                           </AvatarFallback>
                         </Avatar>
                         <div className="flex-1">
                           <div className="flex items-center gap-2 mb-1 flex-wrap">
-                            <h3 className="font-semibold text-gray-900 dark:text-white">
+                            <h3 className="font-bold text-gray-900 dark:text-white">
                               {teacher.name}
                             </h3>
                             <Badge
-                              className={`${
+                              className={`mt-1 ${
                                 teacher.isActive
                                   ? 'bg-green-100 text-green-700 border-green-200'
                                   : 'bg-gray-100 text-gray-700 border-gray-200'
@@ -748,7 +770,7 @@ export default function TeachersPage() {
                             </Badge>
                           </div>
                           <p className="text-sm text-gray-600 dark:text-gray-400 flex items-center gap-1">
-                            <Mail className="w-3 h-3" />{teacher.email}
+                            <Mail className="w-3 h-3" /> {teacher.email}
                           </p>
                         </div>
                       </div>
@@ -771,7 +793,7 @@ export default function TeachersPage() {
                           onClick={() => handleViewTeacher(teacher.id)}
                           className="flex-1 bg-gradient-to-br from-blue-500 to-indigo-600 text-white font-semibold py-2 px-4 rounded-xl hover:opacity-90 transition-all text-sm flex items-center justify-center gap-2 shadow-sm"
                         >
-                          <Eye className="w-4 h-4" />View
+                          <Eye className="w-4 h-4" /> View
                         </button>
 
                         {teacher.currentClass && (
@@ -779,7 +801,7 @@ export default function TeachersPage() {
                             onClick={() => setSwappingTeacherId(teacher.id)}
                             className="flex-1 bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 text-gray-900 dark:text-white font-semibold py-2 px-4 rounded-xl hover:bg-gray-50 dark:hover:bg-gray-600 transition-all text-sm flex items-center justify-center gap-2 shadow-sm"
                           >
-                            <Edit className="w-4 h-4" />Swap
+                            <Edit className="w-4 h-4" /> Swap
                           </button>
                         )}
 
@@ -801,13 +823,22 @@ export default function TeachersPage() {
                             <UserX className="w-5 h-5" />
                           </button>
                         ) : (
-                          <button
-                            onClick={() => deleteTeacher(teacher.id)}
-                            className="bg-red-500 hover:bg-red-600 text-white font-semibold py-2 px-4 rounded-xl transition-all text-sm flex items-center gap-2 shadow-sm"
-                            title="Delete"
-                          >
-                            <Trash2 className="w-5 h-5" />
-                          </button>
+                          <>
+                            <button
+                              onClick={() => activateTeacher(teacher.id)}
+                              className="bg-emerald-500 hover:bg-emerald-600 text-white font-semibold py-2 px-4 rounded-xl transition-all text-sm flex items-center gap-2 shadow-sm"
+                              title="Activate"
+                            >
+                              <UserCheck className="w-5 h-5" />
+                            </button>
+                            <button
+                              onClick={() => setConfirmDelete({ id: teacher.id, name: teacher.name })}
+                              className="bg-red-500 hover:bg-red-600 text-white font-semibold py-2 px-4 rounded-xl transition-all text-sm flex items-center gap-2 shadow-sm"
+                              title="Delete"
+                            >
+                              <Trash2 className="w-5 h-5" />
+                            </button>
+                          </>
                         )}
                       </div>
                     </div>
@@ -815,17 +846,17 @@ export default function TeachersPage() {
                     <div className="hidden lg:grid lg:grid-cols-12 gap-4 items-center">
                       <div className="col-span-3 flex items-center gap-3">
                         <Avatar className="bg-gradient-to-br from-teal-500 to-cyan-600">
-                          <AvatarFallback className="text-white font-semibold bg-transparent">
+                          <AvatarFallback className="text-white font-bold text-2xl bg-white">
                             {teacher.name[0]}
                           </AvatarFallback>
                         </Avatar>
-                        <span className="font-semibold text-gray-900 dark:text-white">
+                        <span className="font-bold text-gray-900 dark:text-white">
                           {teacher.name}
                         </span>
                       </div>
 
                       <div className="col-span-3 flex items-center gap-2 text-gray-600 dark:text-gray-400 text-sm">
-                        <Mail className="w-4 h-4" />{teacher.email}
+                        <Mail className="w-4 h-4" /> {teacher.email}
                       </div>
 
                       <div className="col-span-2">
@@ -860,7 +891,7 @@ export default function TeachersPage() {
                           onClick={() => handleViewTeacher(teacher.id)}
                           className="bg-gradient-to-br from-blue-500 to-indigo-600 text-white font-semibold py-2 px-4 rounded-xl hover:opacity-90 transition-all text-sm flex items-center gap-2 shadow-sm"
                         >
-                          <Eye className="w-4 h-4" />View
+                          <Eye className="w-4 h-4" /> View
                         </button>
 
                         {teacher.currentClass && (
@@ -868,7 +899,7 @@ export default function TeachersPage() {
                             onClick={() => setSwappingTeacherId(teacher.id)}
                             className="bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 text-gray-900 dark:text-white font-semibold py-2 px-4 rounded-xl hover:bg-gray-50 dark:hover:bg-gray-600 transition-all text-sm flex items-center gap-2 shadow-sm"
                           >
-                            <Edit className="w-4 h-4" />Swap
+                            <Edit className="w-4 h-4" /> Swap
                           </button>
                         )}
 
@@ -890,13 +921,22 @@ export default function TeachersPage() {
                             <UserX className="w-5 h-5" />
                           </button>
                         ) : (
-                          <button
-                            onClick={() => deleteTeacher(teacher.id)}
-                            className="bg-red-500 hover:bg-red-600 text-white font-semibold py-2 px-4 rounded-xl transition-all text-sm flex items-center gap-2 shadow-sm"
-                            title="Delete"
-                          >
-                            <Trash2 className="w-5 h-5" />
-                          </button>
+                          <>
+                            <button
+                              onClick={() => activateTeacher(teacher.id)}
+                              className="bg-emerald-500 hover:bg-emerald-600 text-white font-semibold py-2 px-4 rounded-xl transition-all text-sm flex items-center gap-2 shadow-sm"
+                              title="Activate"
+                            >
+                              <UserCheck className="w-5 h-5" />
+                            </button>
+                            <button
+                              onClick={() => setConfirmDelete({ id: teacher.id, name: teacher.name })}
+                              className="bg-red-500 hover:bg-red-600 text-white font-semibold py-2 px-4 rounded-xl transition-all text-sm flex items-center gap-2 shadow-sm"
+                              title="Delete"
+                            >
+                              <Trash2 className="w-5 h-5" />
+                            </button>
+                          </>
                         )}
                       </div>
                     </div>
@@ -907,6 +947,65 @@ export default function TeachersPage() {
           </div>
         </div>
       </main>
+
+      {/* Confirm Delete (Deactivated Teacher) */}
+      <AnimatePresence>
+        {confirmDelete && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 p-4"
+            onClick={() => setConfirmDelete(null)}
+          >
+            <motion.div
+              initial={{ scale: 0.92, y: 10 }}
+              animate={{ scale: 1, y: 0 }}
+              exit={{ scale: 0.92, y: 10 }}
+              onClick={(e) => e.stopPropagation()}
+              className="bg-white/95 dark:bg-gray-800/95 backdrop-blur-sm border border-gray-200/50 dark:border-gray-700/50 rounded-2xl shadow-2xl p-6 w-full max-w-md"
+            >
+              <div className="flex items-center justify-between mb-3">
+                <h3 className="text-lg font-bold text-gray-900 dark:text-white">
+                  Delete Teacher
+                </h3>
+                <button
+                  onClick={() => setConfirmDelete(null)}
+                  className="text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg p-2 transition-colors"
+                >
+                  <X className="w-5 h-5" />
+                </button>
+              </div>
+              <p className="text-sm text-gray-600 dark:text-gray-400 mb-5">
+                Are you sure you want to delete this teacher record?
+                <span className="font-semibold text-gray-900 dark:text-white">
+                  {' '}
+                  {confirmDelete.name}
+                </span>
+              </p>
+              <div className="flex gap-3 justify-end">
+                <Button
+                  variant="outline"
+                  onClick={() => setConfirmDelete(null)}
+                  className="rounded-xl"
+                >
+                  Cancel
+                </Button>
+                <button
+                  onClick={() => {
+                    const id = confirmDelete.id;
+                    setConfirmDelete(null);
+                    deleteTeacher(id);
+                  }}
+                  className="px-6 py-2.5 bg-red-600 hover:bg-red-700 text-white font-semibold rounded-xl transition-all shadow-lg"
+                >
+                  Yes, Delete
+                </button>
+              </div>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
 
       {/* View Teacher Modal */}
       <AnimatePresence>
@@ -1338,7 +1437,9 @@ export default function TeachersPage() {
                 <div className="p-2 bg-gradient-to-br from-blue-600 to-indigo-600 rounded-xl shadow-lg">
                   <BookOpen className="w-5 h-5 text-white" />
                 </div>
-                <h3 className="text-lg font-bold text-gray-900 dark:text-white">Assign Class</h3>
+                <h3 className="text-lg font-bold text-gray-900 dark:text-white">
+                  Assign Class
+                </h3>
               </div>
               <select
                 className="w-full bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 p-3 rounded-xl text-gray-900 dark:text-white mb-4"
@@ -1360,7 +1461,11 @@ export default function TeachersPage() {
                 >
                   Assign
                 </button>
-                <Button variant="outline" onClick={() => setAssigningTeacherId(null)} className="rounded-xl">
+                <Button
+                  variant="outline"
+                  onClick={() => setAssigningTeacherId(null)}
+                  className="rounded-xl"
+                >
                   Cancel
                 </Button>
               </div>
@@ -1393,7 +1498,7 @@ export default function TeachersPage() {
                 <h3 className="text-lg font-bold text-gray-900 dark:text-white">Swap/Change Class</h3>
               </div>
               <p className="text-sm text-gray-600 dark:text-gray-400 mb-4">
-                Select a new class for this teacher. If occupied, teachers will be swapped.
+                Select an available class for this teacher.
               </p>
               <select
                 className="w-full bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 p-3 rounded-xl text-gray-900 dark:text-white mb-4"
@@ -1402,8 +1507,22 @@ export default function TeachersPage() {
               >
                 <option value="">Select class</option>
                 {classes.map((cls: Class) => (
-                  <option key={`${cls.id}-${cls.sessionId}`} value={cls.id}>
-                    {cls.name} - {cls.section}{cls.teacherId ? ' (Occupied - will swap)' : ' (Available)'}
+                  <option
+                    key={`${cls.id}-${cls.sessionId}`}
+                    value={cls.id}
+                    disabled={
+                      !!cls.teacherId ||
+                      (swappingTeacherCurrentClassId
+                        ? cls.id === swappingTeacherCurrentClassId
+                        : false)
+                    }
+                  >
+                    {cls.name} - {cls.section}
+                    {swappingTeacherCurrentClassId && cls.id === swappingTeacherCurrentClassId
+                      ? ' (Current)'
+                      : cls.teacherId
+                        ? ' (Occupied)'
+                        : ' (Available)'}
                   </option>
                 ))}
               </select>

@@ -260,13 +260,48 @@ export default function BulkStudentUploadPage() {
     error: schoolWideError
   } = useBulkUploadStudentsSchoolWide();
 
-  const { data: classes = [], isLoading: classesLoading } = useClasses();
+  const { data: classesData, isLoading: classesLoading } = useClasses();
+  const classes = (classesData as any)?.data || (classesData as any) || [];
+
+  const sortedClasses = [...classes].sort((a: any, b: any) => {
+    const nameA = String(a?.name ?? '');
+    const nameB = String(b?.name ?? '');
+    const nameCmp = nameA.localeCompare(nameB, undefined, {
+      numeric: true,
+      sensitivity: 'base'
+    });
+    if (nameCmp !== 0) return nameCmp;
+
+    const sectionA = String(a?.section ?? '');
+    const sectionB = String(b?.section ?? '');
+    return sectionA.localeCompare(sectionB, undefined, {
+      numeric: true,
+      sensitivity: 'base'
+    });
+  });
 
   const {
     data: classWiseStats = [],
     isLoading: classWiseLoading,
     error: classWiseError
   } = useStudentsClassWiseStats();
+
+  const sortedClassWiseStats = [...classWiseStats].sort((a: any, b: any) => {
+    const nameA = String(a?.className ?? '');
+    const nameB = String(b?.className ?? '');
+    const nameCmp = nameA.localeCompare(nameB, undefined, {
+      numeric: true,
+      sensitivity: 'base'
+    });
+    if (nameCmp !== 0) return nameCmp;
+
+    const sectionA = String(a?.section ?? '');
+    const sectionB = String(b?.section ?? '');
+    return sectionA.localeCompare(sectionB, undefined, {
+      numeric: true,
+      sensitivity: 'base'
+    });
+  });
 
   const [capacity, setCapacity] = useState<number>(0);
   const totalStudentsInSchool = classWiseStats.reduce(
@@ -612,6 +647,42 @@ export default function BulkStudentUploadPage() {
       return { ok: false, errors };
     }
 
+    if (mode === 'schoolWide') {
+      const classKeySet = new Set(
+        sortedClasses.map(
+          (c: Class) => `${String(c.name).trim().toLowerCase()}__${String(c.section).trim().toLowerCase()}`
+        )
+      );
+      const missingClassKeys = new Set<string>();
+
+      for (let r = 1; r < lines.length; r++) {
+        const rowNo = r + 1;
+        const cells = parseCsvLine(lines[r]);
+        const get = (h: string) => (cells[idx(h)] ?? '').trim();
+        const className = get('className');
+        const section = get('section');
+
+        if (!className || !section) continue;
+
+        const key = `${className.trim().toLowerCase()}__${section.trim().toLowerCase()}`;
+        if (!classKeySet.has(key)) {
+          missingClassKeys.add(`${className} - ${section} (Row ${rowNo})`);
+        }
+      }
+
+      if (missingClassKeys.size) {
+        const list = Array.from(missingClassKeys);
+        return {
+          ok: false,
+          errors: [
+            'Some classes in CSV do not exist in the active session.',
+            ...list.slice(0, 10),
+            ...(list.length > 10 ? [`...and ${list.length - 10} more`] : [])
+          ]
+        };
+      }
+    }
+
     return { ok: true, errors: [] as string[] };
   };
 
@@ -690,6 +761,11 @@ export default function BulkStudentUploadPage() {
       },
       {
         onSuccess: (resp: any) => {
+          if (resp && resp.success === false) {
+            const msg = resp?.message || 'CSV validation failed';
+            toast.error(msg);
+            return;
+          }
           toast.success(resp?.message || 'Students uploaded successfully');
           handleClearBulkSchoolWide();
         },
@@ -873,7 +949,7 @@ export default function BulkStudentUploadPage() {
                 </div>
               ) : (
                 <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-                  {classWiseStats.map((c: any) => {
+                  {sortedClassWiseStats.map((c: any) => {
                     const id = String(c.classId);
                     const isSelected = selectedClassId === id;
                     return (
@@ -913,7 +989,7 @@ export default function BulkStudentUploadPage() {
 
           {selectedClassId && (
             <div className="dashboard-card border dashboard-card-border rounded-2xl shadow-dashboard-lg p-4 flex items-center justify-between gap-3">
-              <p className="dashboard-text font-semibold">Selected class: {classWiseStats.find((c: any) => String(c.classId) === String(selectedClassId))?.className} - {classWiseStats.find((c: any) => String(c.classId) === String(selectedClassId))?.section}</p>
+              <p className="dashboard-text font-semibold">Selected class: {sortedClassWiseStats.find((c: any) => String(c.classId) === String(selectedClassId))?.className} - {sortedClassWiseStats.find((c: any) => String(c.classId) === String(selectedClassId))?.section}</p>
 
               <button
                 onClick={() => {
@@ -1150,7 +1226,7 @@ export default function BulkStudentUploadPage() {
                         }}
                       >
                         <option value="">Select class</option>
-                        {classes.map((cls: Class) => (
+                        {sortedClasses.map((cls: Class) => (
                           <option key={cls.id} value={cls.id}>
                             {cls.name} - {cls.section}
                           </option>
@@ -1279,7 +1355,7 @@ export default function BulkStudentUploadPage() {
                             }}
                           >
                             <option value="">Select class</option>
-                            {classes.map((cls: Class) => (
+                            {sortedClasses.map((cls: Class) => (
                               <option key={cls.id} value={cls.id}>
                                 {cls.name} - {cls.section}
                               </option>
