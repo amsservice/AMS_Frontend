@@ -4,8 +4,8 @@ import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { useAuth } from "@/app/context/AuthContext";
 
-import DashboardSidebar from "@/components/navbar/DashboardSidebar";
-import DashboardHeader from "@/components/navbar/DashboardHeader";
+import DashboardSidebar from "@/components/dashboard/DashboardSidebar";
+import DashboardHeader from "@/components/dashboard/DashboardHeader";
 
 export default function TeacherLayout({
   children

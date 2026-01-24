@@ -6,6 +6,7 @@ import { usePathname, useRouter } from "next/navigation";
 import { useAuth } from "@/app/context/AuthContext";
 import { DASHBOARD_MENUS } from "@/lib/dashboardMenus";
 import { useMySchool } from '@/app/querry/useSchool';
+import SidebarSchoolCard from "@/utils/SidebarSchoolCard";
 
 type Props = {
   isOpen: boolean;
@@ -21,6 +22,7 @@ export default function DashboardSidebar({ isOpen, onClose }: Props) {
   const role = user?.role || "student";
   const menus = DASHBOARD_MENUS[role];
   const schoolName = data?.school?.name;
+  const schoolCode = data?.school?.schoolCode;
 
   const activeItem = menus
     .filter(item => pathname === item.path || pathname.startsWith(item.path + "/"))
@@ -33,7 +35,7 @@ export default function DashboardSidebar({ isOpen, onClose }: Props) {
       <div className="absolute top-[-10%] left-[-10%] w-[50%] h-[30%] bg-blue-600/10 blur-[100px] rounded-full" />
       
       {/* Logo Section */}
-      <div className="relative px-8 py-8 flex items-center gap-3">
+      <div className="relative px-8 pt-4 pb-4 flex items-center gap-3">
         <motion.div 
           whileHover={{ rotate: -10 }}
           className="w-10 h-10 rounded-xl bg-gradient-to-br from-blue-500 to-indigo-600 flex items-center justify-center shadow-lg shadow-blue-500/30"
@@ -46,21 +48,8 @@ export default function DashboardSidebar({ isOpen, onClose }: Props) {
       </div>
 
       {/* School Info Card - Glassmorphism */}
-      <div className="relative mx-4 mb-8">
-        <div className="p-4 rounded-2xl bg-white/[0.03] border border-white/10 backdrop-blur-md overflow-hidden group hover:border-white/20 transition-colors">
-          <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-xl bg-gray-800 flex items-center justify-center text-blue-400 font-bold border border-white/10 group-hover:scale-110 transition-transform">
-              {schoolName?.charAt(0)}
-            </div>
-            <div className="flex-1 min-w-0">
-              <p className="text-[10px] uppercase tracking-widest text-gray-500 font-bold">School</p>
-              <p className="text-sm font-semibold text-white truncate leading-tight">
-                {schoolName}
-              </p>
-            </div>
-          </div>
-        </div>
-      </div>
+    <SidebarSchoolCard schoolName={schoolName} schoolCode={schoolCode} />
+
 
       {/* Navigation Links */}
       <nav className="flex-1 px-4 space-y-1 overflow-y-auto custom-scrollbar">

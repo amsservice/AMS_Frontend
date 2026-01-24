@@ -37,10 +37,14 @@ type CreatePaymentResponse = {
 
 type VerifyPaymentResponse = {
   success: boolean;
-  orderId: string;
-  paymentId: string;
-  accessToken: string;
+  user: {
+    id: string;
+    name: string;
+    email: string;
+    role: "principal";
+  };
 };
+
 
 type RazorpayHandlerResponse = {
   razorpay_order_id: string;
@@ -74,7 +78,7 @@ declare global {
 export default function PaymentPage() {
   const router = useRouter();
   const searchParams = useSearchParams();
-  const { refetchUser } = useAuth();
+  const { setAuthUser } = useAuth();
 
   const API_URL = process.env.NEXT_PUBLIC_API_URL!;
   const RAZORPAY_KEY = process.env.NEXT_PUBLIC_RAZORPAY_KEY!;
@@ -329,7 +333,7 @@ export default function PaymentPage() {
             futureStudents: futureStudents || undefined,
             couponCode: couponCode || undefined,
           }),
-          credentials: isUpgradeMode ? "include" : undefined,
+          credentials: "include",
         }
       );
 
@@ -365,7 +369,7 @@ export default function PaymentPage() {
                 razorpay_signature: response.razorpay_signature,
                 ...(isUpgradeMode ? {} : { schoolEmail }),
               }),
-              credentials: isUpgradeMode ? "include" : undefined,
+              credentials: "include",
             }
           );
 
@@ -377,10 +381,9 @@ export default function PaymentPage() {
           }
 
           if (!isUpgradeMode) {
-            localStorage.setItem("accessToken", verifyData.accessToken);
             localStorage.setItem("role", "principal");
           }
-          await refetchUser();
+          setAuthUser(verifyData.user);
           router.replace("/dashboard/principal/schoolProfile");
         },
         theme: { color: "#2563eb" },

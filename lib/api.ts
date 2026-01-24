@@ -17,6 +17,8 @@ export async function apiFetch(
   // const token = localStorage.getItem('accessToken');
 
   const isFormData = options.body instanceof FormData;
+  console.log("isformdata",isFormData);
+  
 
   // ✅ Explicitly typed
   const headers: Record<string, string> = {
