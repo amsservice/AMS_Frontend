@@ -6,6 +6,8 @@ import {
   Users,
   Plus,
   X,
+  Upload,
+  Download,
   Mail,
   BookOpen,
   Trash2,
@@ -34,6 +36,7 @@ import {
   useAssignClassToTeacher,
   useDeactivateTeacher,
   useActivateTeacher,
+  useBulkUploadTeachers,
   useSwapTeacherClasses,
   useTeacherFullProfile,
   useUpdateTeacherProfileByPrincipal
@@ -63,11 +66,13 @@ interface Teacher {
 
 export default function TeachersPage() {
   const [isAddTeacherOpen, setIsAddTeacherOpen] = useState(false);
+  const [isBulkUploadOpen, setIsBulkUploadOpen] = useState(false);
   const [assigningTeacherId, setAssigningTeacherId] = useState<string | null>(null);
   const [swappingTeacherId, setSwappingTeacherId] = useState<string | null>(null);
   const [viewingTeacherId, setViewingTeacherId] = useState<string | null>(null);
   const [isEditing, setIsEditing] = useState(false);
   const [selectedClassId, setSelectedClassId] = useState('');
+
   const [confirmDelete, setConfirmDelete] = useState<{ id: string; name: string } | null>(
     null
   );
@@ -98,10 +103,14 @@ export default function TeachersPage() {
   const { data: teachers = [], isLoading } = useTeachers();
   const { data: classes = [] } = useClasses();
 
+  const [bulkTeacherFile, setBulkTeacherFile] = useState<File | null>(null);
+  const [bulkTeacherClientErrors, setBulkTeacherClientErrors] = useState<string[]>([]);
+
   const { mutate: createTeacher } = useCreateTeacher();
   const { mutate: deleteTeacher } = useDeleteTeacher();
   const { mutate: deactivateTeacher } = useDeactivateTeacher();
   const { mutate: activateTeacher } = useActivateTeacher();
+  const bulkUploadTeachersMutation = useBulkUploadTeachers();
   const assignClassMutation = useAssignClassToTeacher();
   const swapClassMutation = useSwapTeacherClasses();
 
@@ -225,6 +234,228 @@ export default function TeachersPage() {
     }
 
     return 'Request failed';
+  };
+
+  const resetBulkTeachersUpload = () => {
+    setBulkTeacherFile(null);
+    setBulkTeacherClientErrors([]);
+  };
+
+  const parseCsvLine = (line: string) => {
+    const out: string[] = [];
+    let cur = '';
+    let inQuotes = false;
+
+    for (let i = 0; i < line.length; i++) {
+      const ch = line[i];
+      if (ch === '"') {
+        if (inQuotes && line[i + 1] === '"') {
+          cur += '"';
+          i++;
+        } else {
+          inQuotes = !inQuotes;
+        }
+        continue;
+      }
+      if (ch === ',' && !inQuotes) {
+        out.push(cur);
+        cur = '';
+        continue;
+      }
+      cur += ch;
+    }
+    out.push(cur);
+    return out.map((v) => v.trim());
+  };
+
+  const validateTeacherCsvFile = async (csvFile: File) => {
+    const text = await csvFile.text();
+    const lines = text
+      .split(/\r?\n/)
+      .map((l) => l.trim())
+      .filter(Boolean);
+
+    if (!lines.length) {
+      return { ok: false, errors: ['CSV file is empty'] };
+    }
+
+    const headers = parseCsvLine(lines[0]).map((h) => h.trim());
+    const requiredHeaders = ['name', 'email', 'password', 'phone', 'dob', 'gender'];
+    const missingHeaders = requiredHeaders.filter((h) => !headers.includes(h));
+    if (missingHeaders.length) {
+      return {
+        ok: false,
+        errors: [
+          `Missing required columns: ${missingHeaders.join(', ')}`,
+          'Please download the sample CSV and follow the same header names.'
+        ]
+      };
+    }
+
+    const idx = (name: string) => headers.indexOf(name);
+    const errors: string[] = [];
+
+    const parseDobToDate = (raw: string) => {
+      const v = String(raw || '').trim();
+      if (!v) return null;
+
+      if (/^\d{4}-\d{2}-\d{2}$/.test(v)) {
+        const d = new Date(v);
+        return isNaN(d.getTime()) ? null : d;
+      }
+
+      const m = v.match(/^(\d{1,2})[\/\-](\d{1,2})[\/\-](\d{4})$/);
+      if (m) {
+        const dd = Number(m[1]);
+        const mm = Number(m[2]);
+        const yyyy = Number(m[3]);
+        if (dd >= 1 && dd <= 31 && mm >= 1 && mm <= 12) {
+          const d = new Date(yyyy, mm - 1, dd);
+          if (d.getFullYear() === yyyy && d.getMonth() === mm - 1 && d.getDate() === dd) {
+            return d;
+          }
+        }
+        return null;
+      }
+
+      const fallback = new Date(v);
+      return isNaN(fallback.getTime()) ? null : fallback;
+    };
+
+    for (let r = 1; r < lines.length; r++) {
+      const rowNo = r + 1;
+      const cells = parseCsvLine(lines[r]);
+      const get = (h: string) => (cells[idx(h)] ?? '').trim();
+
+      const name = get('name');
+      const email = get('email');
+      const password = get('password');
+      const phone = get('phone');
+      const dob = get('dob');
+      const genderRaw = get('gender');
+      const gender = genderRaw.toLowerCase();
+
+      const highestQualification = headers.includes('highestQualification')
+        ? get('highestQualification')
+        : '';
+      const experienceYears = headers.includes('experienceYears') ? get('experienceYears') : '';
+      const address = headers.includes('address') ? get('address') : '';
+
+      const nameLetters = (name.match(/[A-Za-z]/g) || []).length;
+      if (!name || nameLetters < 3) errors.push(`Row ${rowNo}: name must contain at least 3 letters`);
+
+      const emailOk = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
+      if (!email) errors.push(`Row ${rowNo}: email is required`);
+      else if (!emailOk) errors.push(`Row ${rowNo}: email is invalid`);
+
+      if (!password) errors.push(`Row ${rowNo}: password is required`);
+      else if (password.length < 6) errors.push(`Row ${rowNo}: password must be at least 6 characters`);
+
+      const phoneOk = /^\d{10}$/.test(phone);
+      if (!phone) errors.push(`Row ${rowNo}: phone is required`);
+      else if (!phoneOk) errors.push(`Row ${rowNo}: phone must be exactly 10 digits (numbers only)`);
+
+      if (!dob) errors.push(`Row ${rowNo}: dob is required`);
+      else {
+        const d = parseDobToDate(dob);
+        if (!d) errors.push(`Row ${rowNo}: dob is invalid`);
+        else {
+          const today = new Date();
+          if (d.getTime() > today.getTime()) errors.push(`Row ${rowNo}: dob cannot be in the future`);
+          else {
+            const age =
+              today.getFullYear() -
+              d.getFullYear() -
+              (today.getMonth() < d.getMonth() ||
+              (today.getMonth() === d.getMonth() && today.getDate() < d.getDate())
+                ? 1
+                : 0);
+            if (age < 18) errors.push(`Row ${rowNo}: dob must be at least 18 years ago`);
+          }
+        }
+      }
+
+      if (!genderRaw) errors.push(`Row ${rowNo}: gender is required`);
+      else if (!['male', 'female', 'other'].includes(gender))
+        errors.push(`Row ${rowNo}: gender must be male, female, or other`);
+
+      if (highestQualification) {
+        const letters = (highestQualification.match(/[A-Za-z]/g) || []).length;
+        if (letters < 2)
+          errors.push(`Row ${rowNo}: highestQualification must contain at least 2 letters`);
+        if (highestQualification.length > 100)
+          errors.push(`Row ${rowNo}: highestQualification cannot exceed 100 characters`);
+      }
+
+      if (experienceYears) {
+        const n = Number(experienceYears);
+        if (!Number.isFinite(n) || !Number.isInteger(n)) {
+          errors.push(`Row ${rowNo}: experienceYears must be a whole number`);
+        } else {
+          if (n < 0) errors.push(`Row ${rowNo}: experienceYears cannot be negative`);
+          if (n > 42) errors.push(`Row ${rowNo}: experienceYears cannot be greater than 42`);
+        }
+      }
+
+      if (address) {
+        const letters = (address.match(/[A-Za-z]/g) || []).length;
+        if (letters < 5) errors.push(`Row ${rowNo}: address must contain at least 5 letters`);
+        if (address.length > 250) errors.push(`Row ${rowNo}: address cannot exceed 250 characters`);
+      }
+    }
+
+    if (errors.length) {
+      return { ok: false, errors };
+    }
+
+    return { ok: true, errors: [] as string[] };
+  };
+
+  const downloadTeacherSampleCsv = () => {
+    const csvContent =
+      'name,email,password,phone,dob,gender,highestQualification,experienceYears,address\nJohn Doe,john@example.com,pass1234,9876543210,2000-01-15,male,B.Ed,5,Some street address';
+    const blob = new Blob([csvContent], { type: 'text/csv' });
+    const url = window.URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = 'teachers_sample.csv';
+    a.click();
+  };
+
+  const handleBulkTeacherUpload = async () => {
+    if (!bulkTeacherFile) {
+      toast.error('Please select a CSV file');
+      return;
+    }
+
+    const validation = await validateTeacherCsvFile(bulkTeacherFile);
+    if (!validation.ok) {
+      setBulkTeacherClientErrors(validation.errors);
+      toast.error(validation.errors[0] || 'CSV validation failed');
+      return;
+    }
+
+    setBulkTeacherClientErrors([]);
+    bulkUploadTeachersMutation.mutate(
+      { file: bulkTeacherFile },
+      {
+        onSuccess: (resp: any) => {
+          if (resp && resp.success === false) {
+            toast.error(resp?.message || 'CSV validation failed');
+            return;
+          }
+          toast.success(resp?.message || 'Teachers uploaded successfully');
+          resetBulkTeachersUpload();
+          setIsBulkUploadOpen(false);
+        },
+        onError: (err: any) => {
+          const msg = err?.data?.validationErrors?.length
+            ? `CSV validation failed. Row ${err.data.validationErrors[0].row}: ${err.data.validationErrors[0].message}`
+            : getErrorMessage(err);
+          toast.error(msg);
+        }
+      }
+    );
   };
 
   const handleAddTeacher = (e: React.SyntheticEvent) => {
@@ -449,17 +680,26 @@ export default function TeachersPage() {
                 Manage teachers and class assignments
               </p>
             </div>
-            <button
-              onClick={() => setIsAddTeacherOpen(!isAddTeacherOpen)}
-              className="px-4 sm:px-6 py-2.5 sm:py-3 bg-white text-blue-600 rounded-xl text-sm font-medium hover:bg-gray-50 transition-all duration-200 transform hover:scale-105 shadow-lg flex items-center justify-center"
-            >
-              {isAddTeacherOpen ? (
-                <X className="h-4 w-4 sm:h-5 sm:w-5 mr-2" />
-              ) : (
-                <Plus className="h-4 w-4 sm:h-5 sm:w-5 mr-2" />
-              )}
-              <span>{isAddTeacherOpen ? 'Cancel' : 'Add Teacher'}</span>
-            </button>
+            <div className="flex flex-col sm:flex-row gap-3">
+              <button
+                onClick={() => setIsBulkUploadOpen(true)}
+                className="px-4 sm:px-6 py-2.5 sm:py-3 bg-white text-blue-600 rounded-xl text-sm font-medium hover:bg-gray-50 transition-all duration-200 transform hover:scale-105 shadow-lg flex items-center justify-center"
+              >
+                <Upload className="h-4 w-4 sm:h-5 sm:w-5 mr-2" />
+                <span>Bulk Upload</span>
+              </button>
+              <button
+                onClick={() => setIsAddTeacherOpen(!isAddTeacherOpen)}
+                className="px-4 sm:px-6 py-2.5 sm:py-3 bg-white text-blue-600 rounded-xl text-sm font-medium hover:bg-gray-50 transition-all duration-200 transform hover:scale-105 shadow-lg flex items-center justify-center"
+              >
+                {isAddTeacherOpen ? (
+                  <X className="h-4 w-4 sm:h-5 sm:w-5 mr-2" />
+                ) : (
+                  <Plus className="h-4 w-4 sm:h-5 sm:w-5 mr-2" />
+                )}
+                <span>{isAddTeacherOpen ? 'Cancel' : 'Add Teacher'}</span>
+              </button>
+            </div>
           </div>
         </div>
       </header>
@@ -692,6 +932,119 @@ export default function TeachersPage() {
                     </Button>
                   </div>
                 </div>
+              </motion.div>
+            )}
+          </AnimatePresence>
+
+          <AnimatePresence>
+            {isBulkUploadOpen && (
+              <motion.div
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                exit={{ opacity: 0 }}
+                className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 p-4"
+                onClick={() => {
+                  resetBulkTeachersUpload();
+                  setIsBulkUploadOpen(false);
+                }}
+              >
+                <motion.div
+                  initial={{ scale: 0.92, y: 10 }}
+                  animate={{ scale: 1, y: 0 }}
+                  exit={{ scale: 0.92, y: 10 }}
+                  onClick={(e) => e.stopPropagation()}
+                  className="bg-white/95 dark:bg-gray-800/95 backdrop-blur-sm border border-gray-200/50 dark:border-gray-700/50 rounded-2xl shadow-2xl p-6 w-full max-w-2xl"
+                >
+                  <div className="flex items-center justify-between mb-4">
+                    <div className="flex items-center gap-3">
+                      <div className="p-2 bg-gradient-to-br from-blue-600 to-indigo-600 rounded-xl shadow-lg">
+                        <Upload className="w-5 h-5 text-white" />
+                      </div>
+                      <div>
+                        <h3 className="text-lg font-bold text-gray-900 dark:text-white">
+                          Bulk Upload Teachers
+                        </h3>
+                        <p className="text-sm text-gray-600 dark:text-gray-400">
+                          Upload a CSV to create teachers
+                        </p>
+                      </div>
+                    </div>
+                    <button
+                      onClick={() => {
+                        resetBulkTeachersUpload();
+                        setIsBulkUploadOpen(false);
+                      }}
+                      className="text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg p-2 transition-colors"
+                    >
+                      <X className="w-5 h-5" />
+                    </button>
+                  </div>
+
+                  <div className="flex items-center justify-between flex-wrap gap-3 mb-4">
+                    <p className="text-sm text-gray-600 dark:text-gray-400">
+                      Required columns: Name, Email, Password, Phone, Dob, Gender <br/>
+                      Optional: Highest Qualification, Experience Years, Address
+                    </p>
+                    <button
+                      onClick={downloadTeacherSampleCsv}
+                      className="px-4 py-2 bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 text-gray-900 dark:text-white rounded-xl hover:bg-gray-50 dark:hover:bg-gray-600 transition-all text-sm flex items-center gap-2 shadow-sm"
+                    >
+                      <Download className="w-4 h-4" /> Sample CSV
+                    </button>
+                  </div>
+
+                  <div className="space-y-3">
+                    <input
+                      type="file"
+                      accept=".csv"
+                      onChange={(e) => {
+                        setBulkTeacherClientErrors([]);
+                        setBulkTeacherFile(e.target.files?.[0] || null);
+                      }}
+                      className="w-full text-sm text-gray-700 dark:text-gray-300 file:mr-4 file:py-2.5 file:px-4 file:rounded-xl file:border-0 file:text-sm file:font-semibold file:bg-blue-600 file:text-white hover:file:bg-blue-700 dark:file:bg-blue-500 dark:hover:file:bg-blue-600 file:shadow-sm file:cursor-pointer cursor-pointer"
+                    />
+
+                    {bulkTeacherClientErrors.length > 0 && (
+                      <div className="p-4 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-xl">
+                        <p className="text-red-600 dark:text-red-400 text-sm font-semibold mb-2">
+                          Please fix the following issues in your CSV:
+                        </p>
+                        <div className="space-y-1">
+                          {bulkTeacherClientErrors.slice(0, 12).map((msg) => (
+                            <p key={msg} className="text-red-600 dark:text-red-400 text-xs">
+                              {msg}
+                            </p>
+                          ))}
+                          {bulkTeacherClientErrors.length > 12 && (
+                            <p className="text-red-600 dark:text-red-400 text-xs">
+                              And {bulkTeacherClientErrors.length - 12} more...
+                            </p>
+                          )}
+                        </div>
+                      </div>
+                    )}
+                  </div>
+
+                  <div className="flex gap-3 mt-5">
+                    <button
+                      onClick={handleBulkTeacherUpload}
+                      disabled={bulkUploadTeachersMutation.isPending || !bulkTeacherFile}
+                      className="px-6 py-2.5 bg-gradient-to-br from-teal-500 to-cyan-600 text-white font-semibold rounded-xl hover:opacity-90 transition-all disabled:opacity-50 shadow-lg"
+                    >
+                      {bulkUploadTeachersMutation.isPending ? 'Uploading...' : 'Upload CSV'}
+                    </button>
+                    <Button
+                      variant="outline"
+                      onClick={() => {
+                        resetBulkTeachersUpload();
+                        setIsBulkUploadOpen(false);
+                      }}
+                      className="rounded-xl"
+                    >
+                      Cancel
+                    </Button>
+                  </div>
+                </motion.div>
               </motion.div>
             )}
           </AnimatePresence>
