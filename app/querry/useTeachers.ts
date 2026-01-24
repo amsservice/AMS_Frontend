@@ -330,6 +330,27 @@ export const useCreateTeacher = () => {
 };
 
 /* =====================================================
+   PRINCIPAL: ACTIVATE TEACHER
+   PUT /api/teacher/:id/activate
+===================================================== */
+export const useActivateTeacher = () => {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: (teacherId: string) =>
+      apiFetch(`/api/teacher/${teacherId}/activate`, {
+        method: 'PUT'
+      }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['teachers'] });
+      queryClient.invalidateQueries({ queryKey: ['teacher-full'] });
+      queryClient.invalidateQueries({ queryKey: ['active-teachers'] });
+      queryClient.invalidateQueries({ queryKey: ['classes'] });
+    }
+  });
+};
+
+/* =====================================================
    PRINCIPAL: LIST TEACHERS
    GET /api/teacher
 ===================================================== */
