@@ -147,13 +147,10 @@ export default function AddHolidayForm() {
             error?.message ||
             'Failed to add holiday';
 
-          if (
-            errorMessage.includes('No active session') ||
-            errorMessage.includes('session')
-          ) {
-            toast.error(
-              'No active session found. Please create or activate a session first.'
-            );
+          if (errorMessage.includes('Holiday dates must be within the current academic session')) {
+            toast.error('Holiday must be within the current session year.');
+          } else if (errorMessage.includes('No active session') || errorMessage.includes('No active academic session')) {
+            toast.error('No active session found. Please create or activate a session first.');
           } else if (errorMessage.includes('overlap')) {
             toast.error('Holiday dates overlap with an existing holiday');
           } else {
