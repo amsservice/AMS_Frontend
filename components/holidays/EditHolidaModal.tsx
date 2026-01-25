@@ -312,7 +312,25 @@ export default function EditHolidayModal({
           description: form.description
         }
       },
-      { onSuccess: onClose }
+      {
+        onSuccess: onClose,
+        onError: (error: any) => {
+          const errorMessage =
+            error?.response?.data?.message ||
+            error?.message ||
+            'Failed to update holiday';
+
+          if (errorMessage.includes('Holiday dates must be within the current academic session')) {
+            toast.error('Holiday must be within the current session year.');
+          } else if (errorMessage.includes('No active session') || errorMessage.includes('No active academic session')) {
+            toast.error('No active session found. Please create or activate a session first.');
+          } else if (errorMessage.includes('overlap')) {
+            toast.error('Holiday dates overlap with an existing holiday');
+          } else {
+            toast.error(errorMessage);
+          }
+        }
+      }
     );
   };
 
