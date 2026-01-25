@@ -32,6 +32,18 @@ export default function RegisterPage() {
   const planParam = searchParams.get("plan");
   const planQuery = planParam ? `&plan=${encodeURIComponent(planParam)}` : "";
 
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    try {
+      if (!planParam) {
+        window.localStorage.removeItem("selectedPlanId");
+      } else {
+        window.localStorage.setItem("selectedPlanId", planParam);
+      }
+    } catch {
+    }
+  }, [planParam]);
+
   const [submitting, setSubmitting] = useState(false);
   const [isDark, setIsDark] = useState(false);
   const [mounted, setMounted] = useState(false);

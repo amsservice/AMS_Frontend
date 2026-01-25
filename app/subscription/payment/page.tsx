@@ -99,7 +99,23 @@ export default function PaymentPage() {
   const [futureError, setFutureError] = useState<string | null>(null);
   const [shake, setShake] = useState(false);
 
-  /* 🔐 BLOCK ACCESS WITHOUT OTP */
+  useEffect(() => {
+    setMounted(true);
+
+    try {
+      const savedTheme = window.localStorage.getItem("Upastithi-theme");
+      const initialIsDark = savedTheme
+        ? savedTheme === "dark"
+        : window.matchMedia("(prefers-color-scheme: dark)").matches;
+
+      setIsDark(initialIsDark);
+      document.documentElement.classList.toggle("dark", initialIsDark);
+    } catch {
+      setIsDark(false);
+      document.documentElement.classList.remove("dark");
+    }
+  }, []);
+
   useEffect(() => {
     if (isUpgradeMode) return;
     if (!schoolEmail) {
@@ -174,19 +190,18 @@ export default function PaymentPage() {
     const planParam = searchParams.get("plan");
     if (planParam === "6M" || planParam === "1Y" || planParam === "2Y" || planParam === "3Y") {
       setPlanId(planParam);
+      return;
+    }
+
+    if (typeof window === "undefined") return;
+    try {
+      const storedPlan = window.localStorage.getItem("selectedPlanId");
+      if (storedPlan === "6M" || storedPlan === "1Y" || storedPlan === "2Y" || storedPlan === "3Y") {
+        setPlanId(storedPlan);
+      }
+    } catch {
     }
   }, [searchParams]);
-
-  useEffect(() => {
-    setMounted(true);
-    const savedTheme = window.localStorage.getItem("Upastithi-theme");
-    const initialIsDark = savedTheme
-      ? savedTheme === "dark"
-      : window.matchMedia("(prefers-color-scheme: dark)").matches;
-
-    setIsDark(initialIsDark);
-    document.documentElement.classList.toggle("dark", initialIsDark);
-  }, []);
 
   const validateStudents = () => {
     let valid = true;
@@ -293,6 +308,11 @@ export default function PaymentPage() {
       return;
     }
 
+    try {
+      window.localStorage.removeItem("selectedPlanId");
+    } catch {
+    }
+
     setLoading(true);
 
     try {
@@ -367,6 +387,7 @@ export default function PaymentPage() {
 
         handler: async function (response: RazorpayHandlerResponse) {
           /* 3️⃣ Verify payment */
+
           const verifyRes = await fetch(
             isUpgradeMode
               ? `${API_URL}/api/payment/verify-upgrade`
@@ -394,6 +415,12 @@ export default function PaymentPage() {
           if (!isUpgradeMode) {
             localStorage.setItem("role", "principal");
           }
+
+          try {
+            window.localStorage.removeItem("selectedPlanId");
+          } catch {
+          }
+
           setAuthUser(verifyData.user);
           router.replace("/dashboard/principal/schoolProfile");
         },
