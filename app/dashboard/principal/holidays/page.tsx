@@ -38,6 +38,16 @@ export default function HolidayPage() {
       ? holidays
       : holidays.filter((h) => h.category === filter);
 
+  const isPastHoliday = (h: any) => {
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+
+    const end = new Date(h.endDate || h.startDate);
+    end.setHours(0, 0, 0, 0);
+
+    return end.getTime() < today.getTime();
+  };
+
   const normalizeDateKey = (iso: string) => {
     const d = new Date(iso);
     d.setHours(0, 0, 0, 0);
@@ -246,8 +256,16 @@ export default function HolidayPage() {
                         <Pencil className="w-4 h-4 text-gray-900 dark:text-white" />
                       </button>
                       <button
-                        onClick={() => setDeleting(h)}
-                        className="p-2 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-xl transition-all duration-200 shadow-sm"
+                        onClick={() => {
+                          if (isPastHoliday(h)) {
+                            toast.error('Past holidays cannot be deleted');
+                            return;
+                          }
+                          setDeleting(h);
+                        }}
+                        disabled={isPastHoliday(h)}
+                        className="p-2 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-xl transition-all duration-200 shadow-sm disabled:opacity-40 disabled:cursor-not-allowed"
+                        title={isPastHoliday(h) ? 'Past holidays cannot be deleted' : 'Delete'}
                       >
                         <Trash2 className="w-4 h-4 text-gray-900 dark:text-white" />
                       </button>
