@@ -10,6 +10,16 @@ type PricingCardsProps = {
 };
 
 export default function PricingCards({ isDark, upgradeMode }: PricingCardsProps) {
+  const displayPlans = PRICING_PLANS.filter((p) => p.id !== "6M");
+
+  const setSelectedPlan = (planId: string) => {
+    if (typeof window === "undefined") return;
+    try {
+      window.localStorage.setItem("selectedPlanId", planId);
+    } catch {
+    }
+  };
+
   return (
     <div className="max-w-7xl mx-auto mb-16">
       <div className="grid grid-cols-1 lg:grid-cols-4 gap-6 mb-8">
@@ -57,7 +67,11 @@ export default function PricingCards({ isDark, upgradeMode }: PricingCardsProps)
                 </p>
               </div>
 
-              <Link href="/auth/register" className="block">
+              <Link
+                href="/auth/register?plan=6M"
+                className="block"
+                onClick={() => setSelectedPlan("6M")}
+              >
                 <button className="w-full py-4 rounded-xl font-bold text-base transition-all duration-300 transform hover:scale-[1.05] active:scale-[0.98] shadow-lg bg-gradient-to-r from-purple-600 via-violet-600 to-indigo-600 text-white hover:shadow-purple-500/50 hover:shadow-2xl">
                   Start Trial for ₹1
                 </button>
@@ -71,7 +85,7 @@ export default function PricingCards({ isDark, upgradeMode }: PricingCardsProps)
         ) : null}
 
         {/* Regular Plans */}
-        {PRICING_PLANS.map((plan) => {
+        {displayPlans.map((plan) => {
           const monthlyFor500 = plan.pricePerStudentPerMonth * 500;
           const yearlyFor500 = monthlyFor500 * 12;
 
@@ -130,9 +144,13 @@ export default function PricingCards({ isDark, upgradeMode }: PricingCardsProps)
                   href={
                     upgradeMode
                       ? `/subscription/payment?mode=upgrade&plan=${plan.id}`
-                      : `/auth/register`
+                      : `/auth/register?plan=${plan.id}`
                   }
                   className="block"
+                  onClick={() => {
+                    if (upgradeMode) return;
+                    setSelectedPlan(plan.id);
+                  }}
                 >
                   <button
                     className={`w-full py-4 rounded-xl font-bold text-base transition-all duration-300 transform hover:scale-[1.05] active:scale-[0.98] shadow-lg ${
