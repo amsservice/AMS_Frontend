@@ -1448,20 +1448,24 @@ export default function TeachersPage() {
                 >
                   Cancel
                 </Button>
-                <button
-                  onClick={() => {
-                    const id = confirmDelete.id;
-                    setConfirmDelete(null);
-                    setShowReassignOnDelete(false);
-                    setReassignToTeacherId('');
-                    setIsReassigningAndDeleting(false);
-                    deleteTeacher(id);
-                  }}
-                  disabled={isReassigningAndDeleting}
-                  className="px-6 py-2.5 bg-red-600 hover:bg-red-700 text-white font-semibold rounded-xl transition-all shadow-lg disabled:opacity-50"
-                >
-                  Yes, Delete
-                </button>
+                {!showReassignOnDelete && (
+                  <button
+                    onClick={() => {
+                      if (showReassignOnDelete || isReassigningAndDeleting) return;
+
+                      const id = confirmDelete.id;
+                      setConfirmDelete(null);
+                      setShowReassignOnDelete(false);
+                      setReassignToTeacherId('');
+                      setIsReassigningAndDeleting(false);
+                      deleteTeacher(id);
+                    }}
+                    disabled={isReassigningAndDeleting}
+                    className="px-6 py-2.5 bg-red-600 hover:bg-red-700 text-white font-semibold rounded-xl transition-all shadow-lg disabled:opacity-50"
+                  >
+                    Yes, Delete
+                  </button>
+                )}
               </div>
             </motion.div>
           </motion.div>
