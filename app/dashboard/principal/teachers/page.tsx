@@ -6,12 +6,12 @@ import {
   Users,
   Plus,
   X,
+  Upload,
+  Download,
   Mail,
   BookOpen,
   Trash2,
   Edit,
-  UserX,
-  UserCheck,
   Eye,
   Phone,
   Calendar,
@@ -31,9 +31,9 @@ import {
   useTeachers,
   useCreateTeacher,
   useDeleteTeacher,
+  useReactivateTeacher,
   useAssignClassToTeacher,
-  useDeactivateTeacher,
-  useActivateTeacher,
+  useBulkUploadTeachers,
   useSwapTeacherClasses,
   useTeacherFullProfile,
   useUpdateTeacherProfileByPrincipal
@@ -63,14 +63,20 @@ interface Teacher {
 
 export default function TeachersPage() {
   const [isAddTeacherOpen, setIsAddTeacherOpen] = useState(false);
+  const [isBulkUploadOpen, setIsBulkUploadOpen] = useState(false);
   const [assigningTeacherId, setAssigningTeacherId] = useState<string | null>(null);
   const [swappingTeacherId, setSwappingTeacherId] = useState<string | null>(null);
   const [viewingTeacherId, setViewingTeacherId] = useState<string | null>(null);
   const [isEditing, setIsEditing] = useState(false);
   const [selectedClassId, setSelectedClassId] = useState('');
+
   const [confirmDelete, setConfirmDelete] = useState<{ id: string; name: string } | null>(
     null
   );
+
+  const [showReassignOnDelete, setShowReassignOnDelete] = useState(false);
+  const [reassignToTeacherId, setReassignToTeacherId] = useState('');
+  const [isReassigningAndDeleting, setIsReassigningAndDeleting] = useState(false);
 
   const [formData, setFormData] = useState({
     name: '',
@@ -98,12 +104,19 @@ export default function TeachersPage() {
   const { data: teachers = [], isLoading } = useTeachers();
   const { data: classes = [] } = useClasses();
 
+  const [bulkTeacherFile, setBulkTeacherFile] = useState<File | null>(null);
+  const [bulkTeacherClientErrors, setBulkTeacherClientErrors] = useState<string[]>([]);
+
   const { mutate: createTeacher } = useCreateTeacher();
   const { mutate: deleteTeacher } = useDeleteTeacher();
-  const { mutate: deactivateTeacher } = useDeactivateTeacher();
-  const { mutate: activateTeacher } = useActivateTeacher();
+  const { mutate: reactivateTeacher, isPending: isReactivatingTeacher } = useReactivateTeacher();
+  const bulkUploadTeachersMutation = useBulkUploadTeachers();
   const assignClassMutation = useAssignClassToTeacher();
   const swapClassMutation = useSwapTeacherClasses();
+
+  const [confirmReactivate, setConfirmReactivate] = useState<
+    { id: string; email: string } | null
+  >(null);
 
   const { data: teacherFullData, isLoading: isLoadingFullProfile } =
     useTeacherFullProfile(viewingTeacherId || '');
@@ -190,6 +203,10 @@ export default function TeachersPage() {
       }
       if (n < 0) return 'Experience cannot be negative';
       if (n > 42) return 'Experience cannot be greater than 42 years';
+
+      if (n > age) return 'Experience years cannot be greater than age';
+      if (age - n < 14)
+        return 'DOB and experience years difference must be at least 14 years';
     }
 
     if (data.address !== undefined && data.address.trim().length > 0) {
@@ -225,6 +242,240 @@ export default function TeachersPage() {
     }
 
     return 'Request failed';
+  };
+
+  const resetBulkTeachersUpload = () => {
+    setBulkTeacherFile(null);
+    setBulkTeacherClientErrors([]);
+  };
+
+  const parseCsvLine = (line: string) => {
+    const out: string[] = [];
+    let cur = '';
+    let inQuotes = false;
+
+    for (let i = 0; i < line.length; i++) {
+      const ch = line[i];
+      if (ch === '"') {
+        if (inQuotes && line[i + 1] === '"') {
+          cur += '"';
+          i++;
+        } else {
+          inQuotes = !inQuotes;
+        }
+        continue;
+      }
+      if (ch === ',' && !inQuotes) {
+        out.push(cur);
+        cur = '';
+        continue;
+      }
+      cur += ch;
+    }
+    out.push(cur);
+    return out.map((v) => v.trim());
+  };
+
+  const validateTeacherCsvFile = async (csvFile: File) => {
+    const text = await csvFile.text();
+    const lines = text
+      .split(/\r?\n/)
+      .map((l) => l.trim())
+      .filter(Boolean);
+
+    if (!lines.length) {
+      return { ok: false, errors: ['CSV file is empty'] };
+    }
+
+    const headers = parseCsvLine(lines[0]).map((h) => h.trim());
+    const requiredHeaders = ['name', 'email', 'password', 'phone', 'dob', 'gender'];
+    const missingHeaders = requiredHeaders.filter((h) => !headers.includes(h));
+    if (missingHeaders.length) {
+      return {
+        ok: false,
+        errors: [
+          `Missing required columns: ${missingHeaders.join(', ')}`,
+          'Please download the sample CSV and follow the same header names.'
+        ]
+      };
+    }
+
+    const idx = (name: string) => headers.indexOf(name);
+    const errors: string[] = [];
+
+    const parseDobToDate = (raw: string) => {
+      const v = String(raw || '').trim();
+      if (!v) return null;
+
+      if (/^\d{4}-\d{2}-\d{2}$/.test(v)) {
+        const d = new Date(v);
+        return isNaN(d.getTime()) ? null : d;
+      }
+
+      const m = v.match(/^(\d{1,2})[\/\-](\d{1,2})[\/\-](\d{4})$/);
+      if (m) {
+        const dd = Number(m[1]);
+        const mm = Number(m[2]);
+        const yyyy = Number(m[3]);
+        if (dd >= 1 && dd <= 31 && mm >= 1 && mm <= 12) {
+          const d = new Date(yyyy, mm - 1, dd);
+          if (d.getFullYear() === yyyy && d.getMonth() === mm - 1 && d.getDate() === dd) {
+            return d;
+          }
+        }
+        return null;
+      }
+
+      const fallback = new Date(v);
+      return isNaN(fallback.getTime()) ? null : fallback;
+    };
+
+    for (let r = 1; r < lines.length; r++) {
+      const rowNo = r + 1;
+      const cells = parseCsvLine(lines[r]);
+      const get = (h: string) => (cells[idx(h)] ?? '').trim();
+
+      const name = get('name');
+      const email = get('email');
+      const password = get('password');
+      const phone = get('phone');
+      const dob = get('dob');
+      const genderRaw = get('gender');
+      const gender = genderRaw.toLowerCase();
+
+      const highestQualification = headers.includes('highestQualification')
+        ? get('highestQualification')
+        : '';
+      const experienceYears = headers.includes('experienceYears') ? get('experienceYears') : '';
+      const address = headers.includes('address') ? get('address') : '';
+
+      let ageYears: number | null = null;
+
+      const nameLetters = (name.match(/[A-Za-z]/g) || []).length;
+      if (!name || nameLetters < 3) errors.push(`Row ${rowNo}: name must contain at least 3 letters`);
+
+      const emailOk = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
+      if (!email) errors.push(`Row ${rowNo}: email is required`);
+      else if (!emailOk) errors.push(`Row ${rowNo}: email is invalid`);
+
+      if (!password) errors.push(`Row ${rowNo}: password is required`);
+      else if (password.length < 6) errors.push(`Row ${rowNo}: password must be at least 6 characters`);
+
+      const phoneOk = /^\d{10}$/.test(phone);
+      if (!phone) errors.push(`Row ${rowNo}: phone is required`);
+      else if (!phoneOk) errors.push(`Row ${rowNo}: phone must be exactly 10 digits (numbers only)`);
+
+      if (!dob) errors.push(`Row ${rowNo}: dob is required`);
+      else {
+        const d = parseDobToDate(dob);
+        if (!d) errors.push(`Row ${rowNo}: dob is invalid`);
+        else {
+          const today = new Date();
+          if (d.getTime() > today.getTime()) errors.push(`Row ${rowNo}: dob cannot be in the future`);
+          else {
+            const age =
+              today.getFullYear() -
+              d.getFullYear() -
+              (today.getMonth() < d.getMonth() ||
+              (today.getMonth() === d.getMonth() && today.getDate() < d.getDate())
+                ? 1
+                : 0);
+            ageYears = age;
+            if (age < 18) errors.push(`Row ${rowNo}: dob must be at least 18 years ago`);
+          }
+        }
+      }
+
+      if (!genderRaw) errors.push(`Row ${rowNo}: gender is required`);
+      else if (!['male', 'female', 'other'].includes(gender))
+        errors.push(`Row ${rowNo}: gender must be male, female, or other`);
+
+      if (highestQualification) {
+        const letters = (highestQualification.match(/[A-Za-z]/g) || []).length;
+        if (letters < 2)
+          errors.push(`Row ${rowNo}: highestQualification must contain at least 2 letters`);
+        if (highestQualification.length > 100)
+          errors.push(`Row ${rowNo}: highestQualification cannot exceed 100 characters`);
+      }
+
+      if (experienceYears) {
+        const n = Number(experienceYears);
+        if (!Number.isFinite(n) || !Number.isInteger(n)) {
+          errors.push(`Row ${rowNo}: experienceYears must be a whole number`);
+        } else {
+          if (n < 0) errors.push(`Row ${rowNo}: experienceYears cannot be negative`);
+          if (n > 42) errors.push(`Row ${rowNo}: experienceYears cannot be greater than 42`);
+
+          if (ageYears !== null) {
+            if (n > ageYears)
+              errors.push(`Row ${rowNo}: experienceYears cannot be greater than age`);
+            else if (ageYears - n < 14)
+              errors.push(
+                `Row ${rowNo}: dob and experienceYears difference must be at least 14 years`
+              );
+          }
+        }
+      }
+
+      if (address) {
+        const letters = (address.match(/[A-Za-z]/g) || []).length;
+        if (letters < 5) errors.push(`Row ${rowNo}: address must contain at least 5 letters`);
+        if (address.length > 250) errors.push(`Row ${rowNo}: address cannot exceed 250 characters`);
+      }
+    }
+
+    if (errors.length) {
+      return { ok: false, errors };
+    }
+
+    return { ok: true, errors: [] as string[] };
+  };
+
+  const downloadTeacherSampleCsv = () => {
+    const csvContent =
+      'name,email,password,phone,dob,gender,highestQualification,experienceYears,address\nJohn Doe,john@example.com,pass1234,9876543210,2000-01-15,male,B.Ed,5,Some street address';
+    const blob = new Blob([csvContent], { type: 'text/csv' });
+    const url = window.URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = 'teachers_sample.csv';
+    a.click();
+  };
+
+  const handleBulkTeacherUpload = async () => {
+    if (!bulkTeacherFile) {
+      toast.error('Please select a CSV file');
+      return;
+    }
+
+    const validation = await validateTeacherCsvFile(bulkTeacherFile);
+    if (!validation.ok) {
+      setBulkTeacherClientErrors(validation.errors);
+      toast.error(validation.errors[0] || 'CSV validation failed');
+      return;
+    }
+
+    setBulkTeacherClientErrors([]);
+    bulkUploadTeachersMutation.mutate(
+      { file: bulkTeacherFile },
+      {
+        onSuccess: (resp: any) => {
+          if (resp && resp.success === false) {
+            toast.error(resp?.message || 'CSV validation failed');
+            return;
+          }
+          toast.success(resp?.message || 'Teachers uploaded successfully');
+          resetBulkTeachersUpload();
+          setIsBulkUploadOpen(false);
+        },
+        onError: (err: any) => {
+          const msg = err?.data?.validationErrors?.length
+            ? `CSV validation failed. Row ${err.data.validationErrors[0].row}: ${err.data.validationErrors[0].message}`
+            : getErrorMessage(err);
+          toast.error(msg);
+        }
+      }
+    );
   };
 
   const handleAddTeacher = (e: React.SyntheticEvent) => {
@@ -267,6 +518,16 @@ export default function TeachersPage() {
           setIsAddTeacherOpen(false);
         },
         onError: (error: any) => {
+          const code = error?.data?.code;
+          if (code === 'TEACHER_INACTIVE_EMAIL_EXISTS') {
+            const teacherId = String(error?.data?.teacherId || '');
+            const email = String(error?.data?.email || formData.email || '').trim();
+            if (teacherId) {
+              setConfirmReactivate({ id: teacherId, email });
+              return;
+            }
+          }
+
           toast.error(getErrorMessage(error));
         }
       }
@@ -414,16 +675,6 @@ export default function TeachersPage() {
       bgGradient: 'from-blue-500 to-indigo-600'
     },
     {
-      label: 'Active',
-      value: teachers.filter((t: Teacher) => t.isActive).length,
-      bgGradient: 'from-green-500 to-emerald-600'
-    },
-    {
-      label: 'Inactive',
-      value: teachers.filter((t: Teacher) => !t.isActive).length,
-      bgGradient: 'from-orange-500 to-amber-600'
-    },
-    {
       label: 'Assigned',
       value: teachers.filter((t: Teacher) => t.currentClass).length,
       bgGradient: 'from-purple-500 to-violet-600'
@@ -436,9 +687,61 @@ export default function TeachersPage() {
           ?.classId ?? null)
       : null;
 
+  const teacherToDelete = confirmDelete
+    ? (teachers as Teacher[]).find((t) => t.id === confirmDelete.id)
+    : undefined;
+
+  const unassignedTeachers = (teachers as Teacher[]).filter(
+    (t) => !t.currentClass && t.id !== confirmDelete?.id
+  );
+
+  const handleReassignAndDelete = async () => {
+    if (!confirmDelete) return;
+    if (!teacherToDelete?.currentClass) return;
+
+    if (!reassignToTeacherId) {
+      toast.error('Please select a teacher to reassign this class to');
+      return;
+    }
+
+    const classToReassign = (classes as Class[]).find(
+      (c) => c.id === teacherToDelete.currentClass!.classId
+    );
+
+    if (!classToReassign) {
+      toast.error('Unable to find class details required for reassignment');
+      return;
+    }
+
+    setIsReassigningAndDeleting(true);
+    assignClassMutation.mutate(
+      {
+        teacherId: reassignToTeacherId,
+        sessionId: classToReassign.sessionId,
+        classId: classToReassign.id,
+        className: classToReassign.name,
+        section: classToReassign.section
+      },
+      {
+        onSuccess: () => {
+          deleteTeacher(confirmDelete.id);
+          setConfirmDelete(null);
+          setShowReassignOnDelete(false);
+          setReassignToTeacherId('');
+          setIsReassigningAndDeleting(false);
+        },
+        onError: (err: any) => {
+          const msg = err?.message || 'Failed to reassign class';
+          toast.error(msg);
+          setIsReassigningAndDeleting(false);
+        }
+      }
+    );
+  };
+
   return (
     <div className="relative bg-gradient-to-br from-purple-50 via-white to-blue-50 dark:from-purple-900 dark:via-gray-900 dark:to-blue-950 overflow-hidden min-h-screen">
-      <header className="bg-gradient-to-r from-blue-600 via-purple-600 to-indigo-700 dark:from-blue-800 dark:via-purple-800 dark:to-indigo-900 shadow-xl">
+      <header className="bg-gradient-to-br from-purple-600 via-white to-blue-600 dark:from-purple-800 dark:via-gray-800 dark:to-blue-900 shadow-xl">
         <div className="max-w-7xl mx-auto py-6 sm:py-8 px-4 sm:px-6 lg:px-8">
           <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between space-y-4 lg:space-y-0">
             <div className="flex-1">
@@ -449,24 +752,33 @@ export default function TeachersPage() {
                 Manage teachers and class assignments
               </p>
             </div>
-            <button
-              onClick={() => setIsAddTeacherOpen(!isAddTeacherOpen)}
-              className="px-4 sm:px-6 py-2.5 sm:py-3 bg-white text-blue-600 rounded-xl text-sm font-medium hover:bg-gray-50 transition-all duration-200 transform hover:scale-105 shadow-lg flex items-center justify-center"
-            >
-              {isAddTeacherOpen ? (
-                <X className="h-4 w-4 sm:h-5 sm:w-5 mr-2" />
-              ) : (
-                <Plus className="h-4 w-4 sm:h-5 sm:w-5 mr-2" />
-              )}
-              <span>{isAddTeacherOpen ? 'Cancel' : 'Add Teacher'}</span>
-            </button>
+            <div className="flex flex-col sm:flex-row gap-3">
+              <button
+                onClick={() => setIsBulkUploadOpen(true)}
+                className="px-4 sm:px-6 py-2.5 sm:py-3 bg-white text-blue-600 rounded-xl text-sm font-medium hover:bg-gray-50 transition-all duration-200 transform hover:scale-105 shadow-lg flex items-center justify-center"
+              >
+                <Upload className="h-4 w-4 sm:h-5 sm:w-5 mr-2" />
+                <span>Bulk Upload</span>
+              </button>
+              <button
+                onClick={() => setIsAddTeacherOpen(!isAddTeacherOpen)}
+                className="px-4 sm:px-6 py-2.5 sm:py-3 bg-white text-blue-600 rounded-xl text-sm font-medium hover:bg-gray-50 transition-all duration-200 transform hover:scale-105 shadow-lg flex items-center justify-center"
+              >
+                {isAddTeacherOpen ? (
+                  <X className="h-4 w-4 sm:h-5 sm:w-5 mr-2" />
+                ) : (
+                  <Plus className="h-4 w-4 sm:h-5 sm:w-5 mr-2" />
+                )}
+                <span>{isAddTeacherOpen ? 'Cancel' : 'Add Teacher'}</span>
+              </button>
+            </div>
           </div>
         </div>
       </header>
 
       <main className="max-w-7xl mx-auto py-4 sm:py-6 px-4 sm:px-6 lg:px-8">
         <div className="space-y-6 sm:space-y-8">
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-2 gap-4 sm:gap-6">
             {stats.map((stat, i) => (
               <div
                 key={i}
@@ -475,9 +787,7 @@ export default function TeachersPage() {
                     ? 'from-blue-50 to-indigo-100 dark:from-blue-900/30 dark:to-indigo-900/30 border-blue-200/50 dark:border-blue-700/50'
                     : i === 1
                       ? 'from-green-50 to-emerald-100 dark:from-green-900/30 dark:to-emerald-900/30 border-green-200/50 dark:border-green-700/50'
-                      : i === 2
-                        ? 'from-orange-50 to-amber-100 dark:from-orange-900/30 dark:to-amber-900/30 border-orange-200/50 dark:border-orange-700/50'
-                        : 'from-purple-50 to-violet-100 dark:from-purple-900/30 dark:to-violet-900/30 border-purple-200/50 dark:border-purple-700/50'
+                      : 'from-orange-50 to-amber-100 dark:from-orange-900/30 dark:to-amber-900/30 border-orange-200/50 dark:border-orange-700/50'
                 }`}
               >
                 <div className="p-4 sm:p-6">
@@ -696,6 +1006,119 @@ export default function TeachersPage() {
             )}
           </AnimatePresence>
 
+          <AnimatePresence>
+            {isBulkUploadOpen && (
+              <motion.div
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                exit={{ opacity: 0 }}
+                className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 p-4"
+                onClick={() => {
+                  resetBulkTeachersUpload();
+                  setIsBulkUploadOpen(false);
+                }}
+              >
+                <motion.div
+                  initial={{ scale: 0.92, y: 10 }}
+                  animate={{ scale: 1, y: 0 }}
+                  exit={{ scale: 0.92, y: 10 }}
+                  onClick={(e) => e.stopPropagation()}
+                  className="bg-white/95 dark:bg-gray-800/95 backdrop-blur-sm border border-gray-200/50 dark:border-gray-700/50 rounded-2xl shadow-2xl p-6 w-full max-w-2xl"
+                >
+                  <div className="flex items-center justify-between mb-4">
+                    <div className="flex items-center gap-3">
+                      <div className="p-2 bg-gradient-to-br from-blue-600 to-indigo-600 rounded-xl shadow-lg">
+                        <Upload className="w-5 h-5 text-white" />
+                      </div>
+                      <div>
+                        <h3 className="text-lg font-bold text-gray-900 dark:text-white">
+                          Bulk Upload Teachers
+                        </h3>
+                        <p className="text-sm text-gray-600 dark:text-gray-400">
+                          Upload a CSV to create teachers
+                        </p>
+                      </div>
+                    </div>
+                    <button
+                      onClick={() => {
+                        resetBulkTeachersUpload();
+                        setIsBulkUploadOpen(false);
+                      }}
+                      className="text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg p-2 transition-colors"
+                    >
+                      <X className="w-5 h-5" />
+                    </button>
+                  </div>
+
+                  <div className="flex items-center justify-between flex-wrap gap-3 mb-4">
+                    <p className="text-sm text-gray-600 dark:text-gray-400">
+                      Required columns: Name, Email, Password, Phone, Dob, Gender <br/>
+                      Optional: Highest Qualification, Experience Years, Address
+                    </p>
+                    <button
+                      onClick={downloadTeacherSampleCsv}
+                      className="px-4 py-2 bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 text-gray-900 dark:text-white rounded-xl hover:bg-gray-50 dark:hover:bg-gray-600 transition-all text-sm flex items-center gap-2 shadow-sm"
+                    >
+                      <Download className="w-4 h-4" /> Sample CSV
+                    </button>
+                  </div>
+
+                  <div className="space-y-3">
+                    <input
+                      type="file"
+                      accept=".csv"
+                      onChange={(e) => {
+                        setBulkTeacherClientErrors([]);
+                        setBulkTeacherFile(e.target.files?.[0] || null);
+                      }}
+                      className="w-full text-sm text-gray-700 dark:text-gray-300 file:mr-4 file:py-2.5 file:px-4 file:rounded-xl file:border-0 file:text-sm file:font-semibold file:bg-blue-600 file:text-white hover:file:bg-blue-700 dark:file:bg-blue-500 dark:hover:file:bg-blue-600 file:shadow-sm file:cursor-pointer cursor-pointer"
+                    />
+
+                    {bulkTeacherClientErrors.length > 0 && (
+                      <div className="p-4 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-xl">
+                        <p className="text-red-600 dark:text-red-400 text-sm font-semibold mb-2">
+                          Please fix the following issues in your CSV:
+                        </p>
+                        <div className="space-y-1">
+                          {bulkTeacherClientErrors.slice(0, 12).map((msg) => (
+                            <p key={msg} className="text-red-600 dark:text-red-400 text-xs">
+                              {msg}
+                            </p>
+                          ))}
+                          {bulkTeacherClientErrors.length > 12 && (
+                            <p className="text-red-600 dark:text-red-400 text-xs">
+                              And {bulkTeacherClientErrors.length - 12} more...
+                            </p>
+                          )}
+                        </div>
+                      </div>
+                    )}
+                  </div>
+
+                  <div className="flex gap-3 mt-5">
+                    <button
+                      onClick={handleBulkTeacherUpload}
+                      disabled={bulkUploadTeachersMutation.isPending || !bulkTeacherFile}
+                      className="px-6 py-2.5 bg-gradient-to-br from-teal-500 to-cyan-600 text-white font-semibold rounded-xl hover:opacity-90 transition-all disabled:opacity-50 shadow-lg"
+                    >
+                      {bulkUploadTeachersMutation.isPending ? 'Uploading...' : 'Upload CSV'}
+                    </button>
+                    <Button
+                      variant="outline"
+                      onClick={() => {
+                        resetBulkTeachersUpload();
+                        setIsBulkUploadOpen(false);
+                      }}
+                      className="rounded-xl"
+                    >
+                      Cancel
+                    </Button>
+                  </div>
+                </motion.div>
+              </motion.div>
+            )}
+          </AnimatePresence>
+
           <div className="bg-white/80 dark:bg-gray-800/80 backdrop-blur-sm shadow-xl rounded-2xl border border-gray-200/50 dark:border-gray-700/50 overflow-hidden">
             <div className="px-4 sm:px-6 py-4 sm:py-5 border-b border-gray-200/50 dark:border-gray-700/50">
               <div className="flex items-center gap-3">
@@ -713,20 +1136,17 @@ export default function TeachersPage() {
               </div>
             </div>
 
-            <div className="hidden lg:grid lg:grid-cols-12 gap-4 items-center">
+            <div className="hidden lg:grid lg:grid-cols-12 gap-4 items-center px-6 py-3">
               <div className="col-span-3 text-xs font-semibold text-gray-600 dark:text-gray-400 uppercase tracking-wide">
                 Name
               </div>
-              <div className="col-span-3 text-xs font-semibold text-gray-600 dark:text-gray-400 uppercase tracking-wide">
+              <div className="col-span-4 text-xs font-semibold text-gray-600 dark:text-gray-400 uppercase tracking-wide">
                 Email
               </div>
               <div className="col-span-2 text-xs font-semibold text-gray-600 dark:text-gray-400 uppercase tracking-wide">
                 Assigned Class
               </div>
-              <div className="col-span-1 text-xs font-semibold text-gray-600 dark:text-gray-400 uppercase tracking-wide">
-                Status
-              </div>
-              <div className="col-span-3 text-xs font-semibold text-gray-600 dark:text-gray-400 uppercase tracking-wide text-right">
+              <div className="col-span-3 text-xs font-semibold text-gray-600 dark:text-gray-400 uppercase tracking-wide text-right mr-24">
                 Actions
               </div>
             </div>
@@ -799,7 +1219,7 @@ export default function TeachersPage() {
                         {teacher.currentClass && (
                           <button
                             onClick={() => setSwappingTeacherId(teacher.id)}
-                            className="flex-1 bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 text-gray-900 dark:text-white font-semibold py-2 px-4 rounded-xl hover:bg-gray-50 dark:hover:bg-gray-600 transition-all text-sm flex items-center justify-center gap-2 shadow-sm"
+                            className="flex-1 bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 text-gray-900 dark:text-white font-semibold py-2 px-4 rounded-xl hover:bg-gray-50 dark:hover:bg-gray-600 transition-all text-sm flex items-center justify-center gap-2 shadow-sm min-w-[96px]"
                           >
                             <Edit className="w-4 h-4" /> Swap
                           </button>
@@ -808,38 +1228,23 @@ export default function TeachersPage() {
                         {!teacher.currentClass && (
                           <button
                             onClick={() => setAssigningTeacherId(teacher.id)}
-                            className="flex-1 bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 text-gray-900 dark:text-white font-semibold py-2 px-4 rounded-xl hover:bg-gray-50 dark:hover:bg-gray-600 transition-all text-sm shadow-sm"
+                            className="flex-1 bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 text-gray-900 dark:text-white font-semibold py-2 px-4 rounded-xl hover:bg-gray-50 dark:hover:bg-gray-600 transition-all text-sm flex items-center justify-center gap-2 shadow-sm min-w-[96px]"
                           >
                             Assign
                           </button>
                         )}
 
-                        {teacher.isActive ? (
-                          <button
-                            onClick={() => deactivateTeacher(teacher.id)}
-                            className="bg-orange-500 hover:bg-orange-600 text-white font-semibold py-2 px-4 rounded-xl transition-all text-sm flex items-center gap-2 shadow-sm"
-                            title="Deactivate"
-                          >
-                            <UserX className="w-5 h-5" />
-                          </button>
-                        ) : (
-                          <>
-                            <button
-                              onClick={() => activateTeacher(teacher.id)}
-                              className="bg-emerald-500 hover:bg-emerald-600 text-white font-semibold py-2 px-4 rounded-xl transition-all text-sm flex items-center gap-2 shadow-sm"
-                              title="Activate"
-                            >
-                              <UserCheck className="w-5 h-5" />
-                            </button>
-                            <button
-                              onClick={() => setConfirmDelete({ id: teacher.id, name: teacher.name })}
-                              className="bg-red-500 hover:bg-red-600 text-white font-semibold py-2 px-4 rounded-xl transition-all text-sm flex items-center gap-2 shadow-sm"
-                              title="Delete"
-                            >
-                              <Trash2 className="w-5 h-5" />
-                            </button>
-                          </>
-                        )}
+                        <button
+                          onClick={() => {
+                            setConfirmDelete({ id: teacher.id, name: teacher.name });
+                            setShowReassignOnDelete(false);
+                            setReassignToTeacherId('');
+                          }}
+                          className="bg-red-500 hover:bg-red-600 text-white font-semibold py-2 px-4 rounded-xl transition-all text-sm flex items-center gap-2 shadow-sm"
+                          title="Delete"
+                        >
+                          <Trash2 className="w-5 h-5" />
+                        </button>
                       </div>
                     </div>
 
@@ -855,7 +1260,7 @@ export default function TeachersPage() {
                         </span>
                       </div>
 
-                      <div className="col-span-3 flex items-center gap-2 text-gray-600 dark:text-gray-400 text-sm">
+                      <div className="col-span-4 flex items-center gap-2 text-gray-600 dark:text-gray-400 text-sm">
                         <Mail className="w-4 h-4" /> {teacher.email}
                       </div>
 
@@ -874,18 +1279,6 @@ export default function TeachersPage() {
                         )}
                       </div>
 
-                      <div className="col-span-1">
-                        <Badge
-                          className={`${
-                            teacher.isActive
-                              ? 'bg-green-100 text-green-700 border-green-200'
-                              : 'bg-gray-100 text-gray-700 border-gray-200'
-                          } border`}
-                        >
-                          {teacher.isActive ? 'Active' : 'Inactive'}
-                        </Badge>
-                      </div>
-
                       <div className="col-span-3 flex gap-2 justify-end">
                         <button
                           onClick={() => handleViewTeacher(teacher.id)}
@@ -897,7 +1290,7 @@ export default function TeachersPage() {
                         {teacher.currentClass && (
                           <button
                             onClick={() => setSwappingTeacherId(teacher.id)}
-                            className="bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 text-gray-900 dark:text-white font-semibold py-2 px-4 rounded-xl hover:bg-gray-50 dark:hover:bg-gray-600 transition-all text-sm flex items-center gap-2 shadow-sm"
+                            className="bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 text-gray-900 dark:text-white font-semibold py-2 px-4 rounded-xl hover:bg-gray-50 dark:hover:bg-gray-600 transition-all text-sm flex items-center justify-center gap-2 shadow-sm min-w-[96px]"
                           >
                             <Edit className="w-4 h-4" /> Swap
                           </button>
@@ -906,38 +1299,23 @@ export default function TeachersPage() {
                         {!teacher.currentClass && (
                           <button
                             onClick={() => setAssigningTeacherId(teacher.id)}
-                            className="bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 text-gray-900 dark:text-white font-semibold py-2 px-4 rounded-xl hover:bg-gray-50 dark:hover:bg-gray-600 transition-all text-sm shadow-sm"
+                            className="bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 text-gray-900 dark:text-white font-semibold py-2 px-4 rounded-xl hover:bg-gray-50 dark:hover:bg-gray-600 transition-all text-sm flex items-center justify-center gap-2 shadow-sm min-w-[96px]"
                           >
                             Assign
                           </button>
                         )}
 
-                        {teacher.isActive ? (
-                          <button
-                            onClick={() => deactivateTeacher(teacher.id)}
-                            className="bg-orange-500 hover:bg-orange-600 text-white font-semibold py-2 px-4 rounded-xl transition-all text-sm flex items-center gap-2 shadow-sm"
-                            title="Deactivate"
-                          >
-                            <UserX className="w-5 h-5" />
-                          </button>
-                        ) : (
-                          <>
-                            <button
-                              onClick={() => activateTeacher(teacher.id)}
-                              className="bg-emerald-500 hover:bg-emerald-600 text-white font-semibold py-2 px-4 rounded-xl transition-all text-sm flex items-center gap-2 shadow-sm"
-                              title="Activate"
-                            >
-                              <UserCheck className="w-5 h-5" />
-                            </button>
-                            <button
-                              onClick={() => setConfirmDelete({ id: teacher.id, name: teacher.name })}
-                              className="bg-red-500 hover:bg-red-600 text-white font-semibold py-2 px-4 rounded-xl transition-all text-sm flex items-center gap-2 shadow-sm"
-                              title="Delete"
-                            >
-                              <Trash2 className="w-5 h-5" />
-                            </button>
-                          </>
-                        )}
+                        <button
+                          onClick={() => {
+                            setConfirmDelete({ id: teacher.id, name: teacher.name });
+                            setShowReassignOnDelete(false);
+                            setReassignToTeacherId('');
+                          }}
+                          className="bg-red-500 hover:bg-red-600 text-white font-semibold py-2 px-4 rounded-xl transition-all text-sm flex items-center gap-2 shadow-sm"
+                          title="Delete"
+                        >
+                          <Trash2 className="w-5 h-5" />
+                        </button>
                       </div>
                     </div>
                   </div>
@@ -948,7 +1326,7 @@ export default function TeachersPage() {
         </div>
       </main>
 
-      {/* Confirm Delete (Deactivated Teacher) */}
+      {/* Confirm Delete (Deactivate Teacher) */}
       <AnimatePresence>
         {confirmDelete && (
           <motion.div
@@ -956,7 +1334,12 @@ export default function TeachersPage() {
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
             className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 p-4"
-            onClick={() => setConfirmDelete(null)}
+            onClick={() => {
+              setConfirmDelete(null);
+              setShowReassignOnDelete(false);
+              setReassignToTeacherId('');
+              setIsReassigningAndDeleting(false);
+            }}
           >
             <motion.div
               initial={{ scale: 0.92, y: 10 }}
@@ -970,36 +1353,186 @@ export default function TeachersPage() {
                   Delete Teacher
                 </h3>
                 <button
-                  onClick={() => setConfirmDelete(null)}
+                  onClick={() => {
+                    setConfirmDelete(null);
+                    setShowReassignOnDelete(false);
+                    setReassignToTeacherId('');
+                    setIsReassigningAndDeleting(false);
+                  }}
                   className="text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg p-2 transition-colors"
                 >
                   <X className="w-5 h-5" />
                 </button>
               </div>
               <p className="text-sm text-gray-600 dark:text-gray-400 mb-5">
-                Are you sure you want to delete this teacher record?
+                Are you sure you want to remove this teacher? This will mark the teacher as inactive.
                 <span className="font-semibold text-gray-900 dark:text-white">
                   {' '}
                   {confirmDelete.name}
                 </span>
               </p>
+
+              {teacherToDelete?.currentClass && (
+                <div className="mb-5">
+                  {!showReassignOnDelete ? (
+                    <button
+                      onClick={() => setShowReassignOnDelete(true)}
+                      className="w-full px-4 py-2.5 bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 text-gray-900 dark:text-white font-semibold rounded-xl hover:bg-gray-50 dark:hover:bg-gray-600 transition-all text-sm shadow-sm"
+                    >
+                      Reassign class to another teacher
+                    </button>
+                  ) : (
+                    <div className="p-4 rounded-xl bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800">
+                      <p className="text-sm font-semibold text-gray-900 dark:text-white mb-2">
+                        Reassign Class {teacherToDelete.currentClass.className} -{' '}
+                        {teacherToDelete.currentClass.section}
+                      </p>
+
+                      <select
+                        value={reassignToTeacherId}
+                        onChange={(e) => setReassignToTeacherId(e.target.value)}
+                        className="h-10 w-full bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 text-gray-900 dark:text-white rounded-xl px-3 text-sm"
+                      >
+                        <option value="">Select unassigned teacher</option>
+                        {unassignedTeachers.map((t) => (
+                          <option key={t.id} value={t.id}>
+                            {t.name}
+                          </option>
+                        ))}
+                      </select>
+
+                      {unassignedTeachers.length === 0 && (
+                        <p className="text-xs text-orange-700 dark:text-orange-400 mt-2">
+                          No unassigned teachers available.
+                        </p>
+                      )}
+
+                      <div className="flex gap-3 justify-end mt-3">
+                        <Button
+                          variant="outline"
+                          onClick={() => {
+                            setShowReassignOnDelete(false);
+                            setReassignToTeacherId('');
+                          }}
+                          className="rounded-xl"
+                        >
+                          Back
+                        </Button>
+                        <button
+                          onClick={handleReassignAndDelete}
+                          disabled={
+                            isReassigningAndDeleting ||
+                            !reassignToTeacherId ||
+                            unassignedTeachers.length === 0
+                          }
+                          className="px-6 py-2.5 bg-blue-600 hover:bg-blue-700 text-white font-semibold rounded-xl transition-all shadow-lg disabled:opacity-50"
+                        >
+                          {isReassigningAndDeleting ? 'Reassigning...' : 'Reassign & Delete'}
+                        </button>
+                      </div>
+                    </div>
+                  )}
+                </div>
+              )}
+
               <div className="flex gap-3 justify-end">
                 <Button
                   variant="outline"
-                  onClick={() => setConfirmDelete(null)}
+                  onClick={() => {
+                    setConfirmDelete(null);
+                    setShowReassignOnDelete(false);
+                    setReassignToTeacherId('');
+                    setIsReassigningAndDeleting(false);
+                  }}
                   className="rounded-xl"
                 >
                   Cancel
                 </Button>
+                {!showReassignOnDelete && (
+                  <button
+                    onClick={() => {
+                      if (showReassignOnDelete || isReassigningAndDeleting) return;
+
+                      const id = confirmDelete.id;
+                      setConfirmDelete(null);
+                      setShowReassignOnDelete(false);
+                      setReassignToTeacherId('');
+                      setIsReassigningAndDeleting(false);
+                      deleteTeacher(id);
+                    }}
+                    disabled={isReassigningAndDeleting}
+                    className="px-6 py-2.5 bg-red-600 hover:bg-red-700 text-white font-semibold rounded-xl transition-all shadow-lg disabled:opacity-50"
+                  >
+                    Yes, Delete
+                  </button>
+                )}
+              </div>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* Reactivate Teacher */}
+      <AnimatePresence>
+        {confirmReactivate && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 p-4"
+            onClick={() => setConfirmReactivate(null)}
+          >
+            <motion.div
+              initial={{ scale: 0.92, y: 10 }}
+              animate={{ scale: 1, y: 0 }}
+              exit={{ scale: 0.92, y: 10 }}
+              onClick={(e) => e.stopPropagation()}
+              className="bg-white/95 dark:bg-gray-800/95 backdrop-blur-sm border border-gray-200/50 dark:border-gray-700/50 rounded-2xl shadow-2xl p-6 w-full max-w-md"
+            >
+              <div className="flex items-center justify-between mb-3">
+                <h3 className="text-lg font-bold text-gray-900 dark:text-white">
+                  Reactivate Teacher
+                </h3>
+                <button
+                  onClick={() => setConfirmReactivate(null)}
+                  className="text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg p-2 transition-colors"
+                >
+                  <X className="w-5 h-5" />
+                </button>
+              </div>
+
+              <p className="text-sm text-gray-600 dark:text-gray-400 mb-5">
+                This email already exists with inactive status.
+                <span className="font-semibold text-gray-900 dark:text-white"> {confirmReactivate.email}</span>
+                . Would you like to make this teacher active?
+              </p>
+
+              <div className="flex gap-3 justify-end">
+                <Button
+                  variant="outline"
+                  onClick={() => setConfirmReactivate(null)}
+                  className="rounded-xl"
+                >
+                  No
+                </Button>
                 <button
                   onClick={() => {
-                    const id = confirmDelete.id;
-                    setConfirmDelete(null);
-                    deleteTeacher(id);
+                    const id = confirmReactivate.id;
+                    reactivateTeacher(id, {
+                      onSuccess: (resp: any) => {
+                        toast.success(resp?.message || 'Teacher activated successfully');
+                        setConfirmReactivate(null);
+                        setIsAddTeacherOpen(false);
+                      },
+                      onError: (err: any) => {
+                        toast.error(getErrorMessage(err));
+                      }
+                    });
                   }}
-                  className="px-6 py-2.5 bg-red-600 hover:bg-red-700 text-white font-semibold rounded-xl transition-all shadow-lg"
+                  disabled={isReactivatingTeacher}
+                  className="px-6 py-2.5 bg-blue-600 hover:bg-blue-700 text-white font-semibold rounded-xl transition-all shadow-lg disabled:opacity-50"
                 >
-                  Yes, Delete
+                  {isReactivatingTeacher ? 'Activating...' : 'Yes, Activate'}
                 </button>
               </div>
             </motion.div>
@@ -1047,7 +1580,7 @@ export default function TeachersPage() {
                           <h2 className="text-xl font-bold text-white">
                             {teacherFullData.data.name}
                           </h2>
-                          <Badge
+                          {/* <Badge
                             className={`mt-1 ${
                               teacherFullData.data.isActive
                                 ? 'bg-green-100 text-green-700 border-green-200'
@@ -1055,7 +1588,7 @@ export default function TeachersPage() {
                             } border`}
                           >
                             {teacherFullData.data.isActive ? 'Active' : 'Inactive'}
-                          </Badge>
+                          </Badge> */}
                         </div>
                       </div>
                       <button
@@ -1377,7 +1910,7 @@ export default function TeachersPage() {
                                         </p>
                                       </div>
                                     </div>
-                                    <Badge
+                                    {/* <Badge
                                       className={`${
                                         hist.isActive
                                           ? 'bg-green-100 text-green-700 border-green-200 dark:bg-green-900/30 dark:text-green-400 dark:border-green-800'
@@ -1385,7 +1918,7 @@ export default function TeachersPage() {
                                       } border`}
                                     >
                                       {hist.isActive ? 'Current' : 'Past'}
-                                    </Badge>
+                                    </Badge> */}
                                   </div>
                                 </div>
                               ))}

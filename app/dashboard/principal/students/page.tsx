@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, DragEvent, useEffect, useRef, type ChangeEvent } from 'react';
-import { Upload, UserPlus, Download, FileSpreadsheet, UploadCloud, X, CheckCircle, Users, Mail, Phone, Edit2 } from 'lucide-react';
+import { Upload, UserPlus, Download, FileSpreadsheet, UploadCloud, X, CheckCircle, Users, Mail, Phone, Edit2, Trash2 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { toast } from 'sonner';
 import { apiFetch } from '@/lib/api';
@@ -9,7 +9,7 @@ import { apiFetch } from '@/lib/api';
 /* =====================================================
   IMPORT YOUR ACTUAL API HOOKS
 ===================================================== */
-import { useBulkUploadStudents, useBulkUploadStudentsSchoolWide, useCreateStudent, useStudentsByClass, useStudentsClassWiseStats, type Student } from '@/app/querry/useStudent';
+import { useBulkUploadStudents, useBulkUploadStudentsSchoolWide, useCreateStudent, useDeactivateStudent, useStudentsByClass, useStudentsClassWiseStats, type Student } from '@/app/querry/useStudent';
 import { useClasses } from '@/app/querry/useClasses';
 import { useAuth } from '@/app/context/AuthContext';
 import StudentDetailsModal from '@/components/reports/StudentDetailsModal';
@@ -334,6 +334,9 @@ export default function BulkStudentUploadPage() {
     isLoading: studentsLoading,
     error: studentsError
   } = useStudentsByClass(selectedClassId);
+
+  const { mutate: deactivateStudent } = useDeactivateStudent();
+  const [confirmDeactivate, setConfirmDeactivate] = useState<{ id: string; name: string } | null>(null);
 
   const [searchTerm, setSearchTerm] = useState('');
   const [openSingle, setOpenSingle] = useState(false);
@@ -1110,13 +1113,23 @@ export default function BulkStudentUploadPage() {
                                 </td>
 
                                 <td className="px-6 py-4 whitespace-nowrap text-sm">
-                                  <button
-                                    onClick={() => setSelectedStudentId(s._id)}
-                                    className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-blue-600 text-white hover:bg-blue-700 transition-colors"
-                                  >
-                                    <Edit2 className="w-4 h-4" />
-                                    View
-                                  </button>
+                                  <div className="flex items-center gap-2">
+                                    <button
+                                      onClick={() => setSelectedStudentId(s._id)}
+                                      className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-blue-600 text-white hover:bg-blue-700 transition-colors"
+                                    >
+                                      <Edit2 className="w-4 h-4" />
+                                      View
+                                    </button>
+                                    <button
+                                      onClick={() => setConfirmDeactivate({ id: s._id, name: s.name })}
+                                      className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-red-600 text-white hover:bg-red-700 transition-colors"
+                                      title="Delete"
+                                    >
+                                      <Trash2 className="w-4 h-4" />
+                                      Delete
+                                    </button>
+                                  </div>
                                 </td>
                               </tr>
                             );
@@ -1493,6 +1506,68 @@ export default function BulkStudentUploadPage() {
                     )}
                   </div>
                 </div>
+              </motion.div>
+            )}
+          </AnimatePresence>
+
+          <AnimatePresence>
+            {confirmDeactivate && (
+              <motion.div
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                exit={{ opacity: 0 }}
+                className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 p-4"
+                onClick={() => setConfirmDeactivate(null)}
+              >
+                <motion.div
+                  initial={{ scale: 0.92, y: 10 }}
+                  animate={{ scale: 1, y: 0 }}
+                  exit={{ scale: 0.92, y: 10 }}
+                  onClick={(e) => e.stopPropagation()}
+                  className="bg-white/95 dark:bg-gray-800/95 backdrop-blur-sm border border-gray-200/50 dark:border-gray-700/50 rounded-2xl shadow-2xl p-6 w-full max-w-md"
+                >
+                  <div className="flex items-center justify-between mb-3">
+                    <h3 className="text-lg font-bold text-gray-900 dark:text-white">Delete Student</h3>
+                    <button
+                      onClick={() => setConfirmDeactivate(null)}
+                      className="text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg p-2 transition-colors"
+                    >
+                      <X className="w-5 h-5" />
+                    </button>
+                  </div>
+
+                  <p className="text-sm text-gray-600 dark:text-gray-400 mb-5">
+                    Are you sure you want to delete
+                    <span className="font-semibold text-gray-900 dark:text-white"> {confirmDeactivate.name}</span>?
+                    This will mark the student as inactive.
+                  </p>
+
+                  <div className="flex gap-3 justify-end">
+                    <button
+                      onClick={() => setConfirmDeactivate(null)}
+                      className="px-6 py-2.5 bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 text-gray-900 dark:text-white font-semibold rounded-xl hover:bg-gray-50 dark:hover:bg-gray-600 transition-all text-sm shadow-sm"
+                    >
+                      Cancel
+                    </button>
+                    <button
+                      onClick={() => {
+                        const id = confirmDeactivate.id;
+                        setConfirmDeactivate(null);
+                        deactivateStudent(id, {
+                          onSuccess: (resp: any) => {
+                            toast.success(resp?.message || 'Student deactivated successfully');
+                          },
+                          onError: (err: any) => {
+                            toast.error(err?.message || 'Failed to deactivate student');
+                          }
+                        });
+                      }}
+                      className="px-6 py-2.5 bg-red-600 hover:bg-red-700 text-white font-semibold rounded-xl transition-all shadow-lg"
+                    >
+                      Yes, Delete
+                    </button>
+                  </div>
+                </motion.div>
               </motion.div>
             )}
           </AnimatePresence>
