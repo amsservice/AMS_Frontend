@@ -10,7 +10,7 @@ import { useAuth } from "@/app/context/AuthContext";
 // import { verify } from "crypto";
 // import { AuthProvider } from "@/context/AuthProvider";
 
-type PlanId = "1Y" | "2Y" | "3Y";
+type PlanId = "6M" | "1Y" | "2Y" | "3Y";
 
 type PricePreview = {
   planId: PlanId;
@@ -44,7 +44,6 @@ type VerifyPaymentResponse = {
     role: "principal";
   };
 };
-
 
 type RazorpayHandlerResponse = {
   razorpay_order_id: string;
@@ -86,7 +85,7 @@ export default function PaymentPage() {
   const schoolEmail = searchParams.get("email");
   const mode = searchParams.get("mode");
   const isUpgradeMode = mode === "upgrade";
-  const [planId, setPlanId] = useState<PlanId>("1Y");
+  const [planId, setPlanId] = useState<PlanId>("6M");
   const [enteredStudents, setEnteredStudents] = useState<number | "">("");
   const [futureStudents, setFutureStudents] = useState<number | "">("");
   const [couponCode, setCouponCode] = useState("");
@@ -150,24 +149,30 @@ export default function PaymentPage() {
     (enteredStudents === "" ? 0 : enteredStudents) +
     (futureStudents === "" ? 0 : futureStudents);
 
-  const uiRate = frontendPlan?.pricePerStudentPerMonth ?? 0;
+  const isTrial6M = !isUpgradeMode && previewPlanId === "6M";
+
   const uiMonths = frontendPlan?.durationMonths ?? 0;
+  const uiRate = frontendPlan?.pricePerStudentPerMonth ?? 0;
+
   const uiMonthlyCost = billableStudentsUI * uiRate;
   const uiOriginalAmount = uiMonthlyCost * uiMonths;
-  const uiDiscountMonths = price?.discountMonths ?? 0;
-  const uiDiscountAmount = uiMonthlyCost * uiDiscountMonths;
-  const uiPayable = uiOriginalAmount - uiDiscountAmount;
+
+  const uiDiscountMonths = isTrial6M ? 0 : (price?.discountMonths ?? 0);
+  const uiDiscountAmount = isTrial6M ? Math.max(uiOriginalAmount - 1, 0) : uiMonthlyCost * uiDiscountMonths;
+  const uiPayable = isTrial6M ? 1 : uiOriginalAmount - uiDiscountAmount;
 
   const hasBackendMismatch =
     price
-      ? price.pricePerStudentPerMonth !== uiRate ||
-      price.totalMonths !== uiMonths ||
-      Math.abs(price.paidAmount - uiPayable) > 0.5
+      ? !isTrial6M && (
+        price.pricePerStudentPerMonth !== uiRate ||
+        price.totalMonths !== uiMonths ||
+        Math.abs(price.paidAmount - uiPayable) > 0.5
+      )
       : false;
 
   useEffect(() => {
     const planParam = searchParams.get("plan");
-    if (planParam === "1Y" || planParam === "2Y" || planParam === "3Y") {
+    if (planParam === "6M" || planParam === "1Y" || planParam === "2Y" || planParam === "3Y") {
       setPlanId(planParam);
     }
   }, [searchParams]);
@@ -248,6 +253,9 @@ export default function PaymentPage() {
     if (!validateStudents()) return;
     setLoading(true);
     try {
+      const effectiveCouponCode =
+        !isUpgradeMode && planId === "6M" ? "FREE_6M" : (couponCode || undefined);
+
       const res = await fetch(`${API_URL}/api/subscription/price-preview`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -255,7 +263,7 @@ export default function PaymentPage() {
           planId,
           enteredStudents,
           futureStudents: futureStudents || undefined,
-          couponCode: couponCode || undefined,
+          couponCode: effectiveCouponCode,
         }),
       });
 
@@ -294,6 +302,9 @@ export default function PaymentPage() {
         return;
       }
 
+      const effectiveCouponCode =
+        !isUpgradeMode && planId === "6M" ? "FREE_6M" : (couponCode || undefined);
+
       /* 1️⃣ Create Razorpay order (backend decides amount) */
       const res = await fetch(`${API_URL}/api/subscription/create-payment`, {
         method: "POST",
@@ -302,7 +313,7 @@ export default function PaymentPage() {
           planId,
           enteredStudents,
           futureStudents: futureStudents || undefined,
-          couponCode: couponCode || undefined,
+          couponCode: effectiveCouponCode,
         }),
       });
 
@@ -331,7 +342,7 @@ export default function PaymentPage() {
             planId,
             enteredStudents,
             futureStudents: futureStudents || undefined,
-            couponCode: couponCode || undefined,
+            couponCode: effectiveCouponCode,
           }),
           credentials: "include",
         }
@@ -398,6 +409,8 @@ export default function PaymentPage() {
   };
 
   const getProTip = () => {
+    if (planId === "6M")
+      return "Pro tip: Upgrade to 1 Year and save more long-term.";
     if (planId === "1Y")
       return "Pro tip: Upgrade to 2 Years and save more long-term.";
     if (planId === "2Y")
@@ -478,6 +491,7 @@ export default function PaymentPage() {
                     onChange={(e) => setPlanId(e.target.value as PlanId)}
                     className="w-full rounded-xl px-4 py-3 bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all"
                   >
+                    <option value="6M">6 Months Plan</option>
                     <option value="1Y">1 Year Plan</option>
                     <option value="2Y">2 Year Plan</option>
                     <option value="3Y">3 Year Plan</option>

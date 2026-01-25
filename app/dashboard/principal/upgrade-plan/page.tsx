@@ -6,7 +6,7 @@ import { useRouter, useSearchParams } from "next/navigation";
 import { PRICING_PLANS } from "@/lib/pricing";
 import { apiFetch } from "@/lib/api";
 
-type PlanId = "1Y" | "2Y" | "3Y";
+type PlanId = "6M" | "1Y" | "2Y" | "3Y";
 
 type PricePreview = {
   planId: PlanId;
@@ -82,7 +82,7 @@ export default function PrincipalUpgradePlanPage() {
 
   useEffect(() => {
     const planParam = searchParams.get("plan");
-    if (planParam === "1Y" || planParam === "2Y" || planParam === "3Y") {
+    if (planParam === "6M" || planParam === "1Y" || planParam === "2Y" || planParam === "3Y") {
       setPlanId(planParam);
     }
   }, [searchParams]);
@@ -404,6 +404,7 @@ export default function PrincipalUpgradePlanPage() {
                   onChange={(e) => setPlanId(e.target.value as PlanId)}
                   className="w-full rounded-xl px-4 py-3 bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all"
                 >
+                  <option value="6M">6 Months Plan</option>
                   <option value="1Y">1 Year Plan</option>
                   <option value="2Y">2 Year Plan</option>
                   <option value="3Y">3 Year Plan</option>

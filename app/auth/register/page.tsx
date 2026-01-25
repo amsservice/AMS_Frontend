@@ -4,11 +4,12 @@ import { Button } from "@/components/ui/button";
 import { GraduationCap } from "lucide-react";
 import { motion } from "framer-motion";
 import { useEffect, useState } from "react";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { toast } from "sonner";
 import dynamic from "next/dynamic";
 import { useAuth } from "@/app/context/AuthContext";
 import { getDashboardPath } from "@/lib/roleRedirect";
+
 import MainNavbar from "@/components/main/MainNavbar";
 import MainFooter from "@/components/main/MainFooter";
 import { registerSchoolSchema } from "@/lib/zodSchema";
@@ -25,7 +26,11 @@ const UpastithiPageLoader = dynamic(
 
 export default function RegisterPage() {
   const router = useRouter();
+  const searchParams = useSearchParams();
   const { user, loading } = useAuth();
+
+  const planParam = searchParams.get("plan");
+  const planQuery = planParam ? `&plan=${encodeURIComponent(planParam)}` : "";
 
   const [submitting, setSubmitting] = useState(false);
   const [isDark, setIsDark] = useState(false);
@@ -193,7 +198,7 @@ export default function RegisterPage() {
 
         if (toastId !== undefined) toast.dismiss(toastId);
         router.replace(
-          `/subscription/payment?email=${encodeURIComponent(form.schoolEmail)}`
+          `/subscription/payment?email=${encodeURIComponent(form.schoolEmail)}${planQuery}`
         );
         return;
       }
@@ -206,7 +211,7 @@ export default function RegisterPage() {
       if (toastId !== undefined) toast.dismiss(toastId);
 
       router.replace(
-        `/auth/verify-otp?email=${encodeURIComponent(form.schoolEmail)}`
+        `/auth/verify-otp?email=${encodeURIComponent(form.schoolEmail)}${planQuery}`
       );
     } catch (err: any) {
       if (err instanceof z.ZodError) {

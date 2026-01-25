@@ -49,7 +49,7 @@ interface PrincipalFormData {
 }
 
 interface SubscriptionData {
-  planId: "1Y" | "2Y" | "3Y";
+  planId: "6M" | "1Y" | "2Y" | "3Y";
   billableStudents: number;
   paidAmount: number;
   startDate: string;
@@ -59,7 +59,7 @@ interface SubscriptionData {
 
 type InvoiceItem = {
   id: string;
-  planId: "1Y" | "2Y" | "3Y";
+  planId: "6M" | "1Y" | "2Y" | "3Y";
   orderId: string;
   paymentId: string;
   enteredStudents: number;
@@ -1377,8 +1377,12 @@ export default function PrincipalProfilePage() {
                         <div></div>
                       </div>
                       <div className="row">
-                        <div className="muted">Coupon : <b>{selectedInvoice.couponCode || "-"}</b></div>
-                        <div></div>
+                        {selectedInvoice.couponCode && selectedInvoice.couponCode !== "FREE_6M" ? (
+                          <>
+                            <div className="muted">Coupon : <b>{selectedInvoice.couponCode}</b></div>
+                            <div></div>
+                          </>
+                        ) : null}
                       </div>
                       <div className="row">
                         <div className="muted">Subscription Period : <b>
