@@ -247,12 +247,19 @@ export default function EditHolidayModal({
 }) {
   const { data: sessions = [] } = useSessions();
 
+  const toYmdLocal = (d: Date) => {
+    const yyyy = d.getFullYear();
+    const mm = String(d.getMonth() + 1).padStart(2, '0');
+    const dd = String(d.getDate()).padStart(2, '0');
+    return `${yyyy}-${mm}-${dd}`;
+  };
+
   const today = new Date();
   today.setHours(0, 0, 0, 0);
 
   const tomorrow = new Date(today);
   tomorrow.setDate(tomorrow.getDate() + 1);
-  const minDate = tomorrow.toISOString().split('T')[0];
+  const minDate = toYmdLocal(tomorrow);
 
   const holidayStart = new Date(holiday.startDate);
   const isPastHoliday = holidayStart.getTime() < today.getTime();
@@ -279,20 +286,20 @@ export default function EditHolidayModal({
 
   const maxSelectableDate = useMemo(() => {
     if (!sessionEnd) return undefined;
-    return sessionEnd.toISOString().split('T')[0];
+    return toYmdLocal(sessionEnd);
   }, [sessionEnd]);
 
   const minSelectableDate = useMemo(() => {
     const a = minDate;
     if (!sessionStart) return a;
-    const b = sessionStart.toISOString().split('T')[0];
+    const b = toYmdLocal(sessionStart);
     return a > b ? a : b;
   }, [minDate, sessionStart]);
 
   const [form, setForm] = useState<EditHolidayFormState>({
     name: holiday.name,
-    startDate: holiday.startDate.split('T')[0],
-    endDate: holiday.endDate ? holiday.endDate.split('T')[0] : '',
+    startDate: toYmdLocal(new Date(holiday.startDate)),
+    endDate: holiday.endDate ? toYmdLocal(new Date(holiday.endDate)) : '',
     category: holiday.category,
     description: holiday.description || ''
   });
@@ -367,7 +374,10 @@ export default function EditHolidayModal({
         }
       },
       {
-        onSuccess: onClose,
+        onSuccess: () => {
+          toast.success('Holiday updated successfully!');
+          onClose();
+        },
         onError: (error: any) => {
           const errorMessage =
             error?.response?.data?.message ||
