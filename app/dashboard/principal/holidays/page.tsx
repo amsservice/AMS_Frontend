@@ -229,7 +229,10 @@ export default function HolidayPage() {
             <div className="bg-white/80 dark:bg-gray-800/80 backdrop-blur-sm shadow-xl rounded-2xl border border-gray-200/50 dark:border-gray-700/50 overflow-hidden">
               <div className="divide-y divide-gray-200 dark:divide-gray-700 max-h-[520px] overflow-y-auto">
                 {filtered.map((h) => (
-                  <div key={h._id} className="p-4 sm:p-5 flex items-start justify-between gap-4">
+                  <div
+                    key={h._id}
+                    className={`p-4 sm:p-5 flex items-start justify-between gap-4 ${isPastHoliday(h) ? 'opacity-55' : ''}`}
+                  >
                     <div className="min-w-0 flex-1">
                       <div className="flex items-center gap-2 flex-wrap">
                         <span className="font-bold text-gray-900 dark:text-white truncate">{h.name}</span>
@@ -250,8 +253,16 @@ export default function HolidayPage() {
 
                     <div className="flex items-center gap-2">
                       <button
-                        onClick={() => setEditing(h)}
-                        className="p-2 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-xl transition-all duration-200 shadow-sm"
+                        onClick={() => {
+                          if (isPastHoliday(h)) {
+                            toast.error('Past holidays cannot be edited');
+                            return;
+                          }
+                          setEditing(h);
+                        }}
+                        disabled={isPastHoliday(h)}
+                        className="p-2 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-xl transition-all duration-200 shadow-sm disabled:opacity-40 disabled:cursor-not-allowed"
+                        title={isPastHoliday(h) ? 'Past holidays cannot be edited' : 'Edit'}
                       >
                         <Pencil className="w-4 h-4 text-gray-900 dark:text-white" />
                       </button>
