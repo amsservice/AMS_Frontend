@@ -138,6 +138,23 @@ export const useUpdateStudent = () => {
    STUDENT: MY PROFILE
    GET /api/students/me
 ===================================================== */
+export const useDeactivateStudent = () => {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: (id: string) =>
+      apiFetch(`/api/student/${id}/deactivate`, {
+        method: 'PUT'
+      }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['students'] });
+      queryClient.invalidateQueries({ queryKey: ['school-students'] });
+      queryClient.invalidateQueries({ queryKey: ['students-class-wise-stats'] });
+      queryClient.invalidateQueries({ queryKey: ['students-by-class'] });
+    }
+  });
+};
+
 export const useMyStudentProfile = () =>
   useQuery<Student>({
     queryKey: ['student', 'me'],
