@@ -203,6 +203,10 @@ export default function TeachersPage() {
       }
       if (n < 0) return 'Experience cannot be negative';
       if (n > 42) return 'Experience cannot be greater than 42 years';
+
+      if (n > age) return 'Experience years cannot be greater than age';
+      if (age - n < 14)
+        return 'DOB and experience years difference must be at least 14 years';
     }
 
     if (data.address !== undefined && data.address.trim().length > 0) {
@@ -345,6 +349,8 @@ export default function TeachersPage() {
       const experienceYears = headers.includes('experienceYears') ? get('experienceYears') : '';
       const address = headers.includes('address') ? get('address') : '';
 
+      let ageYears: number | null = null;
+
       const nameLetters = (name.match(/[A-Za-z]/g) || []).length;
       if (!name || nameLetters < 3) errors.push(`Row ${rowNo}: name must contain at least 3 letters`);
 
@@ -374,6 +380,7 @@ export default function TeachersPage() {
               (today.getMonth() === d.getMonth() && today.getDate() < d.getDate())
                 ? 1
                 : 0);
+            ageYears = age;
             if (age < 18) errors.push(`Row ${rowNo}: dob must be at least 18 years ago`);
           }
         }
@@ -398,6 +405,15 @@ export default function TeachersPage() {
         } else {
           if (n < 0) errors.push(`Row ${rowNo}: experienceYears cannot be negative`);
           if (n > 42) errors.push(`Row ${rowNo}: experienceYears cannot be greater than 42`);
+
+          if (ageYears !== null) {
+            if (n > ageYears)
+              errors.push(`Row ${rowNo}: experienceYears cannot be greater than age`);
+            else if (ageYears - n < 14)
+              errors.push(
+                `Row ${rowNo}: dob and experienceYears difference must be at least 14 years`
+              );
+          }
         }
       }
 
@@ -762,7 +778,7 @@ export default function TeachersPage() {
 
       <main className="max-w-7xl mx-auto py-4 sm:py-6 px-4 sm:px-6 lg:px-8">
         <div className="space-y-6 sm:space-y-8">
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-2 gap-4 sm:gap-6">
             {stats.map((stat, i) => (
               <div
                 key={i}
@@ -771,9 +787,7 @@ export default function TeachersPage() {
                     ? 'from-blue-50 to-indigo-100 dark:from-blue-900/30 dark:to-indigo-900/30 border-blue-200/50 dark:border-blue-700/50'
                     : i === 1
                       ? 'from-green-50 to-emerald-100 dark:from-green-900/30 dark:to-emerald-900/30 border-green-200/50 dark:border-green-700/50'
-                      : i === 2
-                        ? 'from-orange-50 to-amber-100 dark:from-orange-900/30 dark:to-amber-900/30 border-orange-200/50 dark:border-orange-700/50'
-                        : 'from-purple-50 to-violet-100 dark:from-purple-900/30 dark:to-violet-900/30 border-purple-200/50 dark:border-purple-700/50'
+                      : 'from-orange-50 to-amber-100 dark:from-orange-900/30 dark:to-amber-900/30 border-orange-200/50 dark:border-orange-700/50'
                 }`}
               >
                 <div className="p-4 sm:p-6">
@@ -1122,20 +1136,17 @@ export default function TeachersPage() {
               </div>
             </div>
 
-            <div className="hidden lg:grid lg:grid-cols-12 gap-4 items-center">
+            <div className="hidden lg:grid lg:grid-cols-12 gap-4 items-center px-6 py-3">
               <div className="col-span-3 text-xs font-semibold text-gray-600 dark:text-gray-400 uppercase tracking-wide">
                 Name
               </div>
-              <div className="col-span-3 text-xs font-semibold text-gray-600 dark:text-gray-400 uppercase tracking-wide">
+              <div className="col-span-4 text-xs font-semibold text-gray-600 dark:text-gray-400 uppercase tracking-wide">
                 Email
               </div>
               <div className="col-span-2 text-xs font-semibold text-gray-600 dark:text-gray-400 uppercase tracking-wide">
                 Assigned Class
               </div>
-              {/* <div className="col-span-1 text-xs font-semibold text-gray-600 dark:text-gray-400 uppercase tracking-wide">
-                Status
-              </div> */}
-              <div className="col-span-3 text-xs font-semibold text-gray-600 dark:text-gray-400 uppercase tracking-wide text-right">
+              <div className="col-span-3 text-xs font-semibold text-gray-600 dark:text-gray-400 uppercase tracking-wide text-right mr-24">
                 Actions
               </div>
             </div>
@@ -1208,7 +1219,7 @@ export default function TeachersPage() {
                         {teacher.currentClass && (
                           <button
                             onClick={() => setSwappingTeacherId(teacher.id)}
-                            className="flex-1 bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 text-gray-900 dark:text-white font-semibold py-2 px-4 rounded-xl hover:bg-gray-50 dark:hover:bg-gray-600 transition-all text-sm flex items-center justify-center gap-2 shadow-sm"
+                            className="flex-1 bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 text-gray-900 dark:text-white font-semibold py-2 px-4 rounded-xl hover:bg-gray-50 dark:hover:bg-gray-600 transition-all text-sm flex items-center justify-center gap-2 shadow-sm min-w-[96px]"
                           >
                             <Edit className="w-4 h-4" /> Swap
                           </button>
@@ -1217,7 +1228,7 @@ export default function TeachersPage() {
                         {!teacher.currentClass && (
                           <button
                             onClick={() => setAssigningTeacherId(teacher.id)}
-                            className="flex-1 bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 text-gray-900 dark:text-white font-semibold py-2 px-4 rounded-xl hover:bg-gray-50 dark:hover:bg-gray-600 transition-all text-sm shadow-sm"
+                            className="flex-1 bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 text-gray-900 dark:text-white font-semibold py-2 px-4 rounded-xl hover:bg-gray-50 dark:hover:bg-gray-600 transition-all text-sm flex items-center justify-center gap-2 shadow-sm min-w-[96px]"
                           >
                             Assign
                           </button>
@@ -1249,7 +1260,7 @@ export default function TeachersPage() {
                         </span>
                       </div>
 
-                      <div className="col-span-3 flex items-center gap-2 text-gray-600 dark:text-gray-400 text-sm">
+                      <div className="col-span-4 flex items-center gap-2 text-gray-600 dark:text-gray-400 text-sm">
                         <Mail className="w-4 h-4" /> {teacher.email}
                       </div>
 
@@ -1268,18 +1279,6 @@ export default function TeachersPage() {
                         )}
                       </div>
 
-                      <div className="col-span-1">
-                        {/* <Badge
-                          className={`${
-                            teacher.isActive
-                              ? 'bg-green-100 text-green-700 border-green-200'
-                              : 'bg-gray-100 text-gray-700 border-gray-200'
-                          } border`}
-                        >
-                          {teacher.isActive ? 'Active' : 'Inactive'}
-                        </Badge> */}
-                      </div>
-
                       <div className="col-span-3 flex gap-2 justify-end">
                         <button
                           onClick={() => handleViewTeacher(teacher.id)}
@@ -1291,7 +1290,7 @@ export default function TeachersPage() {
                         {teacher.currentClass && (
                           <button
                             onClick={() => setSwappingTeacherId(teacher.id)}
-                            className="bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 text-gray-900 dark:text-white font-semibold py-2 px-4 rounded-xl hover:bg-gray-50 dark:hover:bg-gray-600 transition-all text-sm flex items-center gap-2 shadow-sm"
+                            className="bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 text-gray-900 dark:text-white font-semibold py-2 px-4 rounded-xl hover:bg-gray-50 dark:hover:bg-gray-600 transition-all text-sm flex items-center justify-center gap-2 shadow-sm min-w-[96px]"
                           >
                             <Edit className="w-4 h-4" /> Swap
                           </button>
@@ -1300,7 +1299,7 @@ export default function TeachersPage() {
                         {!teacher.currentClass && (
                           <button
                             onClick={() => setAssigningTeacherId(teacher.id)}
-                            className="bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 text-gray-900 dark:text-white font-semibold py-2 px-4 rounded-xl hover:bg-gray-50 dark:hover:bg-gray-600 transition-all text-sm shadow-sm"
+                            className="bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 text-gray-900 dark:text-white font-semibold py-2 px-4 rounded-xl hover:bg-gray-50 dark:hover:bg-gray-600 transition-all text-sm flex items-center justify-center gap-2 shadow-sm min-w-[96px]"
                           >
                             Assign
                           </button>

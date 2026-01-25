@@ -779,9 +779,9 @@ export default function PrincipalProfilePage() {
                 <p className="text-xl font-bold text-gray-900 dark:text-white">
                   ₹{subscriptionData.paidAmount}
                 </p>
-                <p className="text-xs text-gray-600 dark:text-gray-400 mt-1">
+                {/* <p className="text-xs text-gray-600 dark:text-gray-400 mt-1">
                   Credit Card
-                </p>
+                </p> */}
               </div>
 
               <div className="bg-gradient-to-br from-orange-50 to-amber-100 dark:from-orange-900/30 dark:to-amber-900/30 border border-orange-200/50 dark:border-orange-700/50 rounded-xl p-4 shadow-lg">
@@ -848,12 +848,12 @@ export default function PrincipalProfilePage() {
               >
                 Upgrade Plan
               </button>
-              <button
+              {/* <button
                 className="px-4 sm:px-6 py-2.5 bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 text-gray-900 dark:text-white rounded-xl text-sm font-medium hover:bg-gray-50 dark:hover:bg-gray-600 transition-all shadow-sm"
                 onClick={() => toast("Billing management feature coming soon")}
               >
                 Manage Billing
-              </button>
+              </button> */}
             </div>
           </div>
         </div>
