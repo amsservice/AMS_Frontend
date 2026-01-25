@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useMemo, useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
   Users,
@@ -103,6 +103,20 @@ export default function TeachersPage() {
 
   const { data: teachers = [], isLoading } = useTeachers();
   const { data: classes = [] } = useClasses();
+
+  const sortedClasses = useMemo(() => {
+    return [...classes].sort((a: Class, b: Class) => {
+      const nameCmp = String(a.name).localeCompare(String(b.name), undefined, {
+        numeric: true,
+        sensitivity: 'base'
+      });
+      if (nameCmp !== 0) return nameCmp;
+      return String(a.section).localeCompare(String(b.section), undefined, {
+        numeric: true,
+        sensitivity: 'base'
+      });
+    });
+  }, [classes]);
 
   const [bulkTeacherFile, setBulkTeacherFile] = useState<File | null>(null);
   const [bulkTeacherClientErrors, setBulkTeacherClientErrors] = useState<string[]>([]);
@@ -536,7 +550,7 @@ export default function TeachersPage() {
 
   const handleAssignClass = () => {
     if (!assigningTeacherId || !selectedClassId) return;
-    const selectedClass = classes.find((cls: Class) => cls.id === selectedClassId);
+    const selectedClass = sortedClasses.find((cls: Class) => cls.id === selectedClassId);
     if (!selectedClass) return;
 
     assignClassMutation.mutate({
@@ -554,7 +568,7 @@ export default function TeachersPage() {
   const handleSwapClass = () => {
     if (!swappingTeacherId || !selectedClassId) return;
     const swappingTeacher = teachers.find((t: Teacher) => t.id === swappingTeacherId);
-    const targetClass = classes.find((cls: Class) => cls.id === selectedClassId);
+    const targetClass = sortedClasses.find((cls: Class) => cls.id === selectedClassId);
     if (!swappingTeacher || !targetClass || !swappingTeacher.currentClass) return;
 
     if (targetClass.teacherId) {
@@ -704,7 +718,7 @@ export default function TeachersPage() {
       return;
     }
 
-    const classToReassign = (classes as Class[]).find(
+    const classToReassign = (sortedClasses as Class[]).find(
       (c) => c.id === teacherToDelete.currentClass!.classId
     );
 
@@ -1581,7 +1595,7 @@ export default function TeachersPage() {
                             {teacherFullData.data.name}
                           </h2>
                           {/* <Badge
-                            className={`mt-1 ${
+                            className={`${
                               teacherFullData.data.isActive
                                 ? 'bg-green-100 text-green-700 border-green-200'
                                 : 'bg-gray-100 text-gray-700 border-gray-200'
@@ -1980,7 +1994,7 @@ export default function TeachersPage() {
                 onChange={(e) => setSelectedClassId(e.target.value)}
               >
                 <option value="">Select class</option>
-                {classes.map((cls: Class) => (
+                {sortedClasses.map((cls: Class) => (
                   <option key={`${cls.id}-${cls.sessionId}`} value={cls.id} disabled={!!cls.teacherId}>
                     {cls.name} - {cls.section}{cls.teacherId ? ' (Occupied)' : ''}
                   </option>
@@ -2039,7 +2053,7 @@ export default function TeachersPage() {
                 onChange={(e) => setSelectedClassId(e.target.value)}
               >
                 <option value="">Select class</option>
-                {classes.map((cls: Class) => (
+                {sortedClasses.map((cls: Class) => (
                   <option
                     key={`${cls.id}-${cls.sessionId}`}
                     value={cls.id}
