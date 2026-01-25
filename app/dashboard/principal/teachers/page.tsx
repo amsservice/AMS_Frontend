@@ -12,8 +12,6 @@ import {
   BookOpen,
   Trash2,
   Edit,
-  UserX,
-  UserCheck,
   Eye,
   Phone,
   Calendar,
@@ -33,9 +31,8 @@ import {
   useTeachers,
   useCreateTeacher,
   useDeleteTeacher,
+  useReactivateTeacher,
   useAssignClassToTeacher,
-  useDeactivateTeacher,
-  useActivateTeacher,
   useBulkUploadTeachers,
   useSwapTeacherClasses,
   useTeacherFullProfile,
@@ -77,6 +74,10 @@ export default function TeachersPage() {
     null
   );
 
+  const [showReassignOnDelete, setShowReassignOnDelete] = useState(false);
+  const [reassignToTeacherId, setReassignToTeacherId] = useState('');
+  const [isReassigningAndDeleting, setIsReassigningAndDeleting] = useState(false);
+
   const [formData, setFormData] = useState({
     name: '',
     email: '',
@@ -108,11 +109,14 @@ export default function TeachersPage() {
 
   const { mutate: createTeacher } = useCreateTeacher();
   const { mutate: deleteTeacher } = useDeleteTeacher();
-  const { mutate: deactivateTeacher } = useDeactivateTeacher();
-  const { mutate: activateTeacher } = useActivateTeacher();
+  const { mutate: reactivateTeacher, isPending: isReactivatingTeacher } = useReactivateTeacher();
   const bulkUploadTeachersMutation = useBulkUploadTeachers();
   const assignClassMutation = useAssignClassToTeacher();
   const swapClassMutation = useSwapTeacherClasses();
+
+  const [confirmReactivate, setConfirmReactivate] = useState<
+    { id: string; email: string } | null
+  >(null);
 
   const { data: teacherFullData, isLoading: isLoadingFullProfile } =
     useTeacherFullProfile(viewingTeacherId || '');
@@ -498,6 +502,16 @@ export default function TeachersPage() {
           setIsAddTeacherOpen(false);
         },
         onError: (error: any) => {
+          const code = error?.data?.code;
+          if (code === 'TEACHER_INACTIVE_EMAIL_EXISTS') {
+            const teacherId = String(error?.data?.teacherId || '');
+            const email = String(error?.data?.email || formData.email || '').trim();
+            if (teacherId) {
+              setConfirmReactivate({ id: teacherId, email });
+              return;
+            }
+          }
+
           toast.error(getErrorMessage(error));
         }
       }
@@ -645,16 +659,6 @@ export default function TeachersPage() {
       bgGradient: 'from-blue-500 to-indigo-600'
     },
     {
-      label: 'Active',
-      value: teachers.filter((t: Teacher) => t.isActive).length,
-      bgGradient: 'from-green-500 to-emerald-600'
-    },
-    {
-      label: 'Inactive',
-      value: teachers.filter((t: Teacher) => !t.isActive).length,
-      bgGradient: 'from-orange-500 to-amber-600'
-    },
-    {
       label: 'Assigned',
       value: teachers.filter((t: Teacher) => t.currentClass).length,
       bgGradient: 'from-purple-500 to-violet-600'
@@ -667,9 +671,61 @@ export default function TeachersPage() {
           ?.classId ?? null)
       : null;
 
+  const teacherToDelete = confirmDelete
+    ? (teachers as Teacher[]).find((t) => t.id === confirmDelete.id)
+    : undefined;
+
+  const unassignedTeachers = (teachers as Teacher[]).filter(
+    (t) => !t.currentClass && t.id !== confirmDelete?.id
+  );
+
+  const handleReassignAndDelete = async () => {
+    if (!confirmDelete) return;
+    if (!teacherToDelete?.currentClass) return;
+
+    if (!reassignToTeacherId) {
+      toast.error('Please select a teacher to reassign this class to');
+      return;
+    }
+
+    const classToReassign = (classes as Class[]).find(
+      (c) => c.id === teacherToDelete.currentClass!.classId
+    );
+
+    if (!classToReassign) {
+      toast.error('Unable to find class details required for reassignment');
+      return;
+    }
+
+    setIsReassigningAndDeleting(true);
+    assignClassMutation.mutate(
+      {
+        teacherId: reassignToTeacherId,
+        sessionId: classToReassign.sessionId,
+        classId: classToReassign.id,
+        className: classToReassign.name,
+        section: classToReassign.section
+      },
+      {
+        onSuccess: () => {
+          deleteTeacher(confirmDelete.id);
+          setConfirmDelete(null);
+          setShowReassignOnDelete(false);
+          setReassignToTeacherId('');
+          setIsReassigningAndDeleting(false);
+        },
+        onError: (err: any) => {
+          const msg = err?.message || 'Failed to reassign class';
+          toast.error(msg);
+          setIsReassigningAndDeleting(false);
+        }
+      }
+    );
+  };
+
   return (
     <div className="relative bg-gradient-to-br from-purple-50 via-white to-blue-50 dark:from-purple-900 dark:via-gray-900 dark:to-blue-950 overflow-hidden min-h-screen">
-      <header className="bg-gradient-to-r from-blue-600 via-purple-600 to-indigo-700 dark:from-blue-800 dark:via-purple-800 dark:to-indigo-900 shadow-xl">
+      <header className="bg-gradient-to-br from-purple-600 via-white to-blue-600 dark:from-purple-800 dark:via-gray-800 dark:to-blue-900 shadow-xl">
         <div className="max-w-7xl mx-auto py-6 sm:py-8 px-4 sm:px-6 lg:px-8">
           <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between space-y-4 lg:space-y-0">
             <div className="flex-1">
@@ -1076,9 +1132,9 @@ export default function TeachersPage() {
               <div className="col-span-2 text-xs font-semibold text-gray-600 dark:text-gray-400 uppercase tracking-wide">
                 Assigned Class
               </div>
-              <div className="col-span-1 text-xs font-semibold text-gray-600 dark:text-gray-400 uppercase tracking-wide">
+              {/* <div className="col-span-1 text-xs font-semibold text-gray-600 dark:text-gray-400 uppercase tracking-wide">
                 Status
-              </div>
+              </div> */}
               <div className="col-span-3 text-xs font-semibold text-gray-600 dark:text-gray-400 uppercase tracking-wide text-right">
                 Actions
               </div>
@@ -1167,32 +1223,17 @@ export default function TeachersPage() {
                           </button>
                         )}
 
-                        {teacher.isActive ? (
-                          <button
-                            onClick={() => deactivateTeacher(teacher.id)}
-                            className="bg-orange-500 hover:bg-orange-600 text-white font-semibold py-2 px-4 rounded-xl transition-all text-sm flex items-center gap-2 shadow-sm"
-                            title="Deactivate"
-                          >
-                            <UserX className="w-5 h-5" />
-                          </button>
-                        ) : (
-                          <>
-                            <button
-                              onClick={() => activateTeacher(teacher.id)}
-                              className="bg-emerald-500 hover:bg-emerald-600 text-white font-semibold py-2 px-4 rounded-xl transition-all text-sm flex items-center gap-2 shadow-sm"
-                              title="Activate"
-                            >
-                              <UserCheck className="w-5 h-5" />
-                            </button>
-                            <button
-                              onClick={() => setConfirmDelete({ id: teacher.id, name: teacher.name })}
-                              className="bg-red-500 hover:bg-red-600 text-white font-semibold py-2 px-4 rounded-xl transition-all text-sm flex items-center gap-2 shadow-sm"
-                              title="Delete"
-                            >
-                              <Trash2 className="w-5 h-5" />
-                            </button>
-                          </>
-                        )}
+                        <button
+                          onClick={() => {
+                            setConfirmDelete({ id: teacher.id, name: teacher.name });
+                            setShowReassignOnDelete(false);
+                            setReassignToTeacherId('');
+                          }}
+                          className="bg-red-500 hover:bg-red-600 text-white font-semibold py-2 px-4 rounded-xl transition-all text-sm flex items-center gap-2 shadow-sm"
+                          title="Delete"
+                        >
+                          <Trash2 className="w-5 h-5" />
+                        </button>
                       </div>
                     </div>
 
@@ -1228,7 +1269,7 @@ export default function TeachersPage() {
                       </div>
 
                       <div className="col-span-1">
-                        <Badge
+                        {/* <Badge
                           className={`${
                             teacher.isActive
                               ? 'bg-green-100 text-green-700 border-green-200'
@@ -1236,7 +1277,7 @@ export default function TeachersPage() {
                           } border`}
                         >
                           {teacher.isActive ? 'Active' : 'Inactive'}
-                        </Badge>
+                        </Badge> */}
                       </div>
 
                       <div className="col-span-3 flex gap-2 justify-end">
@@ -1265,32 +1306,17 @@ export default function TeachersPage() {
                           </button>
                         )}
 
-                        {teacher.isActive ? (
-                          <button
-                            onClick={() => deactivateTeacher(teacher.id)}
-                            className="bg-orange-500 hover:bg-orange-600 text-white font-semibold py-2 px-4 rounded-xl transition-all text-sm flex items-center gap-2 shadow-sm"
-                            title="Deactivate"
-                          >
-                            <UserX className="w-5 h-5" />
-                          </button>
-                        ) : (
-                          <>
-                            <button
-                              onClick={() => activateTeacher(teacher.id)}
-                              className="bg-emerald-500 hover:bg-emerald-600 text-white font-semibold py-2 px-4 rounded-xl transition-all text-sm flex items-center gap-2 shadow-sm"
-                              title="Activate"
-                            >
-                              <UserCheck className="w-5 h-5" />
-                            </button>
-                            <button
-                              onClick={() => setConfirmDelete({ id: teacher.id, name: teacher.name })}
-                              className="bg-red-500 hover:bg-red-600 text-white font-semibold py-2 px-4 rounded-xl transition-all text-sm flex items-center gap-2 shadow-sm"
-                              title="Delete"
-                            >
-                              <Trash2 className="w-5 h-5" />
-                            </button>
-                          </>
-                        )}
+                        <button
+                          onClick={() => {
+                            setConfirmDelete({ id: teacher.id, name: teacher.name });
+                            setShowReassignOnDelete(false);
+                            setReassignToTeacherId('');
+                          }}
+                          className="bg-red-500 hover:bg-red-600 text-white font-semibold py-2 px-4 rounded-xl transition-all text-sm flex items-center gap-2 shadow-sm"
+                          title="Delete"
+                        >
+                          <Trash2 className="w-5 h-5" />
+                        </button>
                       </div>
                     </div>
                   </div>
@@ -1301,7 +1327,7 @@ export default function TeachersPage() {
         </div>
       </main>
 
-      {/* Confirm Delete (Deactivated Teacher) */}
+      {/* Confirm Delete (Deactivate Teacher) */}
       <AnimatePresence>
         {confirmDelete && (
           <motion.div
@@ -1309,7 +1335,12 @@ export default function TeachersPage() {
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
             className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 p-4"
-            onClick={() => setConfirmDelete(null)}
+            onClick={() => {
+              setConfirmDelete(null);
+              setShowReassignOnDelete(false);
+              setReassignToTeacherId('');
+              setIsReassigningAndDeleting(false);
+            }}
           >
             <motion.div
               initial={{ scale: 0.92, y: 10 }}
@@ -1323,23 +1354,97 @@ export default function TeachersPage() {
                   Delete Teacher
                 </h3>
                 <button
-                  onClick={() => setConfirmDelete(null)}
+                  onClick={() => {
+                    setConfirmDelete(null);
+                    setShowReassignOnDelete(false);
+                    setReassignToTeacherId('');
+                    setIsReassigningAndDeleting(false);
+                  }}
                   className="text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg p-2 transition-colors"
                 >
                   <X className="w-5 h-5" />
                 </button>
               </div>
               <p className="text-sm text-gray-600 dark:text-gray-400 mb-5">
-                Are you sure you want to delete this teacher record?
+                Are you sure you want to remove this teacher? This will mark the teacher as inactive.
                 <span className="font-semibold text-gray-900 dark:text-white">
                   {' '}
                   {confirmDelete.name}
                 </span>
               </p>
+
+              {teacherToDelete?.currentClass && (
+                <div className="mb-5">
+                  {!showReassignOnDelete ? (
+                    <button
+                      onClick={() => setShowReassignOnDelete(true)}
+                      className="w-full px-4 py-2.5 bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 text-gray-900 dark:text-white font-semibold rounded-xl hover:bg-gray-50 dark:hover:bg-gray-600 transition-all text-sm shadow-sm"
+                    >
+                      Reassign class to another teacher
+                    </button>
+                  ) : (
+                    <div className="p-4 rounded-xl bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800">
+                      <p className="text-sm font-semibold text-gray-900 dark:text-white mb-2">
+                        Reassign Class {teacherToDelete.currentClass.className} -{' '}
+                        {teacherToDelete.currentClass.section}
+                      </p>
+
+                      <select
+                        value={reassignToTeacherId}
+                        onChange={(e) => setReassignToTeacherId(e.target.value)}
+                        className="h-10 w-full bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 text-gray-900 dark:text-white rounded-xl px-3 text-sm"
+                      >
+                        <option value="">Select unassigned teacher</option>
+                        {unassignedTeachers.map((t) => (
+                          <option key={t.id} value={t.id}>
+                            {t.name}
+                          </option>
+                        ))}
+                      </select>
+
+                      {unassignedTeachers.length === 0 && (
+                        <p className="text-xs text-orange-700 dark:text-orange-400 mt-2">
+                          No unassigned teachers available.
+                        </p>
+                      )}
+
+                      <div className="flex gap-3 justify-end mt-3">
+                        <Button
+                          variant="outline"
+                          onClick={() => {
+                            setShowReassignOnDelete(false);
+                            setReassignToTeacherId('');
+                          }}
+                          className="rounded-xl"
+                        >
+                          Back
+                        </Button>
+                        <button
+                          onClick={handleReassignAndDelete}
+                          disabled={
+                            isReassigningAndDeleting ||
+                            !reassignToTeacherId ||
+                            unassignedTeachers.length === 0
+                          }
+                          className="px-6 py-2.5 bg-blue-600 hover:bg-blue-700 text-white font-semibold rounded-xl transition-all shadow-lg disabled:opacity-50"
+                        >
+                          {isReassigningAndDeleting ? 'Reassigning...' : 'Reassign & Delete'}
+                        </button>
+                      </div>
+                    </div>
+                  )}
+                </div>
+              )}
+
               <div className="flex gap-3 justify-end">
                 <Button
                   variant="outline"
-                  onClick={() => setConfirmDelete(null)}
+                  onClick={() => {
+                    setConfirmDelete(null);
+                    setShowReassignOnDelete(false);
+                    setReassignToTeacherId('');
+                    setIsReassigningAndDeleting(false);
+                  }}
                   className="rounded-xl"
                 >
                   Cancel
@@ -1348,11 +1453,83 @@ export default function TeachersPage() {
                   onClick={() => {
                     const id = confirmDelete.id;
                     setConfirmDelete(null);
+                    setShowReassignOnDelete(false);
+                    setReassignToTeacherId('');
+                    setIsReassigningAndDeleting(false);
                     deleteTeacher(id);
                   }}
-                  className="px-6 py-2.5 bg-red-600 hover:bg-red-700 text-white font-semibold rounded-xl transition-all shadow-lg"
+                  disabled={isReassigningAndDeleting}
+                  className="px-6 py-2.5 bg-red-600 hover:bg-red-700 text-white font-semibold rounded-xl transition-all shadow-lg disabled:opacity-50"
                 >
                   Yes, Delete
+                </button>
+              </div>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* Reactivate Teacher */}
+      <AnimatePresence>
+        {confirmReactivate && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 p-4"
+            onClick={() => setConfirmReactivate(null)}
+          >
+            <motion.div
+              initial={{ scale: 0.92, y: 10 }}
+              animate={{ scale: 1, y: 0 }}
+              exit={{ scale: 0.92, y: 10 }}
+              onClick={(e) => e.stopPropagation()}
+              className="bg-white/95 dark:bg-gray-800/95 backdrop-blur-sm border border-gray-200/50 dark:border-gray-700/50 rounded-2xl shadow-2xl p-6 w-full max-w-md"
+            >
+              <div className="flex items-center justify-between mb-3">
+                <h3 className="text-lg font-bold text-gray-900 dark:text-white">
+                  Reactivate Teacher
+                </h3>
+                <button
+                  onClick={() => setConfirmReactivate(null)}
+                  className="text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg p-2 transition-colors"
+                >
+                  <X className="w-5 h-5" />
+                </button>
+              </div>
+
+              <p className="text-sm text-gray-600 dark:text-gray-400 mb-5">
+                This email already exists with inactive status.
+                <span className="font-semibold text-gray-900 dark:text-white"> {confirmReactivate.email}</span>
+                . Would you like to make this teacher active?
+              </p>
+
+              <div className="flex gap-3 justify-end">
+                <Button
+                  variant="outline"
+                  onClick={() => setConfirmReactivate(null)}
+                  className="rounded-xl"
+                >
+                  No
+                </Button>
+                <button
+                  onClick={() => {
+                    const id = confirmReactivate.id;
+                    reactivateTeacher(id, {
+                      onSuccess: (resp: any) => {
+                        toast.success(resp?.message || 'Teacher activated successfully');
+                        setConfirmReactivate(null);
+                        setIsAddTeacherOpen(false);
+                      },
+                      onError: (err: any) => {
+                        toast.error(getErrorMessage(err));
+                      }
+                    });
+                  }}
+                  disabled={isReactivatingTeacher}
+                  className="px-6 py-2.5 bg-blue-600 hover:bg-blue-700 text-white font-semibold rounded-xl transition-all shadow-lg disabled:opacity-50"
+                >
+                  {isReactivatingTeacher ? 'Activating...' : 'Yes, Activate'}
                 </button>
               </div>
             </motion.div>
@@ -1400,7 +1577,7 @@ export default function TeachersPage() {
                           <h2 className="text-xl font-bold text-white">
                             {teacherFullData.data.name}
                           </h2>
-                          <Badge
+                          {/* <Badge
                             className={`mt-1 ${
                               teacherFullData.data.isActive
                                 ? 'bg-green-100 text-green-700 border-green-200'
@@ -1408,7 +1585,7 @@ export default function TeachersPage() {
                             } border`}
                           >
                             {teacherFullData.data.isActive ? 'Active' : 'Inactive'}
-                          </Badge>
+                          </Badge> */}
                         </div>
                       </div>
                       <button
@@ -1730,7 +1907,7 @@ export default function TeachersPage() {
                                         </p>
                                       </div>
                                     </div>
-                                    <Badge
+                                    {/* <Badge
                                       className={`${
                                         hist.isActive
                                           ? 'bg-green-100 text-green-700 border-green-200 dark:bg-green-900/30 dark:text-green-400 dark:border-green-800'
@@ -1738,7 +1915,7 @@ export default function TeachersPage() {
                                       } border`}
                                     >
                                       {hist.isActive ? 'Current' : 'Past'}
-                                    </Badge>
+                                    </Badge> */}
                                   </div>
                                 </div>
                               ))}

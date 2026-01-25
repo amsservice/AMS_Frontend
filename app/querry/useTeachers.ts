@@ -83,22 +83,20 @@ export const useCreateTeacher = () => {
 };
 
 /* =====================================================
-   PRINCIPAL: ACTIVATE TEACHER
-   PUT /api/teacher/:id/activate
+   PRINCIPAL: REACTIVATE TEACHER
+   PUT /api/teacher/:id/reactivate
 ===================================================== */
-export const useActivateTeacher = () => {
+export const useReactivateTeacher = () => {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: (teacherId: string) =>
-      apiFetch(`/api/teacher/${teacherId}/activate`, {
+    mutationFn: (id: string) =>
+      apiFetch(`/api/teacher/${id}/reactivate`, {
         method: 'PUT'
       }),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['teachers'] });
-      queryClient.invalidateQueries({ queryKey: ['teacher-full'] });
       queryClient.invalidateQueries({ queryKey: ['active-teachers'] });
-      queryClient.invalidateQueries({ queryKey: ['classes'] });
     }
   });
 };
@@ -281,27 +279,6 @@ export const useActiveTeacherCount = () =>
     queryKey: ['active-teachers'],
     queryFn: () => apiFetch('/api/teacher/active-teachers')
   });
-
-/* =====================================================
-   PRINCIPAL: DEACTIVATE TEACHER
-   PUT /api/teacher/:id/deactivate
-===================================================== */
-export const useDeactivateTeacher = () => {
-  const queryClient = useQueryClient();
-
-  return useMutation({
-    mutationFn: (teacherId: string) =>
-      apiFetch(`/api/teacher/${teacherId}/deactivate`, {
-        method: 'PUT'
-      }),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['teachers'] });
-      queryClient.invalidateQueries({ queryKey: ['teacher-full'] });
-      queryClient.invalidateQueries({ queryKey: ['active-teachers'] });
-      queryClient.invalidateQueries({ queryKey: ['classes'] });
-    }
-  });
-};
 
 /* =====================================================
    PRINCIPAL: SWAP TEACHERS BETWEEN CLASSES
