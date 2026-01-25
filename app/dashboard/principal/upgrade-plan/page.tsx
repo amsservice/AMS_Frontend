@@ -77,6 +77,7 @@ export default function PrincipalUpgradePlanPage() {
 
   const [currentError, setCurrentError] = useState<string | null>(null);
   const [futureError, setFutureError] = useState<string | null>(null);
+  const [planSizeError, setPlanSizeError] = useState<string | null>(null);
   const [shake, setShake] = useState(false);
 
   useEffect(() => {
@@ -122,6 +123,15 @@ export default function PrincipalUpgradePlanPage() {
       .sort((a, b) => new Date(a.startDate).getTime() - new Date(b.startDate).getTime());
   }, [invoices]);
 
+  const minAllowedStudents = useMemo(() => {
+    if (!Array.isArray(invoices) || invoices.length === 0) return 0;
+    const relevant = invoices.filter(
+      (i) => i && (i.status === "active" || i.status === "grace" || i.status === "queued")
+    );
+    if (relevant.length === 0) return 0;
+    return Math.max(...relevant.map((i) => Number(i.billableStudents || 0)));
+  }, [invoices]);
+
   useEffect(() => {
     setPrice(null);
   }, [planId, enteredStudents, futureStudents, couponCode]);
@@ -156,6 +166,16 @@ export default function PrincipalUpgradePlanPage() {
 
     setCurrentError(null);
     setFutureError(null);
+    setPlanSizeError(null);
+
+    const minStudentsFromPlan = Number(minAllowedStudents || 0);
+    const selectedTotal = current + future;
+    if (minStudentsFromPlan > 0 && selectedTotal < minStudentsFromPlan) {
+      setPlanSizeError(
+        `Selected students (${selectedTotal}) cannot be less than your latest plan students (${minStudentsFromPlan}).`
+      );
+      valid = false;
+    }
 
     if (current < 10) {
       setCurrentError("Minimum 10 students required");
@@ -218,6 +238,11 @@ export default function PrincipalUpgradePlanPage() {
   const payNow = async () => {
     if (!price) {
       alert("Please preview price first");
+      return;
+    }
+
+    if (!validateStudents()) {
+      alert(planSizeError || "Please fix validation errors before paying");
       return;
     }
 
@@ -506,6 +531,12 @@ export default function PrincipalUpgradePlanPage() {
             <p className="mt-4 text-xs text-gray-600 dark:text-gray-400">
               If you already have an active plan, the new plan will be queued and will start on the day your current plan ends.
             </p>
+
+            {planSizeError ? (
+              <div className="mt-4 rounded-xl px-3 py-2 text-xs bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 text-red-700 dark:text-red-300">
+                {planSizeError}
+              </div>
+            ) : null}
           </motion.div>
 
           <AnimatePresence>
@@ -584,7 +615,7 @@ export default function PrincipalUpgradePlanPage() {
 
                   <button
                     onClick={payNow}
-                    disabled={loading}
+                    disabled={loading || Boolean(planSizeError)}
                     className="mt-6 w-full px-6 py-4 rounded-xl font-semibold transition-all duration-300 transform hover:scale-[1.01] active:scale-[0.99] shadow-lg bg-gray-900 dark:bg-white/10 text-white hover:bg-gray-800 dark:hover:bg-white/15 border border-gray-900 dark:border-white/20 disabled:opacity-60 disabled:cursor-not-allowed"
                   >
                     {loading ? "Processing..." : "Pay Securely"}

@@ -197,6 +197,9 @@ export const useBulkUploadStudents = () => {
 
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['students'] });
+      queryClient.invalidateQueries({ queryKey: ['school-students'] });
+      queryClient.invalidateQueries({ queryKey: ['students-class-wise-stats'] });
+      queryClient.invalidateQueries({ queryKey: ['students-by-class'] });
     }
   });
 };

@@ -347,6 +347,9 @@ export default function BulkStudentUploadPage() {
   const loadMoreRef = useRef<HTMLDivElement | null>(null);
   const [visibleCount, setVisibleCount] = useState(10);
 
+  const [isBulkUiLocked, setIsBulkUiLocked] = useState(false);
+  const prevSelectedClassIdRef = useRef<string | undefined>(undefined);
+
   /* ---------------- SINGLE STUDENT ---------------- */
   const initialStudent: SingleStudentForm = {
     name: '',
@@ -725,6 +728,11 @@ export default function BulkStudentUploadPage() {
     }
     setBulkClientErrors([]);
 
+    prevSelectedClassIdRef.current = selectedClassId;
+    setIsBulkUiLocked(true);
+    setSelectedClassId(undefined);
+    setSearchTerm('');
+
     uploadStudents(
       {
         file,
@@ -736,9 +744,15 @@ export default function BulkStudentUploadPage() {
         onSuccess: (resp: any) => {
           toast.success(resp?.message || 'Students uploaded successfully');
           handleClearBulkClassWise();
+
+          setIsBulkUiLocked(false);
+          setSelectedClassId(prevSelectedClassIdRef.current);
         },
         onError: (err: any) => {
           toast.error(getApiErrorMessage(err));
+
+          setIsBulkUiLocked(false);
+          setSelectedClassId(prevSelectedClassIdRef.current);
         }
       }
     );
@@ -758,6 +772,11 @@ export default function BulkStudentUploadPage() {
     }
     setSchoolWideClientErrors([]);
 
+    prevSelectedClassIdRef.current = selectedClassId;
+    setIsBulkUiLocked(true);
+    setSelectedClassId(undefined);
+    setSearchTerm('');
+
     uploadStudentsSchoolWide(
       {
         file: schoolWideFile
@@ -767,13 +786,22 @@ export default function BulkStudentUploadPage() {
           if (resp && resp.success === false) {
             const msg = resp?.message || 'CSV validation failed';
             toast.error(msg);
+
+            setIsBulkUiLocked(false);
+            setSelectedClassId(prevSelectedClassIdRef.current);
             return;
           }
           toast.success(resp?.message || 'Students uploaded successfully');
           handleClearBulkSchoolWide();
+
+          setIsBulkUiLocked(false);
+          setSelectedClassId(prevSelectedClassIdRef.current);
         },
         onError: (err: any) => {
           toast.error(getApiErrorMessage(err));
+
+          setIsBulkUiLocked(false);
+          setSelectedClassId(prevSelectedClassIdRef.current);
         }
       }
     );
@@ -911,6 +939,19 @@ export default function BulkStudentUploadPage() {
 
       <main className="max-w-7xl mx-auto py-6 px-4 sm:px-6 lg:px-8 ">
         <div className="space-y-6">
+          {isBulkUiLocked && (
+            <div className="dashboard-card border dashboard-card-border rounded-2xl shadow-dashboard-lg p-4">
+              <div className="flex items-center justify-between gap-3 flex-wrap">
+                <p className="dashboard-text font-semibold">
+                  Bulk upload in progress. Student list will refresh once it completes.
+                </p>
+                <div className="flex items-center gap-2">
+                  <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-blue-600"></div>
+                  <span className="text-sm dashboard-text-muted">Uploading...</span>
+                </div>
+              </div>
+            </div>
+          )}
           <div className="dashboard-card border dashboard-card-border rounded-2xl shadow-dashboard-lg overflow-hidden">
             <div className="px-6 py-5 border-b dashboard-card-border bg-gradient-to-r from-blue-50 to-indigo-50 dark:from-blue-900/20 dark:to-indigo-900/20">
               <div className="flex items-center gap-3">
@@ -958,7 +999,9 @@ export default function BulkStudentUploadPage() {
                     return (
                       <button
                         key={id}
+                        disabled={isBulkUiLocked}
                         onClick={() => {
+                          if (isBulkUiLocked) return;
                           setSelectedClassId(id);
                           setSearchTerm('');
                           window.setTimeout(() => {
@@ -968,7 +1011,7 @@ export default function BulkStudentUploadPage() {
                             });
                           }, 50);
                         }}
-                        className={`text-left p-4 rounded-2xl border transition-all shadow-sm hover:shadow-dashboard-lg ${isSelected
+                        className={`text-left p-4 rounded-2xl border transition-all shadow-sm hover:shadow-dashboard-lg disabled:opacity-60 disabled:cursor-not-allowed ${isSelected
                           ? 'border-accent-blue bg-blue-50 dark:bg-blue-900/20'
                           : 'dashboard-card-border dashboard-card'
                           }`}
@@ -996,9 +1039,11 @@ export default function BulkStudentUploadPage() {
 
               <button
                 onClick={() => {
+                  if (isBulkUiLocked) return;
                   setSelectedClassId(undefined);
                   setSearchTerm('');
                 }}
+                disabled={isBulkUiLocked}
                 className="px-4 py-2 dashboard-card border dashboard-card-border rounded-xl dashboard-text hover:shadow-dashboard transition-all"
               >
                 Back to classes
@@ -1013,6 +1058,7 @@ export default function BulkStudentUploadPage() {
                   value={searchTerm}
                   onChange={(e) => setSearchTerm(e.target.value)}
                   placeholder="Search students by name, email or admission no..."
+                  disabled={isBulkUiLocked}
                   className="w-full px-4 py-3 dashboard-card border dashboard-card-border rounded-xl dashboard-text focus:outline-none focus:ring-2 focus:ring-accent-blue transition-all"
                 />
               </div>
