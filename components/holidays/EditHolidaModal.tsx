@@ -317,6 +317,10 @@ export default function EditHolidayModal({
   };
 
   const handleDelete = () => {
+    if (isPastHoliday) {
+      toast.error('Past holidays cannot be deleted');
+      return;
+    }
     deleteHoliday(holiday._id, { onSuccess: onClose });
   };
 
@@ -440,7 +444,14 @@ export default function EditHolidayModal({
 
               <Button
                 variant="destructive"
-                onClick={() => setShowDeleteConfirm(true)}
+                onClick={() => {
+                  if (isPastHoliday) {
+                    toast.error('Past holidays cannot be deleted');
+                    return;
+                  }
+                  setShowDeleteConfirm(true);
+                }}
+                disabled={isPastHoliday}
               >
                 Delete
               </Button>

@@ -42,9 +42,16 @@ export default function SchoolCalendar() {
   const { data: holidays = [] } = useHolidays();
 
   const today = new Date();
+  today.setHours(0, 0, 0, 0);
   const [month, setMonth] = useState(today.getMonth());
   const [year, setYear] = useState(today.getFullYear());
   const [selectedDate, setSelectedDate] = useState(normalizeDate(today));
+
+  const isPastHoliday = (h: Holiday) => {
+    const end = h.endDate ? new Date(h.endDate) : new Date(h.startDate);
+    end.setHours(0, 0, 0, 0);
+    return end.getTime() < today.getTime();
+  };
 
   /* ===============================
      MONTH NAVIGATION
@@ -88,10 +95,12 @@ export default function SchoolCalendar() {
     if (day < 1 || day > daysInMonth) return null;
 
     const dateKey = normalizeDate(new Date(year, month, day));
+    const cellHolidays = holidayDateMap.get(dateKey) ?? [];
     return {
       day,
       dateKey,
-      holidays: holidayDateMap.get(dateKey) ?? []
+      holidays: cellHolidays,
+      isPastHoliday: cellHolidays.length > 0 ? cellHolidays.every(isPastHoliday) : false
     };
   });
 
@@ -181,7 +190,7 @@ export default function SchoolCalendar() {
     ${cell.dateKey === selectedDate
                         ? "bg-teal-600 text-white shadow-lg"
                         : cell.holidays.length > 0
-                          ? "rounded-lg border border-red-400 bg-red-100/70 dark:bg-red-900/30 text-red-700 dark:text-red-300"
+                          ? `rounded-lg border border-red-400 bg-red-100/70 dark:bg-red-900/30 text-red-700 dark:text-red-300 ${cell.isPastHoliday ? 'opacity-55' : ''}`
                           : "rounded-xl text-gray-900 dark:text-white hover:bg-gray-100 dark:hover:bg-gray-700"
                       }
   `}
@@ -210,7 +219,7 @@ export default function SchoolCalendar() {
                   {selectedHolidays.map((h) => (
                     <div
                       key={h._id}
-                      className="p-4 rounded-xl bg-red-100/60 dark:bg-red-900/30 border border-red-300"
+                      className={`p-4 rounded-xl bg-red-100/60 dark:bg-red-900/30 border border-red-300 ${isPastHoliday(h) ? 'opacity-55' : ''}`}
                     >
                       <div className="font-bold text-red-700">
                         {h.name}
@@ -239,7 +248,7 @@ export default function SchoolCalendar() {
               {monthHolidays.length ? (
                 <div className="space-y-3">
                   {monthHolidays.map((h) => (
-                    <div key={h._id} className="p-3 rounded-xl bg-gray-100 dark:bg-gray-700">
+                    <div key={h._id} className={`p-3 rounded-xl bg-gray-100 dark:bg-gray-700 ${isPastHoliday(h) ? 'opacity-55' : ''}`}>
                       <div className="font-semibold">{h.name}</div>
                       <div className="text-xs text-gray-00">
                         {new Date(h.startDate).toDateString()}
