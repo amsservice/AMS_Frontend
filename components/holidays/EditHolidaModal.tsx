@@ -206,7 +206,7 @@
 
 'use client';
 
-import { useState } from 'react';
+import { useMemo, useState } from 'react';
 import { X } from 'lucide-react';
 
 import { Button } from '@/components/ui/button';
@@ -220,6 +220,8 @@ import {
   useUpdateHoliday,
   useDeleteHoliday
 } from '@/app/querry/useHolidays';
+
+import { useSessions } from '@/app/querry/useSessions';
 
 import {
   HolidayCategory,
@@ -243,6 +245,8 @@ export default function EditHolidayModal({
   holiday: Holiday;
   onClose: () => void;
 }) {
+  const { data: sessions = [] } = useSessions();
+
   const today = new Date();
   today.setHours(0, 0, 0, 0);
 
@@ -252,6 +256,38 @@ export default function EditHolidayModal({
 
   const holidayStart = new Date(holiday.startDate);
   const isPastHoliday = holidayStart.getTime() < today.getTime();
+
+  const isRangeHoliday = Boolean(holiday.endDate);
+
+  const activeSession = useMemo(() => {
+    return (sessions as any[]).find((s) => s?.isActive);
+  }, [sessions]);
+
+  const sessionStart = useMemo(() => {
+    if (!activeSession?.startDate) return null;
+    const d = new Date(activeSession.startDate);
+    d.setHours(0, 0, 0, 0);
+    return d;
+  }, [activeSession]);
+
+  const sessionEnd = useMemo(() => {
+    if (!activeSession?.endDate) return null;
+    const d = new Date(activeSession.endDate);
+    d.setHours(0, 0, 0, 0);
+    return d;
+  }, [activeSession]);
+
+  const maxSelectableDate = useMemo(() => {
+    if (!sessionEnd) return undefined;
+    return sessionEnd.toISOString().split('T')[0];
+  }, [sessionEnd]);
+
+  const minSelectableDate = useMemo(() => {
+    const a = minDate;
+    if (!sessionStart) return a;
+    const b = sessionStart.toISOString().split('T')[0];
+    return a > b ? a : b;
+  }, [minDate, sessionStart]);
 
   const [form, setForm] = useState<EditHolidayFormState>({
     name: holiday.name,
@@ -268,6 +304,11 @@ export default function EditHolidayModal({
 
   const handleSave = () => {
     if (isPastHoliday) return;
+
+    if (!activeSession || !sessionStart || !sessionEnd) {
+      toast.error('No active session found. Please create or activate a session first.');
+      return;
+    }
 
     const trimmedName = form.name.trim();
     if (!/^[A-Za-z0-9\s]+$/.test(trimmedName)) {
@@ -301,13 +342,26 @@ export default function EditHolidayModal({
       }
     }
 
+    const effectiveEnd = (isRangeHoliday && form.endDate)
+      ? (() => {
+        const d = new Date(form.endDate);
+        d.setHours(0, 0, 0, 0);
+        return d;
+      })()
+      : start;
+
+    if (start.getTime() < sessionStart.getTime() || effectiveEnd.getTime() > sessionEnd.getTime()) {
+      toast.error('Holiday must be within the current session year.');
+      return;
+    }
+
     updateHoliday(
       {
         id: holiday._id,
         data: {
           name: trimmedName,
           startDate: form.startDate,
-          endDate: form.endDate || undefined,
+          endDate: isRangeHoliday ? (form.endDate || undefined) : undefined,
           category: form.category,
           description: form.description
         }
@@ -392,25 +446,29 @@ export default function EditHolidayModal({
                 onChange={(e) =>
                   setForm({ ...form, startDate: e.target.value })
                 }
-                min={minDate}
+                min={minSelectableDate}
+                max={maxSelectableDate}
                 className="dashboard-card border dashboard-card-border dashboard-text"
               />
             </div>
 
             {/* END DATE */}
-            <div className="space-y-2">
-              <Label className="dashboard-text-muted">End Date (optional)</Label>
-              <Input
-                type="date"
-                value={form.endDate}
-                disabled={isPastHoliday}
-                onChange={(e) =>
-                  setForm({ ...form, endDate: e.target.value })
-                }
-                min={minDate}
-                className="dashboard-card border dashboard-card-border dashboard-text"
-              />
-            </div>
+            {isRangeHoliday && (
+              <div className="space-y-2">
+                <Label className="dashboard-text-muted">End Date</Label>
+                <Input
+                  type="date"
+                  value={form.endDate}
+                  disabled={isPastHoliday}
+                  onChange={(e) =>
+                    setForm({ ...form, endDate: e.target.value })
+                  }
+                  min={minSelectableDate}
+                  max={maxSelectableDate}
+                  className="dashboard-card border dashboard-card-border dashboard-text"
+                />
+              </div>
+            )}
 
             {/* CATEGORY */}
             <div className="space-y-2">
