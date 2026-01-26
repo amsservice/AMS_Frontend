@@ -665,6 +665,39 @@
     outline: 2px solid var(--accent-blue);
     outline-offset: 2px;
   }
+  
+  /* Hide Edge/Chrome password reveal button */
+  input[type="password"] {
+    appearance: none;
+    -webkit-appearance: none;
+    -moz-appearance: none;
+    background-clip: padding-box !important;
+    background-image: none !important;
+  }
+  
+  /* Target Edge's password visibility toggle */
+  input[type="password"]::-ms-reveal {
+    display: none !important;
+  }
+  
+  input[type="password"]::-webkit-credentials-auto-fill-button,
+  input[type="password"]::-webkit-strong-password-button {
+    display: none !important;
+    visibility: hidden !important;
+    pointer-events: none !important;
+    margin-right: -9999px;
+    width: 0;
+    height: 0;
+  }
+  
+  input[type="password"]::-webkit-autofill-strong-password-container {
+    display: none !important;
+  }
+  
+  /* Override any default button styling */
+  input[type="password"]::placeholder {
+    opacity: 1;
+  }
 }
 
 /* Base Component Overrides */
