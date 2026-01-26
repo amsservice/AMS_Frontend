@@ -19,8 +19,10 @@ export default function DashboardSidebar({ isOpen, onClose }: Props) {
   const router = useRouter();
   const { data } = useMySchool();
 
-  const role = user?.role || "student";
+  
+  const role = user?.activeRole ?? 'student';
   const menus = DASHBOARD_MENUS[role];
+  if (!user) return null;
   const schoolName = data?.school?.name;
   const schoolCode = data?.school?.schoolCode;
 

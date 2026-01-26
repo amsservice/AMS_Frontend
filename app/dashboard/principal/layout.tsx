@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { useAuth } from "@/app/context/AuthContext";
+import { getDashboardPath } from "@/lib/roleRedirect";
 
 import DashboardSidebar from "@/components/dashboard/DashboardSidebar";
 import DashboardHeader from "@/components/dashboard/DashboardHeader";
@@ -21,8 +22,16 @@ export default function PrincipalLayout({
 
   /* 🔐 Role Guard (Incoming Functionality) */
   useEffect(() => {
-    if (!loading && user?.role !== "principal") {
-      router.replace("/auth/school-code");
+    if (loading) return;
+    if (!user) {
+      router.replace("/auth/login");
+      return;
+    }
+
+    const isAllowed =
+      user.roles.includes("principal");
+    if (!isAllowed) {
+      router.replace(getDashboardPath(user.activeRole));
     }
   }, [loading, user, router]);
 

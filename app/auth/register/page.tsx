@@ -76,7 +76,7 @@ export default function RegisterPage() {
   //Redirect if already logged in
   useEffect(() => {
     if (!loading && user) {
-      router.replace(getDashboardPath(user.role));
+      router.replace(getDashboardPath(user.activeRole));
     }
   }, [user, loading, router]);
 
@@ -273,6 +273,7 @@ export default function RegisterPage() {
         hintText="Secure registration"
         navLinks={[
           { label: "Home", href: "/" },
+          { label: "Pricing", href: "/pricing" },
           { label: "Contact", href: "/contact" },
         ]}
       />

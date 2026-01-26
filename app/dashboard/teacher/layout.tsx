@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { useAuth } from "@/app/context/AuthContext";
+import { getDashboardPath } from "@/lib/roleRedirect";
 
 import DashboardSidebar from "@/components/dashboard/DashboardSidebar";
 import DashboardHeader from "@/components/dashboard/DashboardHeader";
@@ -20,8 +21,14 @@ export default function TeacherLayout({
 
   /* 🔐 Role Guard */
   useEffect(() => {
-    if (!loading && user?.role !== "teacher") {
-      router.replace("/auth/school-code");
+    if (loading) return;
+    if (!user) {
+      router.replace("/auth/login");
+      return;
+    }
+
+    if (!user.roles.includes("teacher")) {
+      router.replace(getDashboardPath(user.activeRole));
     }
   }, [loading, user, router]);
 

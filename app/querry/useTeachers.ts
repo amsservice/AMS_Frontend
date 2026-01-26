@@ -12,6 +12,9 @@ export interface ApiResponse<T> {
   data: T;
 }
 
+type StaffRole = "teacher" | "coordinator";
+
+
 export interface TeacherHistory {
   sessionId: {
     _id: string;
@@ -32,6 +35,7 @@ export interface TeacherFullProfile {
   name: string;
   email: string;
   phone?: string;
+  roles: StaffRole[];
   dob?: string;
   gender?: 'male' | 'female' | 'other';
   highestQualification?: string;
@@ -54,7 +58,7 @@ export interface TeacherFullProfile {
 
 /* =====================================================
    PRINCIPAL: CREATE TEACHER
-   POST /api/teacher
+   POST /api/staff
 ===================================================== */
 export const useCreateTeacher = () => {
   const queryClient = useQueryClient();
@@ -70,8 +74,9 @@ export const useCreateTeacher = () => {
       highestQualification?: string;
       experienceYears?: number;
       address?: string;
+      roles: StaffRole[];
     }) =>
-      apiFetch('/api/teacher', {
+      apiFetch('/api/staff', {
         method: 'POST',
         body: JSON.stringify(data)
       }),
@@ -84,14 +89,14 @@ export const useCreateTeacher = () => {
 
 /* =====================================================
    PRINCIPAL: REACTIVATE TEACHER
-   PUT /api/teacher/:id/reactivate
+   PUT /api/staff/:id/reactivate
 ===================================================== */
 export const useReactivateTeacher = () => {
   const queryClient = useQueryClient();
 
   return useMutation({
     mutationFn: (id: string) =>
-      apiFetch(`/api/teacher/${id}/reactivate`, {
+      apiFetch(`/api/staff/${id}/reactivate`, {
         method: 'PUT'
       }),
     onSuccess: () => {
@@ -104,7 +109,7 @@ export const useReactivateTeacher = () => {
 
 /* =====================================================
    PRINCIPAL: BULK UPLOAD TEACHERS
-   POST /api/teacher/bulk-upload
+   POST /api/staff/bulk-upload
 ===================================================== */
 
 export const useBulkUploadTeachers = () => {
@@ -115,7 +120,7 @@ export const useBulkUploadTeachers = () => {
       const formData = new FormData();
       formData.append('csvFile', payload.file);
 
-      return apiFetch('/api/teacher/bulk-upload', {
+      return apiFetch('/api/staff/bulk-upload', {
         method: 'POST',
         body: formData
       });
@@ -129,24 +134,24 @@ export const useBulkUploadTeachers = () => {
 
 /* =====================================================
    PRINCIPAL: LIST TEACHERS
-   GET /api/teacher
+   GET /api/staff
 ===================================================== */
 export const useTeachers = () =>
   useQuery({
     queryKey: ['teachers'],
-    queryFn: () => apiFetch('/api/teacher')
+    queryFn: () => apiFetch('/api/staff')
   });
 
 /* =====================================================
    PRINCIPAL: UPDATE TEACHER
-   PUT /api/teacher/:id
+   PUT /api/staff/:id
 ===================================================== */
 export const useUpdateTeacher = (id: string) => {
   const queryClient = useQueryClient();
 
   return useMutation({
     mutationFn: (data: any) =>
-      apiFetch(`/api/teacher/${id}`, {
+      apiFetch(`/api/staff/${id}`, {
         method: 'PUT',
         body: JSON.stringify(data)
       }),
@@ -159,14 +164,14 @@ export const useUpdateTeacher = (id: string) => {
 
 /* =====================================================
    PRINCIPAL: DELETE TEACHER
-   DELETE /api/teacher/:id
+   DELETE /api/staff/:id
 ===================================================== */
 export const useDeleteTeacher = () => {
   const queryClient = useQueryClient();
 
   return useMutation({
     mutationFn: (id: string) =>
-      apiFetch(`/api/teacher/${id}`, {
+      apiFetch(`/api/staff/${id}`, {
         method: 'DELETE'
       }),
     onSuccess: () => {
@@ -180,7 +185,7 @@ export const useDeleteTeacher = () => {
 
 /* =====================================================
    PRINCIPAL: ASSIGN CLASS TO TEACHER
-   POST /api/teacher/:id/assign-class
+   POST /api/staff/:id/assign-class
 ===================================================== */
 export const useAssignClassToTeacher = () => {
   const queryClient = useQueryClient();
@@ -193,7 +198,7 @@ export const useAssignClassToTeacher = () => {
       className: string;
       section: string;
     }) =>
-      apiFetch(`/api/teacher/${data.teacherId}/assign-class`, {
+      apiFetch(`/api/staff/${data.teacherId}/assign-class`, {
         method: 'POST',
         body: JSON.stringify(data)
       }),
@@ -207,45 +212,45 @@ export const useAssignClassToTeacher = () => {
 
 /* =====================================================
    TEACHER: BASIC PROFILE
-   GET /api/teacher/me
+   GET /api/staff/me
 ===================================================== */
 export const useMyTeacherProfile = () =>
   useQuery({
     queryKey: ['teacher-me'],
-    queryFn: () => apiFetch('/api/teacher/me')
+    queryFn: () => apiFetch('/api/staff/me')
   });
 
 /* =====================================================
    TEACHER: FULL PROFILE
-   GET /api/teacher/me/full
+   GET /api/staff/me/full
 ===================================================== */
 export const useMyTeacherFullProfile = () =>
   useQuery<ApiResponse<TeacherFullProfile>>({
     queryKey: ['teacher-me-full'],
-    queryFn: () => apiFetch('/api/teacher/me/full')
+    queryFn: () => apiFetch('/api/staff/me/full')
   });
 
 /* =====================================================
    PRINCIPAL: GET ANY TEACHER FULL PROFILE
-   GET /api/teacher/:id/full
+   GET /api/staff/:id/full
 ===================================================== */
 export const useTeacherFullProfile = (teacherId: string) =>
   useQuery<ApiResponse<TeacherFullProfile>>({
     queryKey: ['teacher-full', teacherId],
-    queryFn: () => apiFetch(`/api/teacher/${teacherId}/full`),
+    queryFn: () => apiFetch(`/api/staff/${teacherId}/full`),
     enabled: !!teacherId
   });
 
 /* =====================================================
    TEACHER: UPDATE OWN PROFILE
-   PUT /api/teacher/me
+   PUT /api/staff/me
 ===================================================== */
 export const useUpdateMyTeacherProfile = () => {
   const queryClient = useQueryClient();
 
   return useMutation({
     mutationFn: (data: { name?: string; phone?: string }) =>
-      apiFetch('/api/teacher/me', {
+      apiFetch('/api/staff/me', {
         method: 'PUT',
         body: JSON.stringify(data)
       }),
@@ -258,7 +263,7 @@ export const useUpdateMyTeacherProfile = () => {
 
 /* =====================================================
    TEACHER: CHANGE PASSWORD
-   PUT /api/teacher/me/password
+   PUT /api/staff/me/password
 ===================================================== */
 export const useChangeTeacherPassword = () =>
   useMutation({
@@ -266,7 +271,7 @@ export const useChangeTeacherPassword = () =>
       currentPassword: string;
       newPassword: string;
     }) =>
-      apiFetch('/api/teacher/me/password', {
+      apiFetch('/api/staff/me/password', {
         method: 'PUT',
         body: JSON.stringify(data)
       })
@@ -274,17 +279,17 @@ export const useChangeTeacherPassword = () =>
 
 /* =====================================================
    PRINCIPAL DASHBOARD: ACTIVE TEACHER COUNT
-   GET /api/teacher/active-teachers
+   GET /api/staff/active-teachers
 ===================================================== */
 export const useActiveTeacherCount = () =>
   useQuery({
     queryKey: ['active-teachers'],
-    queryFn: () => apiFetch('/api/teacher/active-teachers')
+    queryFn: () => apiFetch('/api/staff/active-teachers')
   });
 
 /* =====================================================
    PRINCIPAL: SWAP TEACHERS BETWEEN CLASSES
-   PUT /api/teacher/swap-classes
+   PUT /api/staff/swap-classes
 ===================================================== */
 export const useSwapTeacherClasses = () => {
   const queryClient = useQueryClient();
@@ -303,7 +308,7 @@ export const useSwapTeacherClasses = () => {
       classBName: string;
       sectionB: string;
     }) =>
-      apiFetch('/api/teacher/swap-classes', {
+      apiFetch('/api/staff/swap-classes', {
         method: 'PUT',
         body: JSON.stringify(data)
       }),
@@ -318,7 +323,7 @@ export const useSwapTeacherClasses = () => {
 
 /* =====================================================
    PRINCIPAL: UPDATE TEACHER PROFILE
-   PUT /api/teacher/:id/profile
+   PUT /api/staff/:id/profile
 ===================================================== */
 export const useUpdateTeacherProfileByPrincipal = (teacherId: string) => {
   const queryClient = useQueryClient();
@@ -334,7 +339,7 @@ export const useUpdateTeacherProfileByPrincipal = (teacherId: string) => {
       experienceYears?: number;
       address?: string;
     }) =>
-      apiFetch(`/api/teacher/${teacherId}/profile`, {
+      apiFetch(`/api/staff/${teacherId}/profile`, {
         method: 'PUT',
         body: JSON.stringify(data)
       }),

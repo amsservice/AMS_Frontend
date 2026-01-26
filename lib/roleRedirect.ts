@@ -1,15 +1,17 @@
 // src/lib/roleRedirect.ts
-import type { User } from "@/app/context/AuthContext";
+import type { Role } from "@/app/context/AuthContext";
 
-export function getDashboardPath(role: User["role"]) {
+export function getDashboardPath(role: Role) {
   switch (role) {
     case "principal":
+    case "coordinator":
       return "/dashboard/principal";
     case "teacher":
       return "/dashboard/teacher";
     case "student":
       return "/dashboard/student";
     default:
-      return "/login";
+      return "/";
   }
 }
+

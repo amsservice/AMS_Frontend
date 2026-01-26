@@ -227,7 +227,6 @@ interface SingleStudentForm {
 const strictEmailRegex =
   /^[a-zA-Z0-9._%+-]+@(gmail|yahoo|outlook|hotmail)\.(com|in)$/;
 
-
 /* =====================================================
   MAIN PAGE COMPONENT
 ===================================================== */
@@ -236,7 +235,8 @@ export default function BulkStudentUploadPage() {
 
   // UNCOMMENT AND USE YOUR ACTUAL HOOKS:
   const { user } = useAuth();
-  const role = user?.role;
+  const isAllowed =
+    user?.roles?.includes("principal") || user?.roles?.includes("coordinator");
 
   const {
     mutate: createStudent,
@@ -313,7 +313,7 @@ export default function BulkStudentUploadPage() {
 
   useEffect(() => {
     if (!user) return;
-    if (role !== 'principal') return;
+    if (!isAllowed) return;
 
     const fetchCapacity = async () => {
       try {
@@ -325,7 +325,7 @@ export default function BulkStudentUploadPage() {
     };
 
     fetchCapacity();
-  }, [user, role]);
+  }, [user, isAllowed]);
 
   const [selectedClassId, setSelectedClassId] = useState<string | undefined>(undefined);
 
@@ -409,16 +409,14 @@ export default function BulkStudentUploadPage() {
   const handleSingleSubmit = () => {
     const errors: Partial<Record<keyof SingleStudentForm | 'class', string>> = {};
 
-   
-
     const trimmedName = student.name.trim();
-  const trimmedEmail = student.email.trim();
-  const trimmedPassword = student.password;
-  const trimmedAdmissionNo = student.admissionNo.trim();
-  const trimmedFatherName = student.fatherName.trim();
-  const trimmedMotherName = student.motherName.trim();
-  const trimmedParentsPhone = student.parentsPhone.trim();
-  const trimmedRollNo = student.rollNo.trim();
+    const trimmedEmail = student.email.trim();
+    const trimmedPassword = student.password;
+    const trimmedAdmissionNo = student.admissionNo.trim();
+    const trimmedFatherName = student.fatherName.trim();
+    const trimmedMotherName = student.motherName.trim();
+    const trimmedParentsPhone = student.parentsPhone.trim();
+    const trimmedRollNo = student.rollNo.trim();
 
     // 🔒 Name validations (NO numbers allowed)
     if (trimmedName.length < 3) {
@@ -713,7 +711,7 @@ export default function BulkStudentUploadPage() {
     }
 
     if (
-      role === 'principal' &&
+      isAllowed &&
       (!bulkClassId || !bulkClassName || !bulkSection)
     ) {
       toast.error('Please select class and section');
@@ -736,9 +734,9 @@ export default function BulkStudentUploadPage() {
     uploadStudents(
       {
         file,
-        classId: role === 'principal' ? bulkClassId : undefined,
-        className: role === 'principal' ? bulkClassName : undefined,
-        section: role === 'principal' ? bulkSection : undefined
+        classId: bulkClassId,
+        className: bulkClassName,
+        section: bulkSection
       },
       {
         onSuccess: (resp: any) => {
@@ -883,7 +881,7 @@ export default function BulkStudentUploadPage() {
      RENDER
   ===================================================== */
 
-  if (role !== 'principal') {
+  if (!isAllowed) {
     return null;
   }
 

@@ -19,9 +19,9 @@ const SidebarSchoolCard = memo(({
 }: SidebarSchoolCardProps) => {
   return (
     <motion.div
-      initial={{ opacity: 0, y: 8 }}
-      animate={{ opacity: 1, y: 0 }}
-      transition={{ duration: 0.4, ease: "easeOut" }}
+      // initial={{ opacity: 0, y: 8 }}
+      // animate={{ opacity: 1, y: 0 }}
+      // transition={{ duration: 0.4, ease: "easeOut" }}
       className="relative w-full px-4 py-2 mb-4"
     >
       <div className="relative overflow-hidden rounded-2xl bg-[#0F0F10] border border-white/[0.1] shadow-2xl group">
