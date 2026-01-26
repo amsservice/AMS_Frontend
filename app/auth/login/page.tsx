@@ -337,7 +337,8 @@ export default function LoginPage() {
                 value={form.password}
                 onChange={handleChange}
                 placeholder="••••••••"
-                className="w-full px-4 py-3 rounded-xl border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 pr-12"
+                autoComplete="new-password"
+                className="w-full px-4 py-3 rounded-xl border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 pr-12 [appearance:none] [-webkit-appearance:none] [-moz-appearance:none]"
               />
               <button
                 type="button"
