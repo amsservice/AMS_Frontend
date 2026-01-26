@@ -8,6 +8,7 @@ import { apiFetch } from '@/lib/api';
 ===================================================== */
 
 export interface StudentHistory {
+    _id?: string;  
   sessionId: string;
   classId: string;
   className: string;
@@ -137,6 +138,23 @@ export const useUpdateStudent = () => {
    STUDENT: MY PROFILE
    GET /api/students/me
 ===================================================== */
+export const useDeactivateStudent = () => {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: (id: string) =>
+      apiFetch(`/api/student/${id}/deactivate`, {
+        method: 'PUT'
+      }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['students'] });
+      queryClient.invalidateQueries({ queryKey: ['school-students'] });
+      queryClient.invalidateQueries({ queryKey: ['students-class-wise-stats'] });
+      queryClient.invalidateQueries({ queryKey: ['students-by-class'] });
+    }
+  });
+};
+
 export const useMyStudentProfile = () =>
   useQuery<Student>({
     queryKey: ['student', 'me'],
@@ -179,6 +197,18 @@ export const useBulkUploadStudents = () => {
 
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['students'] });
+      queryClient.invalidateQueries({ queryKey: ['school-students'] });
+      queryClient.invalidateQueries({ queryKey: ['students-class-wise-stats'] });
+      queryClient.invalidateQueries({ queryKey: ['students-by-class'] });
     }
   });
 };
+
+
+// get full details of students
+export const useStudentById = (studentId?: string) =>
+  useQuery<Student>({
+    queryKey: ['student', studentId],
+    queryFn: () => apiFetch(`/api/student/${studentId}`),
+    enabled: Boolean(studentId)
+  });

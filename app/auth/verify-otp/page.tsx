@@ -24,6 +24,8 @@ export default function VerifyOtpPage() {
   const searchParams = useSearchParams();
 
   const email = searchParams.get("email");
+  const planParam = searchParams.get("plan");
+  const planQuery = planParam ? `&plan=${encodeURIComponent(planParam)}` : "";
 
   const [otp, setOtp] = useState("");
   const [submitting, setSubmitting] = useState(false);
@@ -111,7 +113,7 @@ export default function VerifyOtpPage() {
       toast.success("Email verified successfully");
 
       router.replace(
-        `/subscription/payment?email=${encodeURIComponent(email!)}`
+        `/subscription/payment?email=${encodeURIComponent(email!)}${planQuery}`
       );
 
     } catch (err: any) {

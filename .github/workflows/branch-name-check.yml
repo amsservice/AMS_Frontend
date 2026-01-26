@@ -1,0 +1,38 @@
+name: Branch Name Validation
+
+on:
+  pull_request:
+    types: [opened, synchronize, reopened, edited]
+
+jobs:
+  validate-branch-name:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Validate branch name
+        run: |
+          BRANCH="${{ github.head_ref }}"
+
+          echo "Checking branch: $BRANCH"
+
+          PATTERN="^((task|defect|feature)/[A-Z]+-[0-9]+-[a-z0-9-]+|(task|defect|feature)/[a-z0-9-]+)$"
+
+          if [[ "$BRANCH" == "dev" || "$BRANCH" == "qa" || "$BRANCH" == "main" ]]; then
+            echo "✅ System branch detected, skipping validation"
+            exit 0
+          fi
+
+          if [[ ! "$BRANCH" =~ $PATTERN ]]; then
+            echo "❌ Invalid branch name: $BRANCH"
+            echo ""
+            echo "Expected format:"
+            echo "  task/PROJ-123-description"
+            echo "  defect/PROJ-123-description"
+            echo ""
+            echo "Examples:"
+            echo "  task/AMS-101-login-ui"
+            echo "  defect/BUG-22-null-pointer"
+            exit 1
+          fi
+
+          echo "✅ Branch name is valid"

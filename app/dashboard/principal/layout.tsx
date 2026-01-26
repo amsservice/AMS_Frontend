@@ -4,8 +4,8 @@ import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { useAuth } from "@/app/context/AuthContext";
 
-import DashboardSidebar from "@/components/navbar/DashboardSidebar";
-import DashboardHeader from "@/components/navbar/DashboardHeader";
+import DashboardSidebar from "@/components/dashboard/DashboardSidebar";
+import DashboardHeader from "@/components/dashboard/DashboardHeader";
 
 export default function PrincipalLayout({
   children
@@ -17,42 +17,52 @@ export default function PrincipalLayout({
 
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [darkMode, setDarkMode] = useState(false);
+  const [themeInitialized, setThemeInitialized] = useState(false);
 
-  useEffect(() => {
-    try {
-      const stored = localStorage.getItem('ams:darkMode');
-      if (stored === 'true' || stored === 'false') {
-        setDarkMode(stored === 'true');
-        return;
-      }
-
-      const prefersDark =
-        typeof window !== 'undefined' &&
-        window.matchMedia &&
-        window.matchMedia('(prefers-color-scheme: dark)').matches;
-      setDarkMode(prefersDark);
-    } catch {
-      // ignore
-    }
-  }, []);
-
-  /* 🔐 Role Guard */
+  /* 🔐 Role Guard (Incoming Functionality) */
   useEffect(() => {
     if (!loading && user?.role !== "principal") {
       router.replace("/auth/school-code");
     }
   }, [loading, user, router]);
 
-  /* 🌙 Dark Mode */
+  /* 🌙 Upastithi Theme Logic (Your local key & logic) */
   useEffect(() => {
-    document.documentElement.classList.toggle("dark", darkMode);
-
     try {
-      localStorage.setItem('ams:darkMode', String(darkMode));
-    } catch {
+      // 1. On mount, check LocalStorage using Upastithi key
+      const savedTheme = window.localStorage.getItem("Upastithi-theme");
+      if (savedTheme === "dark") {
+        setDarkMode(true);
+        document.documentElement.classList.add("dark");
+      } else if (savedTheme === "light") {
+        setDarkMode(false);
+        document.documentElement.classList.remove("dark");
+      } else {
+        // 2. If no setting, check system preference (Incoming window check)
+        const prefersDark = 
+          typeof window !== 'undefined' && 
+          window.matchMedia("(prefers-color-scheme: dark)").matches;
+        
+        setDarkMode(prefersDark);
+        document.documentElement.classList.toggle("dark", prefersDark);
+      }
+    } catch (e) {
+      // ignore (Incoming safety functionality)
+    } finally {
+      setThemeInitialized(true);
+    }
+  }, []);
+
+  /* 3. Watch for manual toggles (Upastithi Logic with Incoming safety) */
+  useEffect(() => {
+    if (!themeInitialized) return;
+    document.documentElement.classList.toggle("dark", darkMode);
+    try {
+      window.localStorage.setItem("Upastithi-theme", darkMode ? "dark" : "light");
+    } catch (e) {
       // ignore
     }
-  }, [darkMode]);
+  }, [darkMode, themeInitialized]);
 
   if (loading || !user) return null;
 
@@ -73,6 +83,7 @@ export default function PrincipalLayout({
           onMenuClick={() => setSidebarOpen(true)}
         />
 
+        {/* Keeping your specific UI padding classes */}
         <div className="">
           <div className="max-w-[1400px] mx-auto">
             {children}

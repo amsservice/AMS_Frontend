@@ -4,6 +4,7 @@ import { useState } from "react";
 import { Calendar, Moon, Sun, Sparkles, Menu, X } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { usePathname } from "next/navigation";
+import Link from "next/link";
 
 type MainNavbarProps = {
   isDark: boolean;
@@ -47,7 +48,7 @@ export default function MainNavbar({
         <div className="flex items-center">
           {/* Logo */}
           <div className="flex items-center flex-1">
-            <a href="/" className="flex items-center gap-2 sm:gap-3 group">
+            <Link href="/" className="flex items-center gap-2 sm:gap-3 group">
               <motion.div
                 whileHover={{ scale: 1.05, rotate: 5 }}
                 whileTap={{ scale: 0.95 }}
@@ -64,7 +65,7 @@ export default function MainNavbar({
                   School management, simplified
                 </span>
               </div>
-            </a>
+            </Link>
           </div>
 
           {/* Desktop Navigation Links */}
@@ -81,7 +82,7 @@ export default function MainNavbar({
                         {l.label}
                       </a>
                     ) : (
-                      <a
+                      <Link
                         href={l.href}
                         className={`relative px-3 lg:px-4 py-2 text-sm font-medium transition-colors ${
                           isActiveHref(l.href)
@@ -106,7 +107,7 @@ export default function MainNavbar({
                             }}
                           />
                         )}
-                      </a>
+                      </Link>
                     )}
                   </motion.div>
                 ))}
@@ -171,7 +172,7 @@ export default function MainNavbar({
             <div className="hidden sm:flex items-center gap-2 min-w-[200px] justify-end">
             {showAuthButtons && (
               <div className="hidden sm:flex items-center gap-2">
-                <a href="/auth/school-code">
+                <Link href="/auth/login">
                   <motion.button
                     whileHover={{ scale: 1.02 }}
                     whileTap={{ scale: 0.98 }}
@@ -179,8 +180,8 @@ export default function MainNavbar({
                   >
                     Login
                   </motion.button>
-                </a>
-                <a href="/auth/register">
+                </Link>
+                <Link href="/auth/register">
                   <motion.button
                     whileHover={{
                       scale: 1.02,
@@ -191,7 +192,7 @@ export default function MainNavbar({
                   >
                     Register School
                   </motion.button>
-                </a>
+                </Link>
               </div>
             )}
             </div>
@@ -261,7 +262,7 @@ export default function MainNavbar({
                       {l.label}
                     </a>
                   ) : (
-                    <a
+                    <Link
                       href={l.href}
                       onClick={() => setMobileMenuOpen(false)}
                       className={`block px-4 py-3 text-sm font-medium rounded-xl transition-colors ${
@@ -271,7 +272,7 @@ export default function MainNavbar({
                       }`}
                     >
                       {l.label}
-                    </a>
+                    </Link>
                   )}
                 </motion.div>
               ))}
@@ -284,16 +285,16 @@ export default function MainNavbar({
                   transition={{ delay: 0.3 }}
                   className="pt-3 space-y-2 border-t border-gray-200 dark:border-gray-700"
                 >
-                  <a href="/auth/login" className="block">
+                  <Link href="/auth/login" className="block">
                     <button className="w-full px-4 py-2.5 rounded-xl text-sm font-medium text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors border border-gray-200 dark:border-gray-600">
                       Login
                     </button>
-                  </a>
-                  <a href="/auth/register" className="block">
+                  </Link>
+                  <Link href="/auth/register" className="block">
                     <button className="w-full px-4 py-2.5 text-white rounded-xl font-semibold text-sm shadow-lg bg-gradient-to-r from-blue-600 via-indigo-600 to-purple-600 hover:opacity-90 transition-all">
                       Register School
                     </button>
-                  </a>
+                  </Link>
                 </motion.div>
               )}
             </div>

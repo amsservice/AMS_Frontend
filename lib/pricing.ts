@@ -1,4 +1,4 @@
-export type PlanId = "1Y" | "2Y" | "3Y";
+export type PlanId = "6M" | "1Y" | "2Y" | "3Y";
 
 export type PricingPlan = {
   id: PlanId;
@@ -12,6 +12,13 @@ export type PricingPlan = {
 };
 
 export const PRICING_PLANS: PricingPlan[] = [
+  {
+    id: "6M",
+    durationLabel: "6 Months",
+    durationMonths: 6,
+    pricePerStudentPerMonth: 10,
+    periodLabel: "per student/month"
+  },
   {
     id: "1Y",
     durationLabel: "1 Year",

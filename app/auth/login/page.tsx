@@ -1,8 +1,3 @@
-
-
-
-
-
 "use client";
 
 import Link from "next/link";
@@ -23,9 +18,9 @@ import { z } from "zod";
 const UpastithiPageLoader = dynamic(
   () =>
     import("@/components/loader/UpastithiPageLoader").then(
-      (m) => m.UpastithiPageLoader
+      (m) => m.UpastithiPageLoader,
     ),
-  { ssr: false }
+  { ssr: false },
 );
 
 type Role = "principal" | "teacher" | "student";
@@ -43,7 +38,7 @@ const SCHOOL_THEMES = [
   "from-teal-600 via-cyan-600 to-sky-600",
   "from-lime-600 via-green-600 to-emerald-600",
   "from-red-600 via-rose-600 to-pink-600",
-  "from-indigo-700 via-purple-700 to-fuchsia-700"
+  "from-indigo-700 via-purple-700 to-fuchsia-700",
 ];
 
 export default function LoginPage() {
@@ -65,7 +60,7 @@ export default function LoginPage() {
 
   const [form, setForm] = useState({
     email: "",
-    password: ""
+    password: "",
   });
 
   const [errors, setErrors] = useState<Record<string, string>>({});
@@ -91,7 +86,7 @@ export default function LoginPage() {
 
     try {
       const parsed = JSON.parse(stored);
-      if (!parsed?.schoolCode) {
+      if (parsed.schoolCode == null) {
         router.replace("/auth/school-code");
         return;
       }
@@ -101,7 +96,7 @@ export default function LoginPage() {
     }
 
     setSchoolContextReady(true);
-  }, [router]);
+  }, []);
 
   /* ===============================
      THEME INIT
@@ -133,6 +128,7 @@ export default function LoginPage() {
   =============================== */
   useEffect(() => {
     const stored = localStorage.getItem("schoolContext");
+    console.log(stored, "stored");
     if (!stored) return;
 
     try {
@@ -140,7 +136,7 @@ export default function LoginPage() {
       setSchoolName(parsed.schoolName || null);
 
       if (parsed.schoolCode) {
-        const index = parsed.schoolCode % SCHOOL_THEMES.length;
+        const index = Math.floor(Math.random() * SCHOOL_THEMES.length);
         setSchoolTheme(SCHOOL_THEMES[index]);
       }
     } catch {
@@ -164,92 +160,58 @@ export default function LoginPage() {
     }
   }
 
-  // async function handleSubmit(e: React.FormEvent) {
-  //   e.preventDefault();
-
-  //   try {
-  //     loginSchema.parse(form);
-  //     setErrors({});
-  //     setSubmitting(true);
-
-  //     await login(role, {
-  //       email: form.email,
-  //       password: form.password
-  //     });
-
-  //     toast.success("Logged in successfully");
-  //   } catch (err: any) {
-  //     if (err instanceof z.ZodError) {
-  //       const fieldErrors: Record<string, string> = {};
-  //       err.issues.forEach((issue) => {
-  //         if (issue.path[0]) {
-  //           fieldErrors[issue.path[0].toString()] = issue.message;
-  //         }
-  //       });
-  //       setErrors(fieldErrors);
-  //       toast.error("Please fix the errors in the form");
-  //     } else {
-  //       toast.error(
-  //         err?.response?.data?.message || err?.message || "Login failed"
-  //       );
-  //     }
-  //   } finally {
-  //     setSubmitting(false);
-  //   }
-  // }
-
   async function handleSubmit(e: React.FormEvent) {
-  e.preventDefault();
+    e.preventDefault();
 
-  try {
-    loginSchema.parse(form);
-    setErrors({});
-    setSubmitting(true);
+    try {
+      loginSchema.parse(form);
+      setErrors({});
+      setSubmitting(true);
 
-    // ✅ READ SCHOOL CODE FROM LOCAL STORAGE
-    const stored = localStorage.getItem("schoolContext");
+      // ✅ READ SCHOOL CODE FROM LOCAL STORAGE
+      const stored = localStorage.getItem("schoolContext");
 
-    if (!stored) {
-      toast.error("School not selected. Please enter school code again.");
-      router.replace("/auth/school-code");
-      return;
-    }
+      if (!stored) {
+        toast.error("School not selected. Please enter school code again.");
+        router.replace("/auth/school-code");
+        return;
+      }
 
-    const parsed = JSON.parse(stored);
+      const parsed = JSON.parse(stored);
 
-    if (!parsed.schoolCode) {
-      toast.error("Invalid school context. Please re-enter school code.");
-      router.replace("/auth/school-code");
-      return;
-    }
+      if (!parsed.schoolCode) {
+        toast.error("Please re-enter school code.");
+        router.replace("/auth/school-code");
+        return;
+      }
 
-    await login(role, {
-      email: form.email,
-      password: form.password,
-      schoolCode: Number(parsed.schoolCode)
-    });
-
-    toast.success("Logged in successfully");
-  } catch (err: any) {
-    if (err instanceof z.ZodError) {
-      const fieldErrors: Record<string, string> = {};
-      err.issues.forEach((issue) => {
-        if (issue.path[0]) {
-          fieldErrors[issue.path[0].toString()] = issue.message;
-        }
+      await login(role, {
+        email: form.email,
+        password: form.password,
+        schoolCode: Number(parsed.schoolCode),
       });
-      setErrors(fieldErrors);
-      toast.error("Please fix the errors in the form");
-    } else {
-      toast.error(
-        err?.response?.data?.message || err?.message || "Login failed"
-      );
-    }
-  } finally {
-    setSubmitting(false);
-  }
-}
 
+      toast.success("Logged in successfully");
+    } catch (err: any) {
+      if (err instanceof z.ZodError) {
+        const fieldErrors: Record<string, string> = {};
+        err.issues.forEach((issue) => {
+          if (issue.path[0]) {
+            fieldErrors[issue.path[0].toString()] = issue.message;
+          }
+        });
+        setErrors(fieldErrors);
+        console.log("Field errors:", fieldErrors);
+        toast.error("Invalid credentials");
+      } else {
+        toast.error(
+          err?.response?.data?.message || err?.message || "Login failed",
+        );
+      }
+    } finally {
+      setSubmitting(false);
+    }
+  }
 
   if (!schoolContextReady) {
     return null;
@@ -269,7 +231,7 @@ export default function LoginPage() {
         navLinks={[
           { label: "Home", href: "/" },
           { label: "Pricing", href: "/pricing" },
-          { label: "Contact", href: "/contact" }
+          { label: "Contact", href: "/contact" },
         ]}
       />
 
@@ -309,7 +271,8 @@ export default function LoginPage() {
                 className={`py-3 rounded-xl border font-semibold transition-all duration-200 transform hover:scale-105 ${
                   role === r
                     ? `border-blue-500 bg-gradient-to-r ${
-                        schoolTheme ?? "from-blue-600 via-indigo-600 to-purple-600"
+                        schoolTheme ??
+                        "from-blue-600 via-indigo-600 to-purple-600"
                       } text-white shadow-lg`
                     : "border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 bg-white dark:bg-gray-700"
                 }`}

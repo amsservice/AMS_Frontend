@@ -1,18 +1,227 @@
+// 'use client';
+
+// import { useState } from 'react';
+// import { X } from 'lucide-react';
+
+// import { Button } from '@/components/ui/button';
+// import { Input } from '@/components/ui/input';
+// import { Label } from '@/components/ui/label';
+// import { motion, AnimatePresence } from 'framer-motion';
+
+// import {
+//   Holiday,
+//   useUpdateHoliday,
+//   useDeleteHoliday
+// } from '@/app/querry/useHolidays';
+
+// import {
+//   HolidayCategory,
+//   HOLIDAY_CATEGORIES
+// } from '@/lib/holiday.constants';
+
+// import ConfirmDialog from '@/components/holidays/ConfirmDialog';
+
+
+
+
+// interface EditHolidayFormState {
+//   name: string;
+//   date: string;
+//   category: HolidayCategory;
+//   description?: string;
+// }
+
+// export default function EditHolidayModal({
+//   holiday,
+//   onClose
+// }: {
+//   holiday: Holiday;
+//   onClose: () => void;
+// }) {
+//   const today = new Date();
+//   today.setHours(0, 0, 0, 0);
+
+//   const isPastHoliday = new Date(holiday.date).getTime() < today.getTime();
+
+//   const [form, setForm] = useState<EditHolidayFormState>({
+//     name: holiday.name,
+//     date: holiday.date.split('T')[0],
+//     category: holiday.category,
+//     description: holiday.description || ''
+//   });
+
+//   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+
+//   const { mutate: updateHoliday } = useUpdateHoliday();
+//   const { mutate: deleteHoliday } = useDeleteHoliday();
+
+//   const handleSave = () => {
+//     if (isPastHoliday) return;
+//     updateHoliday({ id: holiday._id, data: form }, { onSuccess: onClose });
+//   };
+
+//   const handleDelete = () => {
+//     deleteHoliday(holiday._id, { onSuccess: onClose });
+//   };
+
+//   return (
+//     <>
+//       <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50 p-4">
+//         <motion.div
+//           initial={{ scale: 0.9, opacity: 0 }}
+//           animate={{ scale: 1, opacity: 1 }}
+//           exit={{ scale: 0.9, opacity: 0 }}
+//           className="dashboard-card border rounded-xl w-full max-w-lg p-6 relative"
+//         >
+//           <button
+//             onClick={onClose}
+//             className="absolute top-4 right-4 p-2 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-lg transition-colors"
+//           >
+//             <X className="w-5 h-5 dashboard-text" />
+//           </button>
+
+//           <h2 className="text-xl font-bold dashboard-text mb-4">
+//             Edit Holiday
+//           </h2>
+
+//           {isPastHoliday && (
+//             <p className="text-sm text-red-600 dark:text-red-400 mb-4">
+//               Past holidays cannot be edited.
+//             </p>
+//           )}
+
+//           <div className="space-y-4">
+//             <div className="space-y-2">
+//               <Label className="dashboard-text-muted">Name</Label>
+//               <Input
+//                 value={form.name}
+//                 disabled={isPastHoliday}
+//                 onChange={(e) => setForm({ ...form, name: e.target.value })}
+//                 className="dashboard-card border dashboard-card-border dashboard-text"
+//               />
+//             </div>
+
+//             <div className="space-y-2">
+//               <Label className="dashboard-text-muted">Date</Label>
+//               <Input
+//                 type="date"
+//                 value={form.date}
+//                 disabled={isPastHoliday}
+//                 onChange={(e) => setForm({ ...form, date: e.target.value })}
+//                 className="dashboard-card border dashboard-card-border dashboard-text"
+//               />
+//             </div>
+
+//             <div className="space-y-2">
+//               <Label className="dashboard-text-muted">Category</Label>
+//               <select
+//                 className="w-full dashboard-card border dashboard-card-border p-2 rounded-lg dashboard-text"
+//                 disabled={isPastHoliday}
+//                 value={form.category}
+//                 onChange={(e) =>
+//                   setForm({
+//                     ...form,
+//                     category: e.target.value as HolidayCategory
+//                   })
+//                 }
+//               >
+//                 {Object.entries(HOLIDAY_CATEGORIES).map(([key, label]) => (
+//                   <option key={key} value={key}>
+//                     {label}
+//                   </option>
+//                 ))}
+//               </select>
+//             </div>
+
+//             <div className="space-y-2">
+//               <Label className="dashboard-text-muted">Description</Label>
+//               <Input
+//                 value={form.description}
+//                 disabled={isPastHoliday}
+//                 onChange={(e) =>
+//                   setForm({
+//                     ...form,
+//                     description: e.target.value
+//                   })
+//                 }
+//                 className="dashboard-card border dashboard-card-border dashboard-text"
+//               />
+//             </div>
+
+//             <div className="flex gap-3 pt-4">
+//               <button
+//                 className="accent-teal text-white font-semibold py-2.5 px-6 rounded-lg hover:opacity-90 transition-opacity disabled:opacity-50"
+//                 disabled={isPastHoliday}
+//                 onClick={handleSave}
+//               >
+//                 Save
+//               </button>
+
+//               <Button
+//                 variant="destructive"
+//                 onClick={() => setShowDeleteConfirm(true)}
+//               >
+//                 Delete
+//               </Button>
+
+//               <Button
+//                 variant="outline"
+//                 onClick={onClose}
+//                 className="dashboard-card border dashboard-card-border dashboard-text"
+//               >
+//                 Cancel
+//               </Button>
+//             </div>
+//           </div>
+//         </motion.div>
+//       </div>
+
+//       {showDeleteConfirm && (
+//         <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50">
+//           <div className="dashboard-card border rounded-xl w-full max-w-sm p-6">
+//             <h2 className="text-lg font-bold dashboard-text mb-2">Delete Holiday</h2>
+//             <p className="text-sm dashboard-text-muted mb-6">
+//               Are you sure you want to delete this holiday? This action cannot be undone.
+//             </p>
+
+//             <div className="flex justify-end gap-3">
+//               <Button
+//                 variant="outline"
+//                 onClick={() => setShowDeleteConfirm(false)}
+//                 className="dashboard-card border dashboard-card-border dashboard-text"
+//               >
+//                 Cancel
+//               </Button>
+//               <Button variant="destructive" onClick={handleDelete}>
+//                 Delete
+//               </Button>
+//             </div>
+//           </div>
+//         </div>
+//       )}
+//     </>
+//   );
+// }
+
+
 'use client';
 
-import { useState } from 'react';
+import { useMemo, useState } from 'react';
 import { X } from 'lucide-react';
 
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { motion, AnimatePresence } from 'framer-motion';
+import { motion } from 'framer-motion';
+import { toast } from 'sonner';
 
 import {
   Holiday,
   useUpdateHoliday,
   useDeleteHoliday
 } from '@/app/querry/useHolidays';
+
+import { useSessions } from '@/app/querry/useSessions';
 
 import {
   HolidayCategory,
@@ -21,12 +230,10 @@ import {
 
 import ConfirmDialog from '@/components/holidays/ConfirmDialog';
 
-
-
-
 interface EditHolidayFormState {
   name: string;
-  date: string;
+  startDate: string;
+  endDate?: string;
   category: HolidayCategory;
   description?: string;
 }
@@ -38,14 +245,61 @@ export default function EditHolidayModal({
   holiday: Holiday;
   onClose: () => void;
 }) {
+  const { data: sessions = [] } = useSessions();
+
+  const toYmdLocal = (d: Date) => {
+    const yyyy = d.getFullYear();
+    const mm = String(d.getMonth() + 1).padStart(2, '0');
+    const dd = String(d.getDate()).padStart(2, '0');
+    return `${yyyy}-${mm}-${dd}`;
+  };
+
   const today = new Date();
   today.setHours(0, 0, 0, 0);
 
-  const isPastHoliday = new Date(holiday.date).getTime() < today.getTime();
+  const tomorrow = new Date(today);
+  tomorrow.setDate(tomorrow.getDate() + 1);
+  const minDate = toYmdLocal(tomorrow);
+
+  const holidayStart = new Date(holiday.startDate);
+  const isPastHoliday = holidayStart.getTime() < today.getTime();
+
+  const isRangeHoliday = Boolean(holiday.endDate);
+
+  const activeSession = useMemo(() => {
+    return (sessions as any[]).find((s) => s?.isActive);
+  }, [sessions]);
+
+  const sessionStart = useMemo(() => {
+    if (!activeSession?.startDate) return null;
+    const d = new Date(activeSession.startDate);
+    d.setHours(0, 0, 0, 0);
+    return d;
+  }, [activeSession]);
+
+  const sessionEnd = useMemo(() => {
+    if (!activeSession?.endDate) return null;
+    const d = new Date(activeSession.endDate);
+    d.setHours(0, 0, 0, 0);
+    return d;
+  }, [activeSession]);
+
+  const maxSelectableDate = useMemo(() => {
+    if (!sessionEnd) return undefined;
+    return toYmdLocal(sessionEnd);
+  }, [sessionEnd]);
+
+  const minSelectableDate = useMemo(() => {
+    const a = minDate;
+    if (!sessionStart) return a;
+    const b = toYmdLocal(sessionStart);
+    return a > b ? a : b;
+  }, [minDate, sessionStart]);
 
   const [form, setForm] = useState<EditHolidayFormState>({
     name: holiday.name,
-    date: holiday.date.split('T')[0],
+    startDate: toYmdLocal(new Date(holiday.startDate)),
+    endDate: holiday.endDate ? toYmdLocal(new Date(holiday.endDate)) : '',
     category: holiday.category,
     description: holiday.description || ''
   });
@@ -57,10 +311,98 @@ export default function EditHolidayModal({
 
   const handleSave = () => {
     if (isPastHoliday) return;
-    updateHoliday({ id: holiday._id, data: form }, { onSuccess: onClose });
+
+    if (!activeSession || !sessionStart || !sessionEnd) {
+      toast.error('No active session found. Please create or activate a session first.');
+      return;
+    }
+
+    const trimmedName = form.name.trim();
+    if (!/^[A-Za-z0-9\s]+$/.test(trimmedName)) {
+      toast.error('Holiday name can contain only letters, numbers, and spaces');
+      return;
+    }
+
+    const lettersCount = (trimmedName.match(/[A-Za-z]/g) || []).length;
+    if (lettersCount < 3) {
+      toast.error('Holiday name must contain at least 3 letters');
+      return;
+    }
+
+    const start = new Date(form.startDate);
+    start.setHours(0, 0, 0, 0);
+    if (start.getTime() <= today.getTime()) {
+      toast.error('Holiday can be marked only on future dates');
+      return;
+    }
+
+    if (form.endDate) {
+      const end = new Date(form.endDate);
+      end.setHours(0, 0, 0, 0);
+      if (end.getTime() <= today.getTime()) {
+        toast.error('Holiday can be marked only on future dates');
+        return;
+      }
+      if (end.getTime() < start.getTime()) {
+        toast.error('End date must be greater than or equal to start date');
+        return;
+      }
+    }
+
+    const effectiveEnd = (isRangeHoliday && form.endDate)
+      ? (() => {
+        const d = new Date(form.endDate);
+        d.setHours(0, 0, 0, 0);
+        return d;
+      })()
+      : start;
+
+    if (start.getTime() < sessionStart.getTime() || effectiveEnd.getTime() > sessionEnd.getTime()) {
+      toast.error('Holiday must be within the current session year.');
+      return;
+    }
+
+    updateHoliday(
+      {
+        id: holiday._id,
+        data: {
+          name: trimmedName,
+          startDate: form.startDate,
+          endDate: isRangeHoliday ? (form.endDate || undefined) : undefined,
+          category: form.category,
+          description: form.description
+        }
+      },
+      {
+        onSuccess: () => {
+          toast.success('Holiday updated successfully!');
+          onClose();
+        },
+        onError: (error: any) => {
+          const errorMessage =
+            error?.response?.data?.message ||
+            error?.message ||
+            'Failed to update holiday';
+
+          if (errorMessage.includes('Holiday dates must be within the current academic session')) {
+            toast.error('Holiday must be within the current session year.');
+          } else if (errorMessage.includes('No active session') || errorMessage.includes('No active academic session')) {
+            toast.error('No active session found. Please create or activate a session first.');
+          } else if (errorMessage.includes('overlap')) {
+            toast.error('Holiday dates overlap with an existing holiday');
+          } else {
+            toast.error(errorMessage);
+          }
+        }
+      }
+    );
   };
 
   const handleDelete = () => {
+    if (isPastHoliday) {
+      toast.error('Past holidays cannot be deleted');
+      return;
+    }
     deleteHoliday(holiday._id, { onSuccess: onClose });
   };
 
@@ -91,27 +433,54 @@ export default function EditHolidayModal({
           )}
 
           <div className="space-y-4">
+            {/* NAME */}
             <div className="space-y-2">
               <Label className="dashboard-text-muted">Name</Label>
               <Input
                 value={form.name}
                 disabled={isPastHoliday}
-                onChange={(e) => setForm({ ...form, name: e.target.value })}
+                onChange={(e) =>
+                  setForm({ ...form, name: e.target.value })
+                }
                 className="dashboard-card border dashboard-card-border dashboard-text"
               />
             </div>
 
+            {/* START DATE */}
             <div className="space-y-2">
-              <Label className="dashboard-text-muted">Date</Label>
+              <Label className="dashboard-text-muted">Start Date</Label>
               <Input
                 type="date"
-                value={form.date}
+                value={form.startDate}
                 disabled={isPastHoliday}
-                onChange={(e) => setForm({ ...form, date: e.target.value })}
+                onChange={(e) =>
+                  setForm({ ...form, startDate: e.target.value })
+                }
+                min={minSelectableDate}
+                max={maxSelectableDate}
                 className="dashboard-card border dashboard-card-border dashboard-text"
               />
             </div>
 
+            {/* END DATE */}
+            {isRangeHoliday && (
+              <div className="space-y-2">
+                <Label className="dashboard-text-muted">End Date</Label>
+                <Input
+                  type="date"
+                  value={form.endDate}
+                  disabled={isPastHoliday}
+                  onChange={(e) =>
+                    setForm({ ...form, endDate: e.target.value })
+                  }
+                  min={minSelectableDate}
+                  max={maxSelectableDate}
+                  className="dashboard-card border dashboard-card-border dashboard-text"
+                />
+              </div>
+            )}
+
+            {/* CATEGORY */}
             <div className="space-y-2">
               <Label className="dashboard-text-muted">Category</Label>
               <select
@@ -133,6 +502,7 @@ export default function EditHolidayModal({
               </select>
             </div>
 
+            {/* DESCRIPTION */}
             <div className="space-y-2">
               <Label className="dashboard-text-muted">Description</Label>
               <Input
@@ -148,6 +518,7 @@ export default function EditHolidayModal({
               />
             </div>
 
+            {/* ACTIONS */}
             <div className="flex gap-3 pt-4">
               <button
                 className="accent-teal text-white font-semibold py-2.5 px-6 rounded-lg hover:opacity-90 transition-opacity disabled:opacity-50"
@@ -159,7 +530,14 @@ export default function EditHolidayModal({
 
               <Button
                 variant="destructive"
-                onClick={() => setShowDeleteConfirm(true)}
+                onClick={() => {
+                  if (isPastHoliday) {
+                    toast.error('Past holidays cannot be deleted');
+                    return;
+                  }
+                  setShowDeleteConfirm(true);
+                }}
+                disabled={isPastHoliday}
               >
                 Delete
               </Button>
@@ -177,27 +555,12 @@ export default function EditHolidayModal({
       </div>
 
       {showDeleteConfirm && (
-        <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50">
-          <div className="dashboard-card border rounded-xl w-full max-w-sm p-6">
-            <h2 className="text-lg font-bold dashboard-text mb-2">Delete Holiday</h2>
-            <p className="text-sm dashboard-text-muted mb-6">
-              Are you sure you want to delete this holiday? This action cannot be undone.
-            </p>
-
-            <div className="flex justify-end gap-3">
-              <Button
-                variant="outline"
-                onClick={() => setShowDeleteConfirm(false)}
-                className="dashboard-card border dashboard-card-border dashboard-text"
-              >
-                Cancel
-              </Button>
-              <Button variant="destructive" onClick={handleDelete}>
-                Delete
-              </Button>
-            </div>
-          </div>
-        </div>
+        <ConfirmDialog
+          title="Delete Holiday"
+          message="Are you sure you want to delete this holiday? This action cannot be undone."
+          onConfirm={handleDelete}
+          onCancel={() => setShowDeleteConfirm(false)}
+        />
       )}
     </>
   );

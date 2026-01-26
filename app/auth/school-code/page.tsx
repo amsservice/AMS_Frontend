@@ -32,6 +32,12 @@ export default function SchoolCodePage() {
   const inputRefs = useRef<Array<HTMLInputElement | null>>([]);
 
   useEffect(() => {
+
+    if(localStorage.getItem("schoolContext")) {
+      router.replace("/auth/login");
+      return;
+    }
+
     const start = Date.now();
 
     const savedTheme = window.localStorage.getItem("Upastithi-theme");

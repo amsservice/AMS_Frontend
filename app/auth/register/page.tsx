@@ -4,11 +4,12 @@ import { Button } from "@/components/ui/button";
 import { GraduationCap } from "lucide-react";
 import { motion } from "framer-motion";
 import { useEffect, useState } from "react";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { toast } from "sonner";
 import dynamic from "next/dynamic";
 import { useAuth } from "@/app/context/AuthContext";
 import { getDashboardPath } from "@/lib/roleRedirect";
+
 import MainNavbar from "@/components/main/MainNavbar";
 import MainFooter from "@/components/main/MainFooter";
 import { registerSchoolSchema } from "@/lib/zodSchema";
@@ -25,7 +26,23 @@ const UpastithiPageLoader = dynamic(
 
 export default function RegisterPage() {
   const router = useRouter();
+  const searchParams = useSearchParams();
   const { user, loading } = useAuth();
+
+  const planParam = searchParams.get("plan");
+  const planQuery = planParam ? `&plan=${encodeURIComponent(planParam)}` : "";
+
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    try {
+      if (!planParam) {
+        window.localStorage.removeItem("selectedPlanId");
+      } else {
+        window.localStorage.setItem("selectedPlanId", planParam);
+      }
+    } catch {
+    }
+  }, [planParam]);
 
   const [submitting, setSubmitting] = useState(false);
   const [isDark, setIsDark] = useState(false);
@@ -35,6 +52,7 @@ export default function RegisterPage() {
   const [form, setForm] = useState({
     schoolName: "",
     schoolEmail: "",
+    establishedYear: "",
     phone: "",
     address: "",
     pincode: "",
@@ -45,6 +63,8 @@ export default function RegisterPage() {
     state: "",
     principalName: "",
     principalEmail: "",
+    principalPhone: "",
+    principalQualification: "",
     principalPassword: "",
     confirmPassword: "",
     gender: "",
@@ -111,6 +131,7 @@ export default function RegisterPage() {
       const payload = {
         schoolName: form.schoolName,
         schoolEmail: form.schoolEmail,
+        establishedYear: parseInt(form.establishedYear, 10),
         phone: form.phone,
         address: form.address,
         pincode: form.pincode,
@@ -121,6 +142,8 @@ export default function RegisterPage() {
         state: form.state,
         principalName: form.principalName,
         principalEmail: form.principalEmail,
+        principalPhone: form.principalPhone,
+        principalQualification: form.principalQualification,
         principalPassword: form.principalPassword,
         principalGender: form.gender || undefined,
         principalExperience: form.yearsOfExperience
@@ -187,7 +210,7 @@ export default function RegisterPage() {
 
         if (toastId !== undefined) toast.dismiss(toastId);
         router.replace(
-          `/subscription/payment?email=${encodeURIComponent(form.schoolEmail)}`
+          `/subscription/payment?email=${encodeURIComponent(form.schoolEmail)}${planQuery}`
         );
         return;
       }
@@ -200,7 +223,7 @@ export default function RegisterPage() {
       if (toastId !== undefined) toast.dismiss(toastId);
 
       router.replace(
-        `/auth/verify-otp?email=${encodeURIComponent(form.schoolEmail)}`
+        `/auth/verify-otp?email=${encodeURIComponent(form.schoolEmail)}${planQuery}`
       );
     } catch (err: any) {
       if (err instanceof z.ZodError) {
@@ -315,6 +338,16 @@ export default function RegisterPage() {
                       </div>
 
                       <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mt-4">
+                        <div>
+                          <input 
+                            name="establishedYear" 
+                            type="number"
+                            onChange={handleChange} 
+                            placeholder="Established Year" 
+                            className={`px-4 py-3 rounded-xl bg-white dark:bg-gray-700 border ${errors.establishedYear ? 'border-red-500' : 'border-gray-300 dark:border-gray-600'} text-gray-900 dark:text-white placeholder:text-gray-500 dark:placeholder:text-gray-400 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all w-full`}
+                          />
+                          {errors.establishedYear && <p className="text-red-500 text-xs mt-1">{errors.establishedYear}</p>}
+                        </div>
                         <div>
                           <select
                             name="schoolType"
@@ -432,6 +465,27 @@ export default function RegisterPage() {
                             className={`px-4 py-3 rounded-xl bg-white dark:bg-gray-700 border ${errors.principalEmail ? 'border-red-500' : 'border-gray-300 dark:border-gray-600'} text-gray-900 dark:text-white placeholder:text-gray-500 dark:placeholder:text-gray-400 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all w-full`}
                           />
                           {errors.principalEmail && <p className="text-red-500 text-xs mt-1">{errors.principalEmail}</p>}
+                        </div>
+                      </div>
+
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mt-4">
+                        <div>
+                          <input 
+                            name="principalPhone" 
+                            onChange={handleChange} 
+                            placeholder="Phone" 
+                            className={`px-4 py-3 rounded-xl bg-white dark:bg-gray-700 border ${errors.principalPhone ? 'border-red-500' : 'border-gray-300 dark:border-gray-600'} text-gray-900 dark:text-white placeholder:text-gray-500 dark:placeholder:text-gray-400 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all w-full`}
+                          />
+                          {errors.principalPhone && <p className="text-red-500 text-xs mt-1">{errors.principalPhone}</p>}
+                        </div>
+                        <div>
+                          <input 
+                            name="principalQualification" 
+                            onChange={handleChange} 
+                            placeholder="Qualification" 
+                            className={`px-4 py-3 rounded-xl bg-white dark:bg-gray-700 border ${errors.principalQualification ? 'border-red-500' : 'border-gray-300 dark:border-gray-600'} text-gray-900 dark:text-white placeholder:text-gray-500 dark:placeholder:text-gray-400 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all w-full`}
+                          />
+                          {errors.principalQualification && <p className="text-red-500 text-xs mt-1">{errors.principalQualification}</p>}
                         </div>
                       </div>
 

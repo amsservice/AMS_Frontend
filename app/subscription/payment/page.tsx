@@ -10,7 +10,7 @@ import { useAuth } from "@/app/context/AuthContext";
 // import { verify } from "crypto";
 // import { AuthProvider } from "@/context/AuthProvider";
 
-type PlanId = "1Y" | "2Y" | "3Y";
+type PlanId = "6M" | "1Y" | "2Y" | "3Y";
 
 type PricePreview = {
   planId: PlanId;
@@ -37,9 +37,12 @@ type CreatePaymentResponse = {
 
 type VerifyPaymentResponse = {
   success: boolean;
-  orderId: string;
-  paymentId: string;
-  accessToken: string;
+  user: {
+    id: string;
+    name: string;
+    email: string;
+    role: "principal";
+  };
 };
 
 type RazorpayHandlerResponse = {
@@ -74,13 +77,15 @@ declare global {
 export default function PaymentPage() {
   const router = useRouter();
   const searchParams = useSearchParams();
-  const { refetchUser } = useAuth();
+  const { setAuthUser } = useAuth();
 
   const API_URL = process.env.NEXT_PUBLIC_API_URL!;
   const RAZORPAY_KEY = process.env.NEXT_PUBLIC_RAZORPAY_KEY!;
 
   const schoolEmail = searchParams.get("email");
-  const [planId, setPlanId] = useState<PlanId>("1Y");
+  const mode = searchParams.get("mode");
+  const isUpgradeMode = mode === "upgrade";
+  const [planId, setPlanId] = useState<PlanId>("6M");
   const [enteredStudents, setEnteredStudents] = useState<number | "">("");
   const [futureStudents, setFutureStudents] = useState<number | "">("");
   const [couponCode, setCouponCode] = useState("");
@@ -94,15 +99,33 @@ export default function PaymentPage() {
   const [futureError, setFutureError] = useState<string | null>(null);
   const [shake, setShake] = useState(false);
 
-  /* 🔐 BLOCK ACCESS WITHOUT OTP */
   useEffect(() => {
+    setMounted(true);
+
+    try {
+      const savedTheme = window.localStorage.getItem("Upastithi-theme");
+      const initialIsDark = savedTheme
+        ? savedTheme === "dark"
+        : window.matchMedia("(prefers-color-scheme: dark)").matches;
+
+      setIsDark(initialIsDark);
+      document.documentElement.classList.toggle("dark", initialIsDark);
+    } catch {
+      setIsDark(false);
+      document.documentElement.classList.remove("dark");
+    }
+  }, []);
+
+  useEffect(() => {
+    if (isUpgradeMode) return;
     if (!schoolEmail) {
       alert("Please verify email before payment");
       router.replace("/auth/register");
     }
-  }, [schoolEmail, router]);
+  }, [schoolEmail, router, isUpgradeMode]);
 
   useEffect(() => {
+    if (isUpgradeMode) return;
     if (!schoolEmail) return;
 
     (async () => {
@@ -128,7 +151,7 @@ export default function PaymentPage() {
       } catch {
       }
     })();
-  }, [API_URL, router, schoolEmail]);
+  }, [API_URL, router, schoolEmail, isUpgradeMode]);
 
   useEffect(() => {
     setPrice(null);
@@ -142,38 +165,43 @@ export default function PaymentPage() {
     (enteredStudents === "" ? 0 : enteredStudents) +
     (futureStudents === "" ? 0 : futureStudents);
 
-  const uiRate = frontendPlan?.pricePerStudentPerMonth ?? 0;
+  const isTrial6M = !isUpgradeMode && previewPlanId === "6M";
+
   const uiMonths = frontendPlan?.durationMonths ?? 0;
+  const uiRate = frontendPlan?.pricePerStudentPerMonth ?? 0;
+
   const uiMonthlyCost = billableStudentsUI * uiRate;
   const uiOriginalAmount = uiMonthlyCost * uiMonths;
-  const uiDiscountMonths = price?.discountMonths ?? 0;
-  const uiDiscountAmount = uiMonthlyCost * uiDiscountMonths;
-  const uiPayable = uiOriginalAmount - uiDiscountAmount;
+
+  const uiDiscountMonths = isTrial6M ? 0 : (price?.discountMonths ?? 0);
+  const uiDiscountAmount = isTrial6M ? Math.max(uiOriginalAmount - 1, 0) : uiMonthlyCost * uiDiscountMonths;
+  const uiPayable = isTrial6M ? 1 : uiOriginalAmount - uiDiscountAmount;
 
   const hasBackendMismatch =
     price
-      ? price.pricePerStudentPerMonth !== uiRate ||
-      price.totalMonths !== uiMonths ||
-      Math.abs(price.paidAmount - uiPayable) > 0.5
+      ? !isTrial6M && (
+        price.pricePerStudentPerMonth !== uiRate ||
+        price.totalMonths !== uiMonths ||
+        Math.abs(price.paidAmount - uiPayable) > 0.5
+      )
       : false;
 
   useEffect(() => {
     const planParam = searchParams.get("plan");
-    if (planParam === "1Y" || planParam === "2Y" || planParam === "3Y") {
+    if (planParam === "6M" || planParam === "1Y" || planParam === "2Y" || planParam === "3Y") {
       setPlanId(planParam);
+      return;
+    }
+
+    if (typeof window === "undefined") return;
+    try {
+      const storedPlan = window.localStorage.getItem("selectedPlanId");
+      if (storedPlan === "6M" || storedPlan === "1Y" || storedPlan === "2Y" || storedPlan === "3Y") {
+        setPlanId(storedPlan);
+      }
+    } catch {
     }
   }, [searchParams]);
-
-  useEffect(() => {
-    setMounted(true);
-    const savedTheme = window.localStorage.getItem("Upastithi-theme");
-    const initialIsDark = savedTheme
-      ? savedTheme === "dark"
-      : window.matchMedia("(prefers-color-scheme: dark)").matches;
-
-    setIsDark(initialIsDark);
-    document.documentElement.classList.toggle("dark", initialIsDark);
-  }, []);
 
   const validateStudents = () => {
     let valid = true;
@@ -233,13 +261,16 @@ export default function PaymentPage() {
      PRICE PREVIEW
   =============================== */
   const previewPrice = async () => {
-    if (alreadyPaid) {
+    if (!isUpgradeMode && alreadyPaid) {
       router.replace("/");
       return;
     }
     if (!validateStudents()) return;
     setLoading(true);
     try {
+      const effectiveCouponCode =
+        !isUpgradeMode && planId === "6M" ? "FREE_6M" : (couponCode || undefined);
+
       const res = await fetch(`${API_URL}/api/subscription/price-preview`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -247,7 +278,7 @@ export default function PaymentPage() {
           planId,
           enteredStudents,
           futureStudents: futureStudents || undefined,
-          couponCode: couponCode || undefined,
+          couponCode: effectiveCouponCode,
         }),
       });
 
@@ -277,6 +308,11 @@ export default function PaymentPage() {
       return;
     }
 
+    try {
+      window.localStorage.removeItem("selectedPlanId");
+    } catch {
+    }
+
     setLoading(true);
 
     try {
@@ -286,6 +322,9 @@ export default function PaymentPage() {
         return;
       }
 
+      const effectiveCouponCode =
+        !isUpgradeMode && planId === "6M" ? "FREE_6M" : (couponCode || undefined);
+
       /* 1️⃣ Create Razorpay order (backend decides amount) */
       const res = await fetch(`${API_URL}/api/subscription/create-payment`, {
         method: "POST",
@@ -294,7 +333,7 @@ export default function PaymentPage() {
           planId,
           enteredStudents,
           futureStudents: futureStudents || undefined,
-          couponCode: couponCode || undefined,
+          couponCode: effectiveCouponCode,
         }),
       });
 
@@ -311,17 +350,23 @@ export default function PaymentPage() {
 
       /* 1️⃣.5️⃣ Create PaymentIntent (CRITICAL STEP) */
 
-      await fetch(`${API_URL}/api/payment/create-intent`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          orderId: order.orderId,
-          planId,
-          enteredStudents,
-          futureStudents: futureStudents || undefined,
-          couponCode: couponCode || undefined,
-        }),
-      });
+      await fetch(
+        isUpgradeMode
+          ? `${API_URL}/api/payment/create-intent-upgrade`
+          : `${API_URL}/api/payment/create-intent`,
+        {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            orderId: order.orderId,
+            planId,
+            enteredStudents,
+            futureStudents: futureStudents || undefined,
+            couponCode: effectiveCouponCode,
+          }),
+          credentials: "include",
+        }
+      );
 
       const paidAmount = order.paidAmount;
 
@@ -342,16 +387,23 @@ export default function PaymentPage() {
 
         handler: async function (response: RazorpayHandlerResponse) {
           /* 3️⃣ Verify payment */
-          const verifyRes = await fetch(`${API_URL}/api/payment/verify`, {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({
-              razorpay_order_id: response.razorpay_order_id,
-              razorpay_payment_id: response.razorpay_payment_id,
-              razorpay_signature: response.razorpay_signature,
-              schoolEmail
-            }),
-          });
+
+          const verifyRes = await fetch(
+            isUpgradeMode
+              ? `${API_URL}/api/payment/verify-upgrade`
+              : `${API_URL}/api/payment/verify`,
+            {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({
+                razorpay_order_id: response.razorpay_order_id,
+                razorpay_payment_id: response.razorpay_payment_id,
+                razorpay_signature: response.razorpay_signature,
+                ...(isUpgradeMode ? {} : { schoolEmail }),
+              }),
+              credentials: "include",
+            }
+          );
 
           const verifyData = (await verifyRes.json()) as VerifyPaymentResponse;
 
@@ -360,11 +412,17 @@ export default function PaymentPage() {
             return;
           }
 
-          localStorage.setItem("accessToken", verifyData.accessToken);
-          localStorage.setItem("role", "principal");
-          await refetchUser();
-          router.replace("/dashboard/principal");
+          if (!isUpgradeMode) {
+            localStorage.setItem("role", "principal");
+          }
 
+          try {
+            window.localStorage.removeItem("selectedPlanId");
+          } catch {
+          }
+
+          setAuthUser(verifyData.user);
+          router.replace("/dashboard/principal/schoolProfile");
         },
         theme: { color: "#2563eb" },
       });
@@ -378,6 +436,8 @@ export default function PaymentPage() {
   };
 
   const getProTip = () => {
+    if (planId === "6M")
+      return "Pro tip: Upgrade to 1 Year and save more long-term.";
     if (planId === "1Y")
       return "Pro tip: Upgrade to 2 Years and save more long-term.";
     if (planId === "2Y")
@@ -458,6 +518,7 @@ export default function PaymentPage() {
                     onChange={(e) => setPlanId(e.target.value as PlanId)}
                     className="w-full rounded-xl px-4 py-3 bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all"
                   >
+                    <option value="6M">6 Months Plan</option>
                     <option value="1Y">1 Year Plan</option>
                     <option value="2Y">2 Year Plan</option>
                     <option value="3Y">3 Year Plan</option>

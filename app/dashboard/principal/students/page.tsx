@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, DragEvent, useEffect, useRef, type ChangeEvent } from 'react';
-import { Upload, UserPlus, Download, FileSpreadsheet, UploadCloud, X, CheckCircle, Users, Mail, Phone } from 'lucide-react';
+import { Upload, UserPlus, Download, FileSpreadsheet, UploadCloud, X, CheckCircle, Users, Mail, Phone, Edit2, Trash2 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { toast } from 'sonner';
 import { apiFetch } from '@/lib/api';
@@ -9,9 +9,11 @@ import { apiFetch } from '@/lib/api';
 /* =====================================================
   IMPORT YOUR ACTUAL API HOOKS
 ===================================================== */
-import { useBulkUploadStudents, useBulkUploadStudentsSchoolWide, useCreateStudent, useStudentsByClass, useStudentsClassWiseStats, type Student } from '@/app/querry/useStudent';
+import { useBulkUploadStudents, useBulkUploadStudentsSchoolWide, useCreateStudent, useDeactivateStudent, useStudentsByClass, useStudentsClassWiseStats, type Student } from '@/app/querry/useStudent';
 import { useClasses } from '@/app/querry/useClasses';
 import { useAuth } from '@/app/context/AuthContext';
+import StudentDetailsModal from '@/components/reports/StudentDetailsModal';
+
 
 /* =====================================================
   DRAG DROP CSV COMPONENT
@@ -76,10 +78,9 @@ function DragDropCSV({ onFileSelect, onClear, selectedFile }: DragDropCSVProps) 
         onDragLeave={() => setIsDragging(false)}
         onDrop={handleDrop}
         className={`relative border-2 border-dashed rounded-2xl p-8 sm:p-12 text-center cursor-pointer transition-all duration-300 transform
-          ${
-            isDragging
-              ? 'border-accent-blue bg-blue-50 dark:bg-blue-900/30 scale-[1.02] shadow-lg'
-              : fileName
+          ${isDragging
+            ? 'border-accent-blue bg-blue-50 dark:bg-blue-900/30 scale-[1.02] shadow-lg'
+            : fileName
               ? 'dashboard-card-border bg-green-50 dark:bg-green-900/20 hover:border-accent-green'
               : 'dashboard-card-border hover:border-accent-blue hover:shadow-dashboard'
           }`}
@@ -104,7 +105,7 @@ function DragDropCSV({ onFileSelect, onClear, selectedFile }: DragDropCSVProps) 
                     <CheckCircle className="w-5 h-5 text-green-600" />
                   </div>
                 </div>
-                
+
                 <div className="space-y-2">
                   <p className="text-base sm:text-lg font-bold dashboard-text">
                     {fileName}
@@ -125,16 +126,14 @@ function DragDropCSV({ onFileSelect, onClear, selectedFile }: DragDropCSVProps) 
               </>
             ) : (
               <>
-                <div className={`p-4 rounded-2xl shadow-lg transition-all duration-300 ${
-                  isDragging 
-                    ? 'bg-gradient-to-br from-blue-600 to-indigo-600 scale-110' 
-                    : 'bg-gradient-to-br from-blue-500 to-indigo-500'
-                }`}>
-                  <UploadCloud className={`w-10 h-10 sm:w-12 sm:h-12 text-white transition-transform duration-300 ${
-                    isDragging ? 'animate-bounce' : ''
-                  }`} />
+                <div className={`p-4 rounded-2xl shadow-lg transition-all duration-300 ${isDragging
+                  ? 'bg-gradient-to-br from-blue-600 to-indigo-600 scale-110'
+                  : 'bg-gradient-to-br from-blue-500 to-indigo-500'
+                  }`}>
+                  <UploadCloud className={`w-10 h-10 sm:w-12 sm:h-12 text-white transition-transform duration-300 ${isDragging ? 'animate-bounce' : ''
+                    }`} />
                 </div>
-                
+
                 <div className="space-y-2">
                   <p className="text-base sm:text-lg font-bold dashboard-text">
                     {isDragging ? 'Drop your CSV file here' : 'Drag & drop CSV file here'}
@@ -224,6 +223,10 @@ interface SingleStudentForm {
   parentsPhone: string;
   rollNo: string;
 }
+// const nameRegex = /^[A-Za-z ]+$/;
+const strictEmailRegex =
+  /^[a-zA-Z0-9._%+-]+@(gmail|yahoo|outlook|hotmail)\.(com|in)$/;
+
 
 /* =====================================================
   MAIN PAGE COMPONENT
@@ -234,13 +237,13 @@ export default function BulkStudentUploadPage() {
   // UNCOMMENT AND USE YOUR ACTUAL HOOKS:
   const { user } = useAuth();
   const role = user?.role;
-  
+
   const {
     mutate: createStudent,
     isPending: creatingStudent,
     error: singleError
   } = useCreateStudent();
-  
+
   const {
     mutate: uploadStudents,
     isPending: uploading,
@@ -256,14 +259,49 @@ export default function BulkStudentUploadPage() {
     data: schoolWideData,
     error: schoolWideError
   } = useBulkUploadStudentsSchoolWide();
-  
-  const { data: classes = [], isLoading: classesLoading } = useClasses();
+
+  const { data: classesData, isLoading: classesLoading } = useClasses();
+  const classes = (classesData as any)?.data || (classesData as any) || [];
+
+  const sortedClasses = [...classes].sort((a: any, b: any) => {
+    const nameA = String(a?.name ?? '');
+    const nameB = String(b?.name ?? '');
+    const nameCmp = nameA.localeCompare(nameB, undefined, {
+      numeric: true,
+      sensitivity: 'base'
+    });
+    if (nameCmp !== 0) return nameCmp;
+
+    const sectionA = String(a?.section ?? '');
+    const sectionB = String(b?.section ?? '');
+    return sectionA.localeCompare(sectionB, undefined, {
+      numeric: true,
+      sensitivity: 'base'
+    });
+  });
 
   const {
     data: classWiseStats = [],
     isLoading: classWiseLoading,
     error: classWiseError
   } = useStudentsClassWiseStats();
+
+  const sortedClassWiseStats = [...classWiseStats].sort((a: any, b: any) => {
+    const nameA = String(a?.className ?? '');
+    const nameB = String(b?.className ?? '');
+    const nameCmp = nameA.localeCompare(nameB, undefined, {
+      numeric: true,
+      sensitivity: 'base'
+    });
+    if (nameCmp !== 0) return nameCmp;
+
+    const sectionA = String(a?.section ?? '');
+    const sectionB = String(b?.section ?? '');
+    return sectionA.localeCompare(sectionB, undefined, {
+      numeric: true,
+      sensitivity: 'base'
+    });
+  });
 
   const [capacity, setCapacity] = useState<number>(0);
   const totalStudentsInSchool = classWiseStats.reduce(
@@ -297,6 +335,9 @@ export default function BulkStudentUploadPage() {
     error: studentsError
   } = useStudentsByClass(selectedClassId);
 
+  const { mutate: deactivateStudent } = useDeactivateStudent();
+  const [confirmDeactivate, setConfirmDeactivate] = useState<{ id: string; name: string } | null>(null);
+
   const [searchTerm, setSearchTerm] = useState('');
   const [openSingle, setOpenSingle] = useState(false);
   const [openBulk, setOpenBulk] = useState(false);
@@ -305,6 +346,9 @@ export default function BulkStudentUploadPage() {
   const studentsSectionRef = useRef<HTMLDivElement | null>(null);
   const loadMoreRef = useRef<HTMLDivElement | null>(null);
   const [visibleCount, setVisibleCount] = useState(10);
+
+  const [isBulkUiLocked, setIsBulkUiLocked] = useState(false);
+  const prevSelectedClassIdRef = useRef<string | undefined>(undefined);
 
   /* ---------------- SINGLE STUDENT ---------------- */
   const initialStudent: SingleStudentForm = {
@@ -338,6 +382,8 @@ export default function BulkStudentUploadPage() {
 
   const [bulkClientErrors, setBulkClientErrors] = useState<string[]>([]);
   const [schoolWideClientErrors, setSchoolWideClientErrors] = useState<string[]>([]);
+  const [selectedStudentId, setSelectedStudentId] = useState<string | null>(null);//get full dtials of studnet
+
 
   const handleClearBulkClassWise = () => {
     setFile(null);
@@ -363,39 +409,82 @@ export default function BulkStudentUploadPage() {
   const handleSingleSubmit = () => {
     const errors: Partial<Record<keyof SingleStudentForm | 'class', string>> = {};
 
+   
+
     const trimmedName = student.name.trim();
-    const trimmedEmail = student.email.trim();
-    const trimmedPassword = student.password;
-    const trimmedAdmissionNo = student.admissionNo.trim();
-    const trimmedFatherName = student.fatherName.trim();
-    const trimmedMotherName = student.motherName.trim();
-    const trimmedParentsPhone = student.parentsPhone.trim();
-    const trimmedRollNo = student.rollNo.trim();
+  const trimmedEmail = student.email.trim();
+  const trimmedPassword = student.password;
+  const trimmedAdmissionNo = student.admissionNo.trim();
+  const trimmedFatherName = student.fatherName.trim();
+  const trimmedMotherName = student.motherName.trim();
+  const trimmedParentsPhone = student.parentsPhone.trim();
+  const trimmedRollNo = student.rollNo.trim();
 
-    if (trimmedName.length < 3) errors.name = 'Name must be at least 3 characters';
-    if (trimmedPassword.length < 6) errors.password = 'Password must be at least 6 characters';
-    if (!trimmedAdmissionNo) errors.admissionNo = 'Admission number is required';
-    if (trimmedFatherName.length < 3) errors.fatherName = "Father's name must be at least 3 characters";
-    if (trimmedMotherName.length < 3) errors.motherName = "Mother's name must be at least 3 characters";
+    // 🔒 Name validations (NO numbers allowed)
+    if (trimmedName.length < 3) {
+      errors.name = 'Name must be at least 3 characters';
+    }
+    // else if (!nameRegex.test(trimmedName)) {
+    //   errors.name = 'Name must not contain numbers';
+    // }
 
+    if (trimmedFatherName.length < 3) {
+      errors.fatherName = "Father's name must be at least 3 characters";
+    }
+    // else if (!nameRegex.test(trimmedFatherName)) {
+    //   errors.fatherName = "Father's name must not contain numbers";
+    // }
+
+    if (trimmedMotherName.length < 3) {
+      errors.motherName = "Mother's name must be at least 3 characters";
+    }
+    // else if (!nameRegex.test(trimmedMotherName)) {
+    //   errors.motherName = "Mother's name must not contain numbers";
+    // }
+
+    // 🔒 Password
+    if (trimmedPassword.length < 6) {
+      errors.password = 'Password must be at least 6 characters';
+    }
+
+    // 🔒 Admission No
+    if (!trimmedAdmissionNo) {
+      errors.admissionNo = 'Admission number is required';
+    }
+
+    // 🔒 Phone validation (exact 10 digits)
     const phoneDigits = trimmedParentsPhone.replace(/\D/g, '');
-    if (phoneDigits.length < 10) errors.parentsPhone = 'Parent phone must be at least 10 digits';
+    if (phoneDigits.length !== 10) {
+      errors.parentsPhone = 'Phone number must be exactly 10 digits';
+    }
 
+    // 🔒 Roll number (limit size)
     const rollNoNum = Number(trimmedRollNo);
-    if (!trimmedRollNo || Number.isNaN(rollNoNum) || rollNoNum <= 0 || !Number.isInteger(rollNoNum)) {
+    if (
+      !trimmedRollNo ||
+      Number.isNaN(rollNoNum) ||
+      rollNoNum <= 0 ||
+      !Number.isInteger(rollNoNum)
+    ) {
       errors.rollNo = 'Roll number must be a positive integer';
+    } else if (rollNoNum > 200) {
+      errors.rollNo = 'Roll number cannot be greater than 100';
     }
 
+    // 🔒 Email validation (STRICT)
     if (trimmedEmail) {
-      const emailOk = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(trimmedEmail);
-      if (!emailOk) errors.email = 'Please enter a valid email';
+      if (!strictEmailRegex.test(trimmedEmail)) {
+        errors.email = 'Please enter a valid email address';
+      }
     }
 
+    // 🔒 Class validation
     if (!singleClassId || !singleClassName || !singleSection) {
       errors.class = 'Please select class and section';
     }
 
     setSingleErrors(errors);
+
     if (Object.keys(errors).length) {
       toast.error(Object.values(errors)[0] || 'Please fix form errors');
       return;
@@ -564,6 +653,42 @@ export default function BulkStudentUploadPage() {
       return { ok: false, errors };
     }
 
+    if (mode === 'schoolWide') {
+      const classKeySet = new Set(
+        sortedClasses.map(
+          (c: Class) => `${String(c.name).trim().toLowerCase()}__${String(c.section).trim().toLowerCase()}`
+        )
+      );
+      const missingClassKeys = new Set<string>();
+
+      for (let r = 1; r < lines.length; r++) {
+        const rowNo = r + 1;
+        const cells = parseCsvLine(lines[r]);
+        const get = (h: string) => (cells[idx(h)] ?? '').trim();
+        const className = get('className');
+        const section = get('section');
+
+        if (!className || !section) continue;
+
+        const key = `${className.trim().toLowerCase()}__${section.trim().toLowerCase()}`;
+        if (!classKeySet.has(key)) {
+          missingClassKeys.add(`${className} - ${section} (Row ${rowNo})`);
+        }
+      }
+
+      if (missingClassKeys.size) {
+        const list = Array.from(missingClassKeys);
+        return {
+          ok: false,
+          errors: [
+            'Some classes in CSV do not exist in the active session.',
+            ...list.slice(0, 10),
+            ...(list.length > 10 ? [`...and ${list.length - 10} more`] : [])
+          ]
+        };
+      }
+    }
+
     return { ok: true, errors: [] as string[] };
   };
 
@@ -603,6 +728,11 @@ export default function BulkStudentUploadPage() {
     }
     setBulkClientErrors([]);
 
+    prevSelectedClassIdRef.current = selectedClassId;
+    setIsBulkUiLocked(true);
+    setSelectedClassId(undefined);
+    setSearchTerm('');
+
     uploadStudents(
       {
         file,
@@ -614,9 +744,15 @@ export default function BulkStudentUploadPage() {
         onSuccess: (resp: any) => {
           toast.success(resp?.message || 'Students uploaded successfully');
           handleClearBulkClassWise();
+
+          setIsBulkUiLocked(false);
+          setSelectedClassId(prevSelectedClassIdRef.current);
         },
         onError: (err: any) => {
           toast.error(getApiErrorMessage(err));
+
+          setIsBulkUiLocked(false);
+          setSelectedClassId(prevSelectedClassIdRef.current);
         }
       }
     );
@@ -636,17 +772,36 @@ export default function BulkStudentUploadPage() {
     }
     setSchoolWideClientErrors([]);
 
+    prevSelectedClassIdRef.current = selectedClassId;
+    setIsBulkUiLocked(true);
+    setSelectedClassId(undefined);
+    setSearchTerm('');
+
     uploadStudentsSchoolWide(
       {
         file: schoolWideFile
       },
       {
         onSuccess: (resp: any) => {
+          if (resp && resp.success === false) {
+            const msg = resp?.message || 'CSV validation failed';
+            toast.error(msg);
+
+            setIsBulkUiLocked(false);
+            setSelectedClassId(prevSelectedClassIdRef.current);
+            return;
+          }
           toast.success(resp?.message || 'Students uploaded successfully');
           handleClearBulkSchoolWide();
+
+          setIsBulkUiLocked(false);
+          setSelectedClassId(prevSelectedClassIdRef.current);
         },
         onError: (err: any) => {
           toast.error(getApiErrorMessage(err));
+
+          setIsBulkUiLocked(false);
+          setSelectedClassId(prevSelectedClassIdRef.current);
         }
       }
     );
@@ -733,7 +888,7 @@ export default function BulkStudentUploadPage() {
   }
 
   return (
-    <div className="min-h-screen dashboard-bg">
+    <div className="relative bg-gradient-to-br from-purple-50 via-white to-blue-50 dark:from-purple-900 dark:via-gray-900 dark:to-blue-950 overflow-hidden min-h-screen">
       <header className="bg-gradient-to-r from-blue-600 via-purple-600 to-indigo-700 dark:from-blue-800 dark:via-purple-800 dark:to-indigo-900 shadow-xl">
         <div className="max-w-7xl mx-auto py-6 sm:py-8 px-4 sm:px-6 lg:px-8">
           <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between space-y-4 lg:space-y-0">
@@ -782,8 +937,21 @@ export default function BulkStudentUploadPage() {
         </div>
       </header>
 
-      <main className="max-w-7xl mx-auto py-6 px-4 sm:px-6 lg:px-8">
+      <main className="max-w-7xl mx-auto py-6 px-4 sm:px-6 lg:px-8 ">
         <div className="space-y-6">
+          {isBulkUiLocked && (
+            <div className="dashboard-card border dashboard-card-border rounded-2xl shadow-dashboard-lg p-4">
+              <div className="flex items-center justify-between gap-3 flex-wrap">
+                <p className="dashboard-text font-semibold">
+                  Bulk upload in progress. Student list will refresh once it completes.
+                </p>
+                <div className="flex items-center gap-2">
+                  <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-blue-600"></div>
+                  <span className="text-sm dashboard-text-muted">Uploading...</span>
+                </div>
+              </div>
+            </div>
+          )}
           <div className="dashboard-card border dashboard-card-border rounded-2xl shadow-dashboard-lg overflow-hidden">
             <div className="px-6 py-5 border-b dashboard-card-border bg-gradient-to-r from-blue-50 to-indigo-50 dark:from-blue-900/20 dark:to-indigo-900/20">
               <div className="flex items-center gap-3">
@@ -825,13 +993,15 @@ export default function BulkStudentUploadPage() {
                 </div>
               ) : (
                 <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-                  {classWiseStats.map((c: any) => {
+                  {sortedClassWiseStats.map((c: any) => {
                     const id = String(c.classId);
                     const isSelected = selectedClassId === id;
                     return (
                       <button
                         key={id}
+                        disabled={isBulkUiLocked}
                         onClick={() => {
+                          if (isBulkUiLocked) return;
                           setSelectedClassId(id);
                           setSearchTerm('');
                           window.setTimeout(() => {
@@ -841,11 +1011,10 @@ export default function BulkStudentUploadPage() {
                             });
                           }, 50);
                         }}
-                        className={`text-left p-4 rounded-2xl border transition-all shadow-sm hover:shadow-dashboard-lg ${
-                          isSelected
-                            ? 'border-accent-blue bg-blue-50 dark:bg-blue-900/20'
-                            : 'dashboard-card-border dashboard-card'
-                        }`}
+                        className={`text-left p-4 rounded-2xl border transition-all shadow-sm hover:shadow-dashboard-lg disabled:opacity-60 disabled:cursor-not-allowed ${isSelected
+                          ? 'border-accent-blue bg-blue-50 dark:bg-blue-900/20'
+                          : 'dashboard-card-border dashboard-card'
+                          }`}
                       >
                         <div className="flex items-start justify-between gap-3">
                           <div>
@@ -866,13 +1035,15 @@ export default function BulkStudentUploadPage() {
 
           {selectedClassId && (
             <div className="dashboard-card border dashboard-card-border rounded-2xl shadow-dashboard-lg p-4 flex items-center justify-between gap-3">
-              <p className="dashboard-text font-semibold">Selected class: {classWiseStats.find((c: any) => String(c.classId) === String(selectedClassId))?.className} - {classWiseStats.find((c: any) => String(c.classId) === String(selectedClassId))?.section}</p>
+              <p className="dashboard-text font-semibold">Selected class: {sortedClassWiseStats.find((c: any) => String(c.classId) === String(selectedClassId))?.className} - {sortedClassWiseStats.find((c: any) => String(c.classId) === String(selectedClassId))?.section}</p>
 
               <button
                 onClick={() => {
+                  if (isBulkUiLocked) return;
                   setSelectedClassId(undefined);
                   setSearchTerm('');
                 }}
+                disabled={isBulkUiLocked}
                 className="px-4 py-2 dashboard-card border dashboard-card-border rounded-xl dashboard-text hover:shadow-dashboard transition-all"
               >
                 Back to classes
@@ -887,6 +1058,7 @@ export default function BulkStudentUploadPage() {
                   value={searchTerm}
                   onChange={(e) => setSearchTerm(e.target.value)}
                   placeholder="Search students by name, email or admission no..."
+                  disabled={isBulkUiLocked}
                   className="w-full px-4 py-3 dashboard-card border dashboard-card-border rounded-xl dashboard-text focus:outline-none focus:ring-2 focus:ring-accent-blue transition-all"
                 />
               </div>
@@ -941,11 +1113,17 @@ export default function BulkStudentUploadPage() {
                             <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                               Parent Contact
                             </th>
+                            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                              Action
+                            </th>
                           </tr>
                         </thead>
+                       
+
                         <tbody className="divide-y dashboard-card-border">
                           {visibleStudents.map((s: Student) => {
                             const active = s.history?.find(h => h.isActive) || s.history?.[0];
+
                             return (
                               <tr key={s._id} className="hover:bg-gray-50 dark:hover:bg-gray-800/30">
                                 <td className="px-6 py-4 whitespace-nowrap">
@@ -957,15 +1135,19 @@ export default function BulkStudentUploadPage() {
                                     </div>
                                   </div>
                                 </td>
+
                                 <td className="px-6 py-4 whitespace-nowrap text-sm dashboard-text">
                                   {s.admissionNo}
                                 </td>
+
                                 <td className="px-6 py-4 whitespace-nowrap text-sm dashboard-text">
                                   {active ? `${active.className} - ${active.section}` : ''}
                                 </td>
+
                                 <td className="px-6 py-4 whitespace-nowrap text-sm dashboard-text">
                                   {active?.rollNo ?? ''}
                                 </td>
+
                                 <td className="px-6 py-4 whitespace-nowrap">
                                   <div className="text-sm dashboard-text">
                                     <div>Father: {s.fatherName}</div>
@@ -975,14 +1157,46 @@ export default function BulkStudentUploadPage() {
                                     </div>
                                   </div>
                                 </td>
+
+                                <td className="px-6 py-4 whitespace-nowrap text-sm">
+                                  <div className="flex items-center gap-2">
+                                    <button
+                                      onClick={() => setSelectedStudentId(s._id)}
+                                      className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-blue-600 text-white hover:bg-blue-700 transition-colors"
+                                    >
+                                      <Edit2 className="w-4 h-4" />
+                                      View
+                                    </button>
+                                    <button
+                                      onClick={() => setConfirmDeactivate({ id: s._id, name: s.name })}
+                                      className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-red-600 text-white hover:bg-red-700 transition-colors"
+                                      title="Delete"
+                                    >
+                                      <Trash2 className="w-4 h-4" />
+                                      Delete
+                                    </button>
+                                  </div>
+                                </td>
                               </tr>
                             );
                           })}
                         </tbody>
+
+                        
                       </table>
                     </div>
+                    
                   )}
+                  {/* MODAL */}
+                        {selectedStudentId && (
+                          <StudentDetailsModal
+                            studentId={selectedStudentId}
+                            onClose={() => setSelectedStudentId(null)}
+                          />
+                        )}
                 </div>
+
+
               </div>
 
               {visibleCount < filteredStudents.length && (
@@ -1032,13 +1246,13 @@ export default function BulkStudentUploadPage() {
                               key === 'password'
                                 ? 'password'
                                 : key === 'email'
-                                ? 'email'
-                                : 'text'
+                                  ? 'email'
+                                  : 'text'
                             }
                             placeholder={`Enter ${fieldLabels[key as keyof SingleStudentForm].toLowerCase()}`}
                             value={value}
                             onChange={(e) =>
-                              (setStudent({ ...student, [key]: e.target.value }),
+                            (setStudent({ ...student, [key]: e.target.value }),
                               setSingleErrors(prev => ({ ...prev, [key]: undefined })))
                             }
                             className="w-full px-4 py-3 dashboard-card border dashboard-card-border rounded-xl dashboard-text focus:outline-none focus:ring-2 focus:ring-accent-blue transition-all"
@@ -1071,7 +1285,7 @@ export default function BulkStudentUploadPage() {
                         }}
                       >
                         <option value="">Select class</option>
-                        {classes.map((cls: Class) => (
+                        {sortedClasses.map((cls: Class) => (
                           <option key={cls.id} value={cls.id}>
                             {cls.name} - {cls.section}
                           </option>
@@ -1145,22 +1359,20 @@ export default function BulkStudentUploadPage() {
                     <div className="flex flex-wrap gap-3">
                       <button
                         onClick={() => setBulkMode('classWise')}
-                        className={`flex-1 min-w-[220px] px-6 py-4 rounded-xl font-medium transition-all duration-200 flex items-center justify-center gap-2 ${
-                          bulkMode === 'classWise'
-                            ? 'bg-gradient-to-br from-teal-500 to-cyan-600 text-white shadow-lg transform scale-[1.02]'
-                            : 'dashboard-card border dashboard-card-border dashboard-text hover:border-accent-teal'
-                        }`}
+                        className={`flex-1 min-w-[220px] px-6 py-4 rounded-xl font-medium transition-all duration-200 flex items-center justify-center gap-2 ${bulkMode === 'classWise'
+                          ? 'bg-gradient-to-br from-teal-500 to-cyan-600 text-white shadow-lg transform scale-[1.02]'
+                          : 'dashboard-card border dashboard-card-border dashboard-text hover:border-accent-teal'
+                          }`}
                       >
                         <Upload className="w-5 h-5" /> Class-wise Upload
                       </button>
 
                       <button
                         onClick={() => setBulkMode('schoolWide')}
-                        className={`flex-1 min-w-[220px] px-6 py-4 rounded-xl font-medium transition-all duration-200 flex items-center justify-center gap-2 ${
-                          bulkMode === 'schoolWide'
-                            ? 'bg-gradient-to-br from-blue-600 to-indigo-600 text-white shadow-lg transform scale-[1.02]'
-                            : 'dashboard-card border dashboard-card-border dashboard-text hover:border-accent-blue'
-                        }`}
+                        className={`flex-1 min-w-[220px] px-6 py-4 rounded-xl font-medium transition-all duration-200 flex items-center justify-center gap-2 ${bulkMode === 'schoolWide'
+                          ? 'bg-gradient-to-br from-blue-600 to-indigo-600 text-white shadow-lg transform scale-[1.02]'
+                          : 'dashboard-card border dashboard-card-border dashboard-text hover:border-accent-blue'
+                          }`}
                       >
                         <Upload className="w-5 h-5" /> Whole-school Upload
                       </button>
@@ -1202,7 +1414,7 @@ export default function BulkStudentUploadPage() {
                             }}
                           >
                             <option value="">Select class</option>
-                            {classes.map((cls: Class) => (
+                            {sortedClasses.map((cls: Class) => (
                               <option key={cls.id} value={cls.id}>
                                 {cls.name} - {cls.section}
                               </option>
@@ -1340,6 +1552,68 @@ export default function BulkStudentUploadPage() {
                     )}
                   </div>
                 </div>
+              </motion.div>
+            )}
+          </AnimatePresence>
+
+          <AnimatePresence>
+            {confirmDeactivate && (
+              <motion.div
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                exit={{ opacity: 0 }}
+                className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 p-4"
+                onClick={() => setConfirmDeactivate(null)}
+              >
+                <motion.div
+                  initial={{ scale: 0.92, y: 10 }}
+                  animate={{ scale: 1, y: 0 }}
+                  exit={{ scale: 0.92, y: 10 }}
+                  onClick={(e) => e.stopPropagation()}
+                  className="bg-white/95 dark:bg-gray-800/95 backdrop-blur-sm border border-gray-200/50 dark:border-gray-700/50 rounded-2xl shadow-2xl p-6 w-full max-w-md"
+                >
+                  <div className="flex items-center justify-between mb-3">
+                    <h3 className="text-lg font-bold text-gray-900 dark:text-white">Delete Student</h3>
+                    <button
+                      onClick={() => setConfirmDeactivate(null)}
+                      className="text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg p-2 transition-colors"
+                    >
+                      <X className="w-5 h-5" />
+                    </button>
+                  </div>
+
+                  <p className="text-sm text-gray-600 dark:text-gray-400 mb-5">
+                    Are you sure you want to delete
+                    <span className="font-semibold text-gray-900 dark:text-white"> {confirmDeactivate.name}</span>?
+                    This will mark the student as inactive.
+                  </p>
+
+                  <div className="flex gap-3 justify-end">
+                    <button
+                      onClick={() => setConfirmDeactivate(null)}
+                      className="px-6 py-2.5 bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 text-gray-900 dark:text-white font-semibold rounded-xl hover:bg-gray-50 dark:hover:bg-gray-600 transition-all text-sm shadow-sm"
+                    >
+                      Cancel
+                    </button>
+                    <button
+                      onClick={() => {
+                        const id = confirmDeactivate.id;
+                        setConfirmDeactivate(null);
+                        deactivateStudent(id, {
+                          onSuccess: (resp: any) => {
+                            toast.success(resp?.message || 'Student deactivated successfully');
+                          },
+                          onError: (err: any) => {
+                            toast.error(err?.message || 'Failed to deactivate student');
+                          }
+                        });
+                      }}
+                      className="px-6 py-2.5 bg-red-600 hover:bg-red-700 text-white font-semibold rounded-xl transition-all shadow-lg"
+                    >
+                      Yes, Delete
+                    </button>
+                  </div>
+                </motion.div>
               </motion.div>
             )}
           </AnimatePresence>
