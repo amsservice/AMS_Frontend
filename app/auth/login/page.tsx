@@ -283,7 +283,7 @@ export default function LoginPage() {
                 }`}
               >
                 {r === "teacher"
-                  ? "Staff"
+                  ? "Teacher"
                   : r === "coordinator"
                     ? "Coordinator"
                     : r.charAt(0).toUpperCase() + r.slice(1)}
