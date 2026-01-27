@@ -36,7 +36,7 @@ export default function ReactivateModal({
           >
             <div className="flex items-center justify-between mb-3">
               <h3 className="text-lg font-bold text-gray-900 dark:text-white">
-                Reactivate Teacher
+                Reactivate Staff
               </h3>
               <button
                 onClick={onClose}
@@ -52,7 +52,7 @@ export default function ReactivateModal({
                 {" "}
                 {confirmReactivate.email}
               </span>
-              . Would you like to make this teacher active?
+              . Would you like to make this staff member active?
             </p>
 
             <div className="flex gap-3 justify-end">

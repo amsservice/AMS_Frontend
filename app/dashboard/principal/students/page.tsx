@@ -9,7 +9,7 @@ import { apiFetch } from '@/lib/api';
 /* =====================================================
   IMPORT YOUR ACTUAL API HOOKS
 ===================================================== */
-import { useBulkUploadStudents, useBulkUploadStudentsSchoolWide, useCreateStudent, useDeactivateStudent, useStudentsByClass, useStudentsClassWiseStats, type Student } from '@/app/querry/useStudent';
+import { useBulkUploadStudents, useBulkUploadStudentsSchoolWide, useBulkDeactivateStudents, useCreateStudent, useDeactivateStudent, useStudentsByClass, useStudentsClassWiseStats, type Student } from '@/app/querry/useStudent';
 import { useClasses } from '@/app/querry/useClasses';
 import { useAuth } from '@/app/context/AuthContext';
 import StudentDetailsModal from '@/components/reports/StudentDetailsModal';
@@ -336,6 +336,7 @@ export default function BulkStudentUploadPage() {
   } = useStudentsByClass(selectedClassId);
 
   const { mutate: deactivateStudent } = useDeactivateStudent();
+  const bulkDeactivateStudentsMutation = useBulkDeactivateStudents();
   const [confirmDeactivate, setConfirmDeactivate] = useState<{ id: string; name: string } | null>(null);
 
   const [searchTerm, setSearchTerm] = useState('');
@@ -347,8 +348,14 @@ export default function BulkStudentUploadPage() {
   const loadMoreRef = useRef<HTMLDivElement | null>(null);
   const [visibleCount, setVisibleCount] = useState(10);
 
+  const [selectedStudentIds, setSelectedStudentIds] = useState<Set<string>>(new Set());
+
   const [isBulkUiLocked, setIsBulkUiLocked] = useState(false);
   const prevSelectedClassIdRef = useRef<string | undefined>(undefined);
+
+  useEffect(() => {
+    setSelectedStudentIds(new Set());
+  }, [selectedClassId]);
 
   /* ---------------- SINGLE STUDENT ---------------- */
   const initialStudent: SingleStudentForm = {
@@ -1093,9 +1100,104 @@ export default function BulkStudentUploadPage() {
                     </div>
                   ) : (
                     <div className="overflow-x-auto">
+                      <div className="px-6 py-3 border-b dashboard-card-border flex items-center justify-between gap-3 flex-wrap">
+                        <div className="text-sm dashboard-text-muted">Selected: {selectedStudentIds.size}</div>
+                        <div className="flex items-center gap-2 flex-wrap">
+                          <button
+                            onClick={() => {
+                              const ids = Array.from(selectedStudentIds);
+                              if (!ids.length) {
+                                toast.error('Please select at least one student');
+                                return;
+                              }
+
+                              bulkDeactivateStudentsMutation.mutate(ids, {
+                                onSuccess: (resp: any) => {
+                                  const results = Array.isArray(resp?.results) ? resp.results : [];
+                                  const failed = results.filter((r: any) => !r?.ok);
+                                  const successCount = results.filter((r: any) => r?.ok).length;
+
+                                  if (failed.length > 0) {
+                                    const firstMsg = failed[0]?.message || 'Some students could not be deleted';
+                                    toast.error(`Deleted ${successCount}. Failed ${failed.length}. ${firstMsg}`);
+                                  } else {
+                                    toast.success(`Deleted ${successCount} students successfully`);
+                                  }
+
+                                  setSelectedStudentIds(new Set());
+                                },
+                                onError: (err: any) => toast.error(err?.message || 'Failed to delete students')
+                              });
+                            }}
+                            disabled={bulkDeactivateStudentsMutation.isPending || isBulkUiLocked}
+                            className="px-4 py-2 rounded-xl bg-red-600 text-white hover:bg-red-700 disabled:opacity-50 transition-colors text-sm font-semibold"
+                          >
+                            Delete selected
+                          </button>
+                          <button
+                            onClick={() => {
+                              const ids = (visibleStudents || []).map((s: Student) => String(s._id));
+                              if (!ids.length) {
+                                toast.error('No students to delete');
+                                return;
+                              }
+
+                              bulkDeactivateStudentsMutation.mutate(ids, {
+                                onSuccess: (resp: any) => {
+                                  const results = Array.isArray(resp?.results) ? resp.results : [];
+                                  const failed = results.filter((r: any) => !r?.ok);
+                                  const successCount = results.filter((r: any) => r?.ok).length;
+
+                                  if (failed.length > 0) {
+                                    const firstMsg = failed[0]?.message || 'Some students could not be deleted';
+                                    toast.error(`Deleted ${successCount}. Failed ${failed.length}. ${firstMsg}`);
+                                  } else {
+                                    toast.success(`Deleted ${successCount} students successfully`);
+                                  }
+
+                                  setSelectedStudentIds(new Set());
+                                },
+                                onError: (err: any) => toast.error(err?.message || 'Failed to delete students')
+                              });
+                            }}
+                            disabled={bulkDeactivateStudentsMutation.isPending || isBulkUiLocked}
+                            className="px-4 py-2 rounded-xl bg-red-600 text-white hover:bg-red-700 disabled:opacity-50 transition-colors text-sm font-semibold"
+                          >
+                            Delete all
+                          </button>
+                        </div>
+                      </div>
                       <table className="w-full">
                         <thead className="bg-gray-50 dark:bg-gray-800/40 border-b dashboard-card-border">
                           <tr>
+                            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                              <input
+                                type="checkbox"
+                                checked={visibleStudents.length > 0 && visibleStudents.every((s: Student) => selectedStudentIds.has(String(s._id)))}
+                                ref={(el) => {
+                                  if (!el) return;
+                                  const all = visibleStudents.length > 0 && visibleStudents.every((s: Student) => selectedStudentIds.has(String(s._id)));
+                                  const some = visibleStudents.some((s: Student) => selectedStudentIds.has(String(s._id)));
+                                  el.indeterminate = some && !all;
+                                }}
+                                onChange={() => {
+                                  setSelectedStudentIds((prev) => {
+                                    const next = new Set(prev);
+                                    const allSelectedNow =
+                                      visibleStudents.length > 0 &&
+                                      visibleStudents.every((s: Student) => next.has(String(s._id)));
+                                    if (allSelectedNow) {
+                                      visibleStudents.forEach((s: Student) => next.delete(String(s._id)));
+                                    } else {
+                                      visibleStudents.forEach((s: Student) => next.add(String(s._id)));
+                                    }
+                                    return next;
+                                  });
+                                }}
+                                aria-label="Select all students"
+                                disabled={isBulkUiLocked}
+                              />
+                            </th>
                             <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                               Student
                             </th>
@@ -1124,6 +1226,23 @@ export default function BulkStudentUploadPage() {
 
                             return (
                               <tr key={s._id} className="hover:bg-gray-50 dark:hover:bg-gray-800/30">
+                                <td className="px-6 py-4 whitespace-nowrap">
+                                  <input
+                                    type="checkbox"
+                                    checked={selectedStudentIds.has(String(s._id))}
+                                    onChange={() => {
+                                      const id = String(s._id);
+                                      setSelectedStudentIds((prev) => {
+                                        const next = new Set(prev);
+                                        if (next.has(id)) next.delete(id);
+                                        else next.add(id);
+                                        return next;
+                                      });
+                                    }}
+                                    aria-label={`Select ${s.name}`}
+                                    disabled={isBulkUiLocked}
+                                  />
+                                </td>
                                 <td className="px-6 py-4 whitespace-nowrap">
                                   <div>
                                     <div className="text-sm font-medium dashboard-text">{s.name}</div>
