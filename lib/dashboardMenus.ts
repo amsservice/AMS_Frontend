@@ -22,11 +22,23 @@ const principalMenus: MenuItem[] = [
   { icon: School, text: "School Profile", path: "/dashboard/principal/schoolProfile" },
   { icon: Calendar, text: "Sessions", path: "/dashboard/principal/session" },
   { icon: BookOpen, text: "Classes", path: "/dashboard/principal/class" },
-  { icon: Users, text: "Teachers", path: "/dashboard/principal/teachers" },
+  { icon: Users, text: "Staff", path: "/dashboard/principal/teachers" },
   { icon: Users, text: "Students", path: "/dashboard/principal/students" },
   { icon: Umbrella, text: "Holidays", path: "/dashboard/principal/holidays" },
   { icon: BarChart3, text: "Reports", path: "/dashboard/principal/reports" },
 ];
+
+const coordinatorMenus: MenuItem[] = principalMenus
+  .filter(
+    (m) =>
+      m.path !== "/dashboard/principal/schoolProfile" &&
+      m.path !== "/dashboard/principal/session" &&
+      m.path !== "/dashboard/principal/reports"
+  )
+  .map((m) => ({
+    ...m,
+    path: m.path.replace("/dashboard/principal", "/dashboard/coordinator")
+  }));
 
 const teacherMenus: MenuItem[] = [
   { icon: Home, text: "Overview", path: "/dashboard/teacher" },
@@ -42,7 +54,7 @@ const studentMenus: MenuItem[] = [
 
 export const DASHBOARD_MENUS: Record<Role, MenuItem[]> = {
   principal: principalMenus,
-  coordinator: principalMenus,
+  coordinator: coordinatorMenus,
   teacher: teacherMenus,
   student: studentMenus,
 };

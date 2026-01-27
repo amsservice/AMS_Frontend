@@ -55,6 +55,22 @@ export const useCreateClass = () => {
   });
 };
 
+export const useBulkDeactivateClasses = () => {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: (ids: string[]) =>
+      apiFetch('/api/class/bulk-deactivate', {
+        method: 'POST',
+        body: JSON.stringify({ ids })
+      }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['classes'] });
+      queryClient.invalidateQueries({ queryKey: ['dashboard-stats'] });
+    }
+  });
+};
+
 /* =====================================================
    ✏️ Update Class (PUT /api/class/:id)
 ===================================================== */

@@ -19,6 +19,7 @@ interface FormDataShape {
   experienceYears: string;
   address: string;
   roles: StaffRole[];
+  sessionId: string;
 }
 
 interface AddStaffFormProps {
@@ -93,20 +94,43 @@ export default function AddStaffForm({
 
               <div className="space-y-2">
                 <Label>Staff Role *</Label>
-                <select
-                  value={formData.roles[0]}
-                  onChange={(e) =>
-                    setFormData({
-                      ...formData,
-                      roles: [e.target.value as StaffRole],
-                    })
-                  }
-                  required
-                  className="h-10 w-full bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 text-gray-900 dark:text-white rounded-xl px-3"
-                >
-                  <option value="teacher">Teacher</option>
-                  <option value="coordinator">Coordinator</option>
-                </select>
+                <div className="flex flex-wrap gap-4 pt-1">
+                  <label className="flex items-center gap-2 text-sm text-gray-900 dark:text-white">
+                    <input
+                      type="checkbox"
+                      checked={formData.roles.includes("teacher")}
+                      onChange={(e) => {
+                        const checked = e.target.checked;
+                        const nextRoles = checked
+                          ? Array.from(new Set([...(formData.roles || []), "teacher"]))
+                          : (formData.roles || []).filter((r) => r !== "teacher");
+                        setFormData({
+                          ...formData,
+                          roles: nextRoles as StaffRole[],
+                        });
+                      }}
+                    />
+                    Teacher
+                  </label>
+
+                  <label className="flex items-center gap-2 text-sm text-gray-900 dark:text-white">
+                    <input
+                      type="checkbox"
+                      checked={formData.roles.includes("coordinator")}
+                      onChange={(e) => {
+                        const checked = e.target.checked;
+                        const nextRoles = checked
+                          ? Array.from(new Set([...(formData.roles || []), "coordinator"]))
+                          : (formData.roles || []).filter((r) => r !== "coordinator");
+                        setFormData({
+                          ...formData,
+                          roles: nextRoles as StaffRole[],
+                        });
+                      }}
+                    />
+                    Coordinator
+                  </label>
+                </div>
               </div>
 
               <div className="space-y-2">

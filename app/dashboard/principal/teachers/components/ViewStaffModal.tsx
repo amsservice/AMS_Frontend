@@ -18,6 +18,7 @@ interface TeacherFullData {
   name: string;
   email: string;
   phone?: string;
+  roles?: ("teacher" | "coordinator")[];
   dob?: string;
   gender?: string;
   highestQualification?: string;
@@ -42,6 +43,7 @@ interface ViewStaffModalProps {
     highestQualification: string;
     experienceYears: string;
     address: string;
+    roles: ("teacher" | "coordinator")[];
   };
   setEditFormData: (v: any) => void;
 
@@ -89,7 +91,7 @@ export default function ViewStaffModal({
               <div className="p-8 text-center">
                 <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
                 <p className="text-gray-600 dark:text-gray-400">
-                  Loading teacher details...
+                  Loading staff details...
                 </p>
               </div>
             ) : teacherFullData?.data ? (
@@ -140,6 +142,37 @@ export default function ViewStaffModal({
                         <div className="space-y-2">
                           <Label className="flex items-center gap-2"><Mail className="w-4 h-4" /> Email Address</Label>
                           <Input type="email" value={editFormData.email} onChange={(e)=>setEditFormData({...editFormData,email:e.target.value})} />
+                        </div>
+
+                        <div className="space-y-2 md:col-span-2">
+                          <Label>Staff Roles</Label>
+                          <div className="flex flex-wrap gap-4">
+                            {(["teacher", "coordinator"] as const).map((role) => {
+                              const checked = Array.isArray(editFormData.roles) && editFormData.roles.includes(role);
+                              const hasActiveClass = Array.isArray(teacherFullData.data?.history) && teacherFullData.data!.history!.some((h) => h.isActive);
+                              const disableUncheckTeacher = role === "teacher" && hasActiveClass && checked;
+
+                              return (
+                                <label key={role} className="flex items-center gap-2 text-sm font-medium text-gray-900 dark:text-white">
+                                  <input
+                                    type="checkbox"
+                                    checked={checked}
+                                    onChange={(e) => {
+                                      const next = new Set(editFormData.roles || []);
+                                      if (e.target.checked) next.add(role);
+                                      else {
+                                        if (role === "teacher" && disableUncheckTeacher) return;
+                                        next.delete(role);
+                                      }
+                                      setEditFormData({ ...editFormData, roles: Array.from(next) });
+                                    }}
+                                    className="h-4 w-4"
+                                  />
+                                  {role === "teacher" ? "Teacher" : "Coordinator"}
+                                </label>
+                              );
+                            })}
+                          </div>
                         </div>
 
                         <div className="space-y-2">
@@ -197,6 +230,7 @@ export default function ViewStaffModal({
                       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                         <Info label="Full Name" value={teacherFullData.data.name} icon={<User className="w-3 h-3"/>} />
                         <Info label="Email Address" value={teacherFullData.data.email} icon={<Mail className="w-3 h-3"/>} />
+                        <Info label="Roles" value={Array.isArray(teacherFullData.data.roles) && teacherFullData.data.roles.length ? teacherFullData.data.roles.join(", ") : 'Not provided'} />
                         <Info label="Phone Number" value={teacherFullData.data.phone || 'Not provided'} icon={<Phone className="w-3 h-3"/>} />
                         <Info label="DOB" value={teacherFullData.data.dob ? new Date(teacherFullData.data.dob).toLocaleDateString('en-US',{year:'numeric',month:'long',day:'numeric'}) : 'Not provided'} icon={<Calendar className="w-3 h-3"/>} />
                         <Info label="Gender" value={teacherFullData.data.gender || 'Not provided'} />
@@ -238,7 +272,7 @@ export default function ViewStaffModal({
                 </div>
               </>
             ) : (
-              <div className="p-8 text-center text-gray-500">Unable to load teacher details</div>
+              <div className="p-8 text-center text-gray-500">Unable to load staff details</div>
             )}
           </motion.div>
         </motion.div>

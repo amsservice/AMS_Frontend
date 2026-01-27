@@ -54,10 +54,10 @@ export default function BulkUploadModal({
                 </div>
                 <div>
                   <h3 className="text-lg font-bold text-gray-900 dark:text-white">
-                    Bulk Upload Teachers
+                    Bulk Upload Staff
                   </h3>
                   <p className="text-sm text-gray-600 dark:text-gray-400">
-                    Upload a CSV to create teachers
+                    Upload a CSV to create staff accounts
                   </p>
                 </div>
               </div>

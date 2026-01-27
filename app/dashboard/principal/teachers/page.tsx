@@ -1,7 +1,7 @@
 
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { toast } from "sonner";
 
 import PageHeader from "./components/PageHeader";
@@ -16,9 +16,10 @@ import AssignClassModal from "./components/AssignClassModal";
 import SwapClassModal from "./components/SwapClassModal";
 
 import {
-  useTeachers,
+  useInfiniteTeachers,
   useCreateTeacher,
   useDeleteTeacher,
+  useBulkDeactivateTeachers,
   useReactivateTeacher,
   useAssignClassToTeacher,
   useBulkUploadTeachers,
@@ -28,6 +29,7 @@ import {
 } from "@/app/querry/useTeachers";
 
 import { useClasses } from "@/app/querry/useClasses";
+import { useSessions } from "@/app/querry/useSessions";
 
 interface Class {
   id: string;
@@ -56,12 +58,16 @@ export default function TeachersPage() {
   const [swappingTeacherId, setSwappingTeacherId] = useState<string | null>(null);
   const [viewingTeacherId, setViewingTeacherId] = useState<string | null>(null);
   const [isEditing, setIsEditing] = useState(false);
+  const [autoEnableEditOnLoad, setAutoEnableEditOnLoad] = useState(false);
   const [selectedClassId, setSelectedClassId] = useState("");
 
   const [confirmDelete, setConfirmDelete] = useState<{ id: string; name: string } | null>(null);
   const [showReassignOnDelete, setShowReassignOnDelete] = useState(false);
   const [reassignToTeacherId, setReassignToTeacherId] = useState("");
   const [isReassigningAndDeleting, setIsReassigningAndDeleting] = useState(false);
+
+  const [bulkTeacherFile, setBulkTeacherFile] = useState<File | null>(null);
+  const [bulkTeacherClientErrors, setBulkTeacherClientErrors] = useState<string[]>([]);
 
   const [formData, setFormData] = useState({
     name: "",
@@ -74,6 +80,7 @@ export default function TeachersPage() {
     experienceYears: "",
     address: "",
     roles: ["teacher"] as ("teacher" | "coordinator")[],
+    sessionId: "",
   });
 
   const [editFormData, setEditFormData] = useState({
@@ -85,10 +92,140 @@ export default function TeachersPage() {
     highestQualification: "",
     experienceYears: "",
     address: "",
+    roles: ["teacher"] as ("teacher" | "coordinator")[],
   });
 
-  const { data: teachers = [], isLoading } = useTeachers();
+  const staffListQuery = useInfiniteTeachers({ limit: 50 });
+  const teachers = useMemo(() => {
+    const pages = staffListQuery.data?.pages || [];
+    const all = pages.flatMap((p: any) => (Array.isArray(p?.items) ? p.items : []));
+    const byId = new Map<string, any>();
+    all.forEach((t: any) => {
+      const id = String(t?.id || '');
+      if (!id) return;
+      if (!byId.has(id)) byId.set(id, t);
+    });
+    return Array.from(byId.values());
+  }, [staffListQuery.data]);
+
+  const [selectedTeacherIds, setSelectedTeacherIds] = useState<Set<string>>(new Set());
+
+  const selectableTeachers = useMemo(
+    () => (teachers || []).filter((t: any) => t?.isActive),
+    [teachers]
+  );
+
+  const allSelected =
+    selectableTeachers.length > 0 &&
+    selectableTeachers.every((t: any) => selectedTeacherIds.has(String(t.id)));
+  const someSelected =
+    selectableTeachers.some((t: any) => selectedTeacherIds.has(String(t.id))) && !allSelected;
+
+  const toggleTeacherSelected = (id: string) => {
+    setSelectedTeacherIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+  };
+
+  const toggleSelectAllTeachers = () => {
+    setSelectedTeacherIds((prev) => {
+      const next = new Set(prev);
+      const allAreSelected =
+        selectableTeachers.length > 0 &&
+        selectableTeachers.every((t: any) => next.has(String(t.id)));
+      if (allAreSelected) {
+        selectableTeachers.forEach((t: any) => next.delete(String(t.id)));
+      } else {
+        selectableTeachers.forEach((t: any) => next.add(String(t.id)));
+      }
+      return next;
+    });
+  };
+
+  const handleBulkDeleteSelectedTeachers = () => {
+    const ids = Array.from(selectedTeacherIds);
+    if (!ids.length) {
+      toast.error('Please select at least one staff member');
+      return;
+    }
+
+    bulkDeactivateTeachersMutation.mutate(ids, {
+      onSuccess: (resp: any) => {
+        const results = Array.isArray(resp?.results) ? resp.results : [];
+        const failed = results.filter((r: any) => !r?.ok);
+        const successCount = results.filter((r: any) => r?.ok).length;
+
+        if (failed.length > 0) {
+          const firstMsg = failed[0]?.message || 'Some staff could not be deleted';
+          toast.error(`Deleted ${successCount}. Failed ${failed.length}. ${firstMsg}`);
+        } else {
+          toast.success(`Deleted ${successCount} staff successfully`);
+        }
+
+        setSelectedTeacherIds(new Set());
+      },
+      onError: (err: any) => toast.error(getErrorMessage(err))
+    });
+  };
+
+  const handleBulkDeleteAllTeachers = () => {
+    if (!selectableTeachers.length) {
+      toast.error('No active staff to delete');
+      return;
+    }
+
+    const ids = selectableTeachers.map((t: any) => String(t.id));
+    bulkDeactivateTeachersMutation.mutate(ids, {
+      onSuccess: (resp: any) => {
+        const results = Array.isArray(resp?.results) ? resp.results : [];
+        const failed = results.filter((r: any) => !r?.ok);
+        const successCount = results.filter((r: any) => r?.ok).length;
+
+        if (failed.length > 0) {
+          const firstMsg = failed[0]?.message || 'Some staff could not be deleted';
+          toast.error(`Deleted ${successCount}. Failed ${failed.length}. ${firstMsg}`);
+        } else {
+          toast.success(`Deleted ${successCount} staff successfully`);
+        }
+
+        setSelectedTeacherIds(new Set());
+      },
+      onError: (err: any) => toast.error(getErrorMessage(err))
+    });
+  };
+  const totalStaff = staffListQuery.data?.pages?.[0]?.total;
+  const isLoading = staffListQuery.isLoading;
   const { data: classes = [] } = useClasses();
+  const { data: sessions = [] } = useSessions();
+
+  const loadMoreRef = useRef<HTMLDivElement | null>(null);
+
+  useEffect(() => {
+    const el = loadMoreRef.current;
+    if (!el) return;
+    if (!staffListQuery.hasNextPage) return;
+
+    const obs = new IntersectionObserver(
+      (entries) => {
+        const first = entries[0];
+        if (!first?.isIntersecting) return;
+        if (staffListQuery.isFetchingNextPage) return;
+        staffListQuery.fetchNextPage();
+      },
+      { root: null, rootMargin: "200px", threshold: 0 }
+    );
+
+    obs.observe(el);
+    return () => obs.disconnect();
+  }, [staffListQuery.hasNextPage, staffListQuery.isFetchingNextPage, staffListQuery.fetchNextPage]);
+
+  const activeSessionId = useMemo(() => {
+    const active = (sessions as any[]).find((s) => s?.isActive);
+    return active?._id || active?.id || "";
+  }, [sessions]);
 
   const sortedClasses = useMemo(() => {
     return [...classes].sort((a: Class, b: Class) => {
@@ -104,11 +241,9 @@ export default function TeachersPage() {
     });
   }, [classes]);
 
-  const [bulkTeacherFile, setBulkTeacherFile] = useState<File | null>(null);
-  const [bulkTeacherClientErrors, setBulkTeacherClientErrors] = useState<string[]>([]);
-
   const { mutate: createTeacher } = useCreateTeacher();
   const { mutate: deleteTeacher } = useDeleteTeacher();
+  const bulkDeactivateTeachersMutation = useBulkDeactivateTeachers();
   const { mutate: reactivateTeacher, isPending: isReactivatingTeacher } = useReactivateTeacher();
   const bulkUploadTeachersMutation = useBulkUploadTeachers();
   const assignClassMutation = useAssignClassToTeacher();
@@ -128,6 +263,7 @@ export default function TeachersPage() {
     highestQualification?: string;
     experienceYears?: string;
     address?: string;
+    roles?: ("teacher" | "coordinator")[];
   }) => {
     if (data.name !== undefined) {
       const trimmed = data.name.trim();
@@ -163,6 +299,8 @@ export default function TeachersPage() {
 
     if (data.gender === undefined || data.gender.trim().length === 0) return "Gender is required";
     if (!["male", "female", "other"].includes(data.gender)) return "Invalid gender";
+
+    if (Array.isArray(data.roles) && data.roles.length === 0) return "Please select at least one role";
 
     if (data.highestQualification && data.highestQualification.trim().length > 0) {
       const trimmed = data.highestQualification.trim();
@@ -215,158 +353,45 @@ export default function TeachersPage() {
     setBulkTeacherClientErrors([]);
   };
 
-  const parseCsvLine = (line: string) => {
-    const out: string[] = [];
-    let cur = "";
-    let inQuotes = false;
-    for (let i = 0; i < line.length; i++) {
-      const ch = line[i];
-      if (ch === '"') {
-        if (inQuotes && line[i + 1] === '"') {
-          cur += '"';
-          i++;
-        } else inQuotes = !inQuotes;
-        continue;
-      }
-      if (ch === "," && !inQuotes) {
-        out.push(cur);
-        cur = "";
-        continue;
-      }
-      cur += ch;
-    }
-    out.push(cur);
-    return out.map((v) => v.trim());
-  };
-
-  const validateTeacherCsvFile = async (csvFile: File) => {
-    const text = await csvFile.text();
-    const lines = text.split(/\r?\n/).map((l) => l.trim()).filter(Boolean);
-
-    if (!lines.length) return { ok: false, errors: ["CSV file is empty"] };
-
-    const headers = parseCsvLine(lines[0]).map((h) => h.trim());
-    const requiredHeaders = ["name", "email", "password", "phone", "dob", "gender"];
-    const missingHeaders = requiredHeaders.filter((h) => !headers.includes(h));
-    if (missingHeaders.length) {
-      return {
-        ok: false,
-        errors: [
-          `Missing required columns: ${missingHeaders.join(", ")}`,
-          "Please download the sample CSV and follow the same header names.",
-        ],
-      };
+  const handleBulkTeacherUpload = async () => {
+    if (!bulkTeacherFile) {
+      toast.error("Please select a CSV file");
+      return;
     }
 
-    const idx = (name: string) => headers.indexOf(name);
-    const errors: string[] = [];
+    const sessionIdToUse = activeSessionId;
+    if (!sessionIdToUse) {
+      toast.error("Please create/activate a session first");
+      return;
+    }
 
-    const parseDobToDate = (raw: string) => {
-      const v = String(raw || "").trim();
-      if (!v) return null;
-      if (/^\d{4}-\d{2}-\d{2}$/.test(v)) {
-        const d = new Date(v);
-        return isNaN(d.getTime()) ? null : d;
-      }
-      const m = v.match(/^(\d{1,2})[\/-](\d{1,2})[\/-](\d{4})$/);
-      if (m) {
-        const dd = Number(m[1]);
-        const mm = Number(m[2]);
-        const yyyy = Number(m[3]);
-        if (dd >= 1 && dd <= 31 && mm >= 1 && mm <= 12) {
-          const d = new Date(yyyy, mm - 1, dd);
-          if (d.getFullYear() === yyyy && d.getMonth() === mm - 1 && d.getDate() === dd) return d;
-        }
-        return null;
-      }
-      const fallback = new Date(v);
-      return isNaN(fallback.getTime()) ? null : fallback;
-    };
+    setBulkTeacherClientErrors([]);
 
-    for (let r = 1; r < lines.length; r++) {
-      const rowNo = r + 1;
-      const cells = parseCsvLine(lines[r]);
-      const get = (h: string) => (cells[idx(h)] ?? "").trim();
-
-      const name = get("name");
-      const email = get("email");
-      const password = get("password");
-      const phone = get("phone");
-      const dob = get("dob");
-      const genderRaw = get("gender");
-      const gender = genderRaw.toLowerCase();
-
-      const highestQualification = headers.includes("highestQualification") ? get("highestQualification") : "";
-      const experienceYears = headers.includes("experienceYears") ? get("experienceYears") : "";
-      const address = headers.includes("address") ? get("address") : "";
-
-      let ageYears: number | null = null;
-
-      const nameLetters = (name.match(/[A-Za-z]/g) || []).length;
-      if (!name || nameLetters < 3) errors.push(`Row ${rowNo}: name must contain at least 3 letters`);
-
-      const emailOk = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
-      if (!email) errors.push(`Row ${rowNo}: email is required`);
-      else if (!emailOk) errors.push(`Row ${rowNo}: email is invalid`);
-
-      if (!password) errors.push(`Row ${rowNo}: password is required`);
-      else if (password.length < 6) errors.push(`Row ${rowNo}: password must be at least 6 characters`);
-
-      const phoneOk = /^\d{10}$/.test(phone);
-      if (!phone) errors.push(`Row ${rowNo}: phone is required`);
-      else if (!phoneOk) errors.push(`Row ${rowNo}: phone must be exactly 10 digits (numbers only)`);
-
-      if (!dob) errors.push(`Row ${rowNo}: dob is required`);
-      else {
-        const d = parseDobToDate(dob);
-        if (!d) errors.push(`Row ${rowNo}: dob is invalid`);
-        else {
-          const today = new Date();
-          if (d.getTime() > today.getTime()) errors.push(`Row ${rowNo}: dob cannot be in the future`);
-          else {
-            const age =
-              today.getFullYear() -
-              d.getFullYear() -
-              (today.getMonth() < d.getMonth() || (today.getMonth() === d.getMonth() && today.getDate() < d.getDate())
-                ? 1
-                : 0);
-            ageYears = age;
-            if (age < 18) errors.push(`Row ${rowNo}: dob must be at least 18 years ago`);
+    bulkUploadTeachersMutation.mutate(
+      { file: bulkTeacherFile, sessionId: sessionIdToUse },
+      {
+        onSuccess: (resp: any) => {
+          if (resp && resp.success === false) {
+            const first = resp?.validationErrors?.[0];
+            const msg = first?.message
+              ? `CSV validation failed. Row ${first.row}: ${first.message}`
+              : resp?.message || "CSV validation failed";
+            toast.error(msg);
+            return;
           }
+          toast.success(resp?.message || "Staff uploaded successfully");
+          resetBulkTeachersUpload();
+          setIsBulkUploadOpen(false);
+        },
+        onError: (err: any) => {
+          const first = err?.data?.validationErrors?.[0];
+          const msg = first?.message
+            ? `CSV validation failed. Row ${first.row}: ${first.message}`
+            : getErrorMessage(err);
+          toast.error(msg);
         }
       }
-
-      if (!genderRaw) errors.push(`Row ${rowNo}: gender is required`);
-      else if (!["male", "female", "other"].includes(gender)) errors.push(`Row ${rowNo}: gender must be male, female, or other`);
-
-      if (highestQualification) {
-        const letters = (highestQualification.match(/[A-Za-z]/g) || []).length;
-        if (letters < 2) errors.push(`Row ${rowNo}: highestQualification must contain at least 2 letters`);
-        if (highestQualification.length > 100) errors.push(`Row ${rowNo}: highestQualification cannot exceed 100 characters`);
-      }
-
-      if (experienceYears) {
-        const n = Number(experienceYears);
-        if (!Number.isFinite(n) || !Number.isInteger(n)) errors.push(`Row ${rowNo}: experienceYears must be a whole number`);
-        else {
-          if (n < 0) errors.push(`Row ${rowNo}: experienceYears cannot be negative`);
-          if (n > 42) errors.push(`Row ${rowNo}: experienceYears cannot be greater than 42`);
-          if (ageYears !== null) {
-            if (n > ageYears) errors.push(`Row ${rowNo}: experienceYears cannot be greater than age`);
-            else if (ageYears - n < 14) errors.push(`Row ${rowNo}: dob and experienceYears difference must be at least 14 years`);
-          }
-        }
-      }
-
-      if (address) {
-        const letters = (address.match(/[A-Za-z]/g) || []).length;
-        if (letters < 5) errors.push(`Row ${rowNo}: address must contain at least 5 letters`);
-        if (address.length > 250) errors.push(`Row ${rowNo}: address cannot exceed 250 characters`);
-      }
-    }
-
-    if (errors.length) return { ok: false, errors };
-    return { ok: true, errors: [] as string[] };
+    );
   };
 
   const downloadTeacherSampleCsv = () => {
@@ -376,48 +401,18 @@ export default function TeachersPage() {
     const url = window.URL.createObjectURL(blob);
     const a = document.createElement("a");
     a.href = url;
-    a.download = "teachers_sample.csv";
+    a.download = "staff_sample.csv";
     a.click();
-  };
-
-  const handleBulkTeacherUpload = async () => {
-    if (!bulkTeacherFile) {
-      toast.error("Please select a CSV file");
-      return;
-    }
-
-    const validation = await validateTeacherCsvFile(bulkTeacherFile);
-    if (!validation.ok) {
-      setBulkTeacherClientErrors(validation.errors);
-      toast.error(validation.errors[0] || "CSV validation failed");
-      return;
-    }
-
-    setBulkTeacherClientErrors([]);
-    bulkUploadTeachersMutation.mutate(
-      { file: bulkTeacherFile },
-      {
-        onSuccess: (resp: any) => {
-          if (resp && resp.success === false) {
-            toast.error(resp?.message || "CSV validation failed");
-            return;
-          }
-          toast.success(resp?.message || "Teachers uploaded successfully");
-          resetBulkTeachersUpload();
-          setIsBulkUploadOpen(false);
-        },
-        onError: (err: any) => {
-          const msg = err?.data?.validationErrors?.length
-            ? `CSV validation failed. Row ${err.data.validationErrors[0].row}: ${err.data.validationErrors[0].message}`
-            : getErrorMessage(err);
-          toast.error(msg);
-        },
-      }
-    );
   };
 
   const handleAddTeacher = (e: React.SyntheticEvent) => {
     e.preventDefault();
+
+    const sessionIdToUse = formData.sessionId || activeSessionId;
+    if (!sessionIdToUse) {
+      toast.error("Please create/activate a session first");
+      return;
+    }
 
     const err = validateTeacherProfile(formData);
     if (err) {
@@ -437,10 +432,11 @@ export default function TeachersPage() {
         experienceYears: formData.experienceYears ? Number(formData.experienceYears) : undefined,
         address: formData.address || undefined,
         roles: formData.roles,
+        sessionId: sessionIdToUse,
       },
       {
         onSuccess: () => {
-          toast.success("Teacher created successfully");
+          toast.success("Staff created successfully");
           setFormData({
             name: "",
             email: "",
@@ -452,6 +448,7 @@ export default function TeachersPage() {
             experienceYears: "",
             address: "",
             roles: ["teacher"],
+            sessionId: "",
           });
           setIsAddTeacherOpen(false);
         },
@@ -500,11 +497,11 @@ export default function TeachersPage() {
 
       swapClassMutation.mutate({
         sessionId: targetClass.sessionId,
-        teacherAId: swappingTeacher.id,
+        staffAId: swappingTeacher.id,
         classAId: swappingTeacher.currentClass.classId,
         classAName: swappingTeacher.currentClass.className,
         sectionA: swappingTeacher.currentClass.section,
-        teacherBId: targetTeacher.id,
+        staffBId: targetTeacher.id,
         classBId: targetClass.id,
         classBName: targetClass.name,
         sectionB: targetClass.section,
@@ -528,6 +525,35 @@ export default function TeachersPage() {
     setIsEditing(false);
   };
 
+  const handleEditTeacher = (teacherId: string) => {
+    setViewingTeacherId(teacherId);
+    setIsEditing(true);
+    setAutoEnableEditOnLoad(true);
+  };
+
+  useEffect(() => {
+    if (!autoEnableEditOnLoad) return;
+    if (!isEditing) return;
+    if (!teacherFullData?.data) return;
+
+    setEditFormData({
+      name: teacherFullData.data.name || "",
+      email: teacherFullData.data.email || "",
+      phone: teacherFullData.data.phone || "",
+      dob: teacherFullData.data.dob ? teacherFullData.data.dob.slice(0, 10) : "",
+      gender: teacherFullData.data.gender || "",
+      highestQualification: teacherFullData.data.highestQualification || "",
+      experienceYears: typeof teacherFullData.data.experienceYears === "number" ? String(teacherFullData.data.experienceYears) : "",
+      address: teacherFullData.data.address || "",
+      roles:
+        Array.isArray((teacherFullData as any)?.data?.roles) && (teacherFullData as any).data.roles.length
+          ? (teacherFullData as any).data.roles
+          : (["teacher"] as ("teacher" | "coordinator")[]),
+    });
+
+    setAutoEnableEditOnLoad(false);
+  }, [autoEnableEditOnLoad, isEditing, teacherFullData]);
+
   const handleEnableEdit = () => {
     if (teacherFullData?.data) {
       setEditFormData({
@@ -539,6 +565,9 @@ export default function TeachersPage() {
         highestQualification: teacherFullData.data.highestQualification || "",
         experienceYears: typeof teacherFullData.data.experienceYears === "number" ? String(teacherFullData.data.experienceYears) : "",
         address: teacherFullData.data.address || "",
+        roles: Array.isArray((teacherFullData as any)?.data?.roles) && (teacherFullData as any).data.roles.length
+          ? (teacherFullData as any).data.roles
+          : (["teacher"] as ("teacher" | "coordinator")[]),
       });
       setIsEditing(true);
     }
@@ -546,7 +575,7 @@ export default function TeachersPage() {
 
   const handleCancelEdit = () => {
     setIsEditing(false);
-    setEditFormData({ name: "", email: "", phone: "", dob: "", gender: "", highestQualification: "", experienceYears: "", address: "" });
+    setEditFormData({ name: "", email: "", phone: "", dob: "", gender: "", highestQualification: "", experienceYears: "", address: "", roles: ["teacher"] });
   };
 
   const handleSaveEdit = () => {
@@ -567,6 +596,7 @@ export default function TeachersPage() {
       highestQualification?: string;
       experienceYears?: number;
       address?: string;
+      roles?: ("teacher" | "coordinator")[];
     } = {
       phone: editFormData.phone,
       dob: editFormData.dob,
@@ -578,18 +608,19 @@ export default function TeachersPage() {
     if (editFormData.highestQualification) updateData.highestQualification = editFormData.highestQualification;
     if (editFormData.experienceYears) updateData.experienceYears = Number(editFormData.experienceYears);
     if (editFormData.address) updateData.address = editFormData.address;
+    if (Array.isArray(editFormData.roles)) updateData.roles = editFormData.roles;
 
     updateTeacherMutation.mutate(updateData, {
       onSuccess: () => {
         setIsEditing(false);
-        toast.success("Teacher updated successfully");
+        toast.success("Staff updated successfully");
       },
       onError: (error: any) => toast.error(getErrorMessage(error)),
     });
   };
 
   const stats = [
-    { label: "Total Teachers", value: teachers.length, bgGradient: "from-blue-500 to-indigo-600" },
+    { label: "Total Staff", value: typeof totalStaff === 'number' ? totalStaff : teachers.length, bgGradient: "from-blue-500 to-indigo-600" },
     { label: "Assigned", value: teachers.filter((t: Teacher) => t.currentClass).length, bgGradient: "from-purple-500 to-violet-600" },
   ];
 
@@ -604,7 +635,7 @@ export default function TeachersPage() {
     if (!teacherToDelete?.currentClass) return;
 
     if (!reassignToTeacherId) {
-      toast.error("Please select a teacher to reassign this class to");
+      toast.error("Please select a staff member to reassign this class to");
       return;
     }
 
@@ -673,18 +704,54 @@ export default function TeachersPage() {
             downloadSample={downloadTeacherSampleCsv}
           />
 
+          <div className="flex items-center justify-between gap-3 flex-wrap">
+            <div className="text-sm text-gray-700 dark:text-gray-300">
+              Selected: {selectedTeacherIds.size}
+            </div>
+            <div className="flex items-center gap-2 flex-wrap">
+              <button
+                onClick={handleBulkDeleteSelectedTeachers}
+                disabled={bulkDeactivateTeachersMutation.isPending}
+                className="bg-red-600 hover:bg-red-700 disabled:opacity-50 text-white font-semibold py-2 px-4 rounded-xl transition-all text-sm"
+              >
+                Delete selected
+              </button>
+              <button
+                onClick={handleBulkDeleteAllTeachers}
+                disabled={bulkDeactivateTeachersMutation.isPending}
+                className="bg-red-600 hover:bg-red-700 disabled:opacity-50 text-white font-semibold py-2 px-4 rounded-xl transition-all text-sm"
+              >
+                Delete all
+              </button>
+            </div>
+          </div>
+
           <TeachersTable
             teachers={teachers}
             isLoading={isLoading}
             onView={handleViewTeacher}
-            onAssign={(id) => setAssigningTeacherId(id)}
-            onSwap={(id) => setSwappingTeacherId(id)}
-            onDelete={(t) => {
-              setConfirmDelete(t);
+            onEdit={handleEditTeacher}
+            onAssign={(id) => {
+              setAssigningTeacherId(id);
+              setSelectedClassId("");
+            }}
+            onSwap={(id) => {
+              setSwappingTeacherId(id);
+              setSelectedClassId("");
+            }}
+            onDelete={(teacher) => {
+              setConfirmDelete(teacher);
               setShowReassignOnDelete(false);
               setReassignToTeacherId("");
             }}
+            selectedIds={selectedTeacherIds}
+            onToggleSelected={toggleTeacherSelected}
+            onToggleSelectAll={toggleSelectAllTeachers}
+            allSelected={allSelected}
+            someSelected={someSelected}
           />
+
+          <div ref={loadMoreRef} />
         </div>
       </main>
 
@@ -720,7 +787,7 @@ export default function TeachersPage() {
         onConfirm={(id) => {
           reactivateTeacher(id, {
             onSuccess: (resp: any) => {
-              toast.success(resp?.message || "Teacher activated successfully");
+              toast.success(resp?.message || "Staff activated successfully");
               setConfirmReactivate(null);
               setIsAddTeacherOpen(false);
             },

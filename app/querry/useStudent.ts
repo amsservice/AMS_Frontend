@@ -87,6 +87,24 @@ export const useCreateStudent = () => {
   });
 };
 
+export const useBulkDeactivateStudents = () => {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: (ids: string[]) =>
+      apiFetch('/api/student/bulk-deactivate', {
+        method: 'POST',
+        body: JSON.stringify({ ids })
+      }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['students'] });
+      queryClient.invalidateQueries({ queryKey: ['school-students'] });
+      queryClient.invalidateQueries({ queryKey: ['students-class-wise-stats'] });
+      queryClient.invalidateQueries({ queryKey: ['students-by-class'] });
+    }
+  });
+};
+
 
 export const useBulkUploadStudentsSchoolWide = () => {
   const queryClient = useQueryClient();

@@ -58,7 +58,7 @@ export default function SwapClassModal({
             </div>
 
             <p className="text-sm text-gray-600 dark:text-gray-400 mb-4">
-              Select an available class for this teacher.
+              Select an available class for this staff member.
             </p>
 
             <select
