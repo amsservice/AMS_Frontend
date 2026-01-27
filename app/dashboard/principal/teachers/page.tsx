@@ -396,7 +396,7 @@ export default function TeachersPage() {
 
   const downloadTeacherSampleCsv = () => {
     const csvContent =
-      "name,email,password,phone,dob,gender,highestQualification,experienceYears,address\nJohn Doe,john@example.com,pass1234,9876543210,2000-01-15,male,B.Ed,5,Some street address";
+      "name,email,password,phone,dob,gender,role,highestQualification,experienceYears,address\nJohn Doe,john@example.com,pass1234,9876543210,2000-01-15,male,teacher,B.Ed,5,Some street address";
     const blob = new Blob([csvContent], { type: "text/csv" });
     const url = window.URL.createObjectURL(blob);
     const a = document.createElement("a");
