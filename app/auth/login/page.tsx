@@ -70,7 +70,7 @@ export default function LoginPage() {
   =============================== */
   useEffect(() => {
     if (!loading && user) {
-      router.replace(getDashboardPath(user.role));
+      router.replace(getDashboardPath(user.activeRole));
     }
   }, [user, loading, router]);
 
@@ -150,6 +150,11 @@ export default function LoginPage() {
     window.localStorage.setItem("Upastithi-theme", next ? "dark" : "light");
     document.documentElement.classList.toggle("dark", next);
   };
+
+  function handleChangeSchool() {
+    localStorage.removeItem("schoolContext");
+    router.replace("/auth/school-code");
+  }
 
   function handleChange(e: React.ChangeEvent<HTMLInputElement>) {
     const { name, value } = e.target;
@@ -322,12 +327,27 @@ export default function LoginPage() {
             </Button>
           </form>
 
-          <p className="text-center text-sm mt-6">
-            Don&apos;t have an account?{" "}
-            <Link href="/auth/register" className="font-semibold underline">
-              Register your school
-            </Link>
-          </p>
+          <div className="mt-8 pt-6 border-t border-gray-200/60 dark:border-gray-700/60 text-center space-y-3">
+            <p className="text-sm text-gray-600 dark:text-gray-400">
+              Getting started?{" "}
+              <Link
+                href="/auth/register"
+                className="font-semibold text-blue-600 dark:text-blue-400 hover:underline transition"
+              >
+                Register your school today
+              </Link>
+            </p>
+
+            <p className="text-sm italic text-gray-500 dark:text-gray-400">
+              Landed on the wrong school?{" "}
+              <button
+                onClick={handleChangeSchool}
+                className="font-medium text-blue-600 dark:text-blue-400 hover:underline transition"
+              >
+                Change it here
+              </button>
+            </p>
+          </div>
         </div>
       </motion.div>
 

@@ -41,7 +41,7 @@ type VerifyPaymentResponse = {
     id: string;
     name: string;
     email: string;
-    role: "principal";
+    roles: ("principal")[];
   };
 };
 
@@ -132,8 +132,8 @@ export default function PaymentPage() {
       try {
         const res = await fetch(
           `${API_URL}/api/auth/school/payment-status?email=${encodeURIComponent(
-            schoolEmail
-          )}`
+            schoolEmail,
+          )}`,
         );
 
         const data: unknown = await res.json();
@@ -148,8 +148,7 @@ export default function PaymentPage() {
           setAlreadyPaid(true);
           router.replace("/");
         }
-      } catch {
-      }
+      } catch {}
     })();
   }, [API_URL, router, schoolEmail, isUpgradeMode]);
 
@@ -163,7 +162,7 @@ export default function PaymentPage() {
   const billableStudentsUI =
     price?.billableStudents ??
     (enteredStudents === "" ? 0 : enteredStudents) +
-    (futureStudents === "" ? 0 : futureStudents);
+      (futureStudents === "" ? 0 : futureStudents);
 
   const isTrial6M = !isUpgradeMode && previewPlanId === "6M";
 
@@ -340,7 +339,9 @@ export default function PaymentPage() {
       const orderData: unknown = await res.json();
       if (!res.ok) {
         const message =
-          typeof orderData === "object" && orderData !== null && "message" in orderData
+          typeof orderData === "object" &&
+          orderData !== null &&
+          "message" in orderData
             ? String((orderData as { message: unknown }).message)
             : "Failed to create payment";
         throw new Error(message);
@@ -365,7 +366,7 @@ export default function PaymentPage() {
             couponCode: effectiveCouponCode,
           }),
           credentials: "include",
-        }
+        },
       );
 
       const paidAmount = order.paidAmount;
@@ -402,7 +403,7 @@ export default function PaymentPage() {
                 ...(isUpgradeMode ? {} : { schoolEmail }),
               }),
               credentials: "include",
-            }
+            },
           );
 
           const verifyData = (await verifyRes.json()) as VerifyPaymentResponse;
@@ -422,7 +423,8 @@ export default function PaymentPage() {
           }
 
           setAuthUser(verifyData.user);
-          router.replace("/dashboard/principal/schoolProfile");
+
+          router.replace("/dashboard/principal");
         },
         theme: { color: "#2563eb" },
       });
@@ -451,7 +453,9 @@ export default function PaymentPage() {
         <div className="flex items-center justify-center min-h-screen">
           <div className="flex flex-col items-center gap-4">
             <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600" />
-            <div className="text-sm text-gray-600 dark:text-gray-400">Loading...</div>
+            <div className="text-sm text-gray-600 dark:text-gray-400">
+              Loading...
+            </div>
           </div>
         </div>
       </div>
@@ -487,7 +491,8 @@ export default function PaymentPage() {
               Let's get you subscribed
             </h1>
             <p className="mt-3 text-sm italic text-gray-600 dark:text-gray-300">
-              Lock your plan, set the numbers — we'll do the math and you're good to go.
+              Lock your plan, set the numbers — we'll do the math and you're
+              good to go.
             </p>
           </div>
 
@@ -526,7 +531,9 @@ export default function PaymentPage() {
                 </div>
 
                 <motion.div
-                  animate={shake && currentError ? { x: [-6, 6, -4, 4, 0] } : {}}
+                  animate={
+                    shake && currentError ? { x: [-6, 6, -4, 4, 0] } : {}
+                  }
                   transition={{ duration: 0.4 }}
                 >
                   <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
@@ -597,7 +604,9 @@ export default function PaymentPage() {
                         }}
                       />
                       {futureError && (
-                        <p className="-bottom-4 left-1.5 absolute text-xs text-red-500">{futureError}</p>
+                        <p className="-bottom-4 left-1.5 absolute text-xs text-red-500">
+                          {futureError}
+                        </p>
                       )}
                     </div>
 
@@ -644,7 +653,8 @@ export default function PaymentPage() {
               </div>
 
               <p className="mt-4 text-xs text-gray-600 dark:text-gray-400">
-                After payment verification, you'll be redirected to complete school registration.
+                After payment verification, you'll be redirected to complete
+                school registration.
               </p>
             </motion.div>
 
@@ -726,7 +736,10 @@ export default function PaymentPage() {
 
                       <div className="flex items-center justify-between text-gray-700 dark:text-gray-300">
                         <span>
-                          Discount{uiDiscountMonths ? ` (${uiDiscountMonths} months)` : ""}
+                          Discount
+                          {uiDiscountMonths
+                            ? ` (${uiDiscountMonths} months)`
+                            : ""}
                         </span>
                         <span>₹{uiDiscountAmount}</span>
                       </div>
@@ -738,7 +751,8 @@ export default function PaymentPage() {
 
                       {hasBackendMismatch ? (
                         <div className="mt-2 rounded-xl px-3 py-2 text-xs bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800 text-amber-700 dark:text-amber-300">
-                          Pricing mismatch detected. UI uses `lib/pricing.ts` rates; backend preview returned a different value.
+                          Pricing mismatch detected. UI uses `lib/pricing.ts`
+                          rates; backend preview returned a different value.
                         </div>
                       ) : null}
                     </motion.div>

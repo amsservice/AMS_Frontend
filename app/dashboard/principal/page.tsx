@@ -37,12 +37,13 @@ export default function PrincipalDashboard() {
 
   // Fetch dashboard stats using React Query
   const { data: totalclasscount, isLoading: statsLoading } = useTotalClasses();
+  const isAllowed = user?.roles.includes("principal") || user?.roles.includes("coordinator");
 
 
   useEffect(() => {
     if (loading) return;
     if (!user) return;
-    if (user.role !== "principal") return;
+    if (!isAllowed) return;
 
     const fetchBillableStudents = async () => {
       try {
@@ -59,7 +60,7 @@ export default function PrincipalDashboard() {
   useEffect(() => {
     if (loading) return;
     if (!user) return;
-    if (user.role !== "principal") return;
+    if (!isAllowed) return;
 
     const fetchTotalStudents = async () => {
       try {
@@ -85,11 +86,11 @@ export default function PrincipalDashboard() {
   useEffect(() => {
     if (loading) return;
     if (!user) return;
-    if (user.role !== "principal") return;
+    if (!isAllowed) return;
 
     const fetchActiveTeachers = async () => {
       try {
-        const res = await apiFetch("/api/teacher/active-teachers");
+        const res = await apiFetch("/api/staff/active-teachers");
         setActiveTeachers(res.totalActiveTeachers || 0);
       } catch (err) {
         console.error("Failed to fetch active teachers", err);

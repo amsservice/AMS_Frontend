@@ -9,17 +9,20 @@ import {
 } from "react";
 import { apiFetch } from "@/lib/api";
 import { useRouter } from "next/navigation";
+import { getDashboardPath } from "@/lib/roleRedirect";
 
 /* ================= TYPES ================= */
 
-type Role = "principal" | "teacher" | "student";
+export type Role = "principal" | "teacher" | "student" | "coordinator";
 
 export interface User {
   id: string;
   name: string;
   email: string;
-  role: Role;
+  roles: Role[];
+  activeRole: Role;
 }
+
 interface RegisterSchoolPayload {
   schoolName: string;
   schoolEmail: string;
@@ -39,7 +42,7 @@ interface RegisterSchoolPayload {
   principalExperience?: number;
 }
 
-/* ================= STATE TYPES ================= */
+/* ================= STATE ================= */
 
 interface AuthState {
   user: User | null;
@@ -53,22 +56,22 @@ type AuthAction =
   | { type: "AUTH_SUCCESS"; payload: User }
   | { type: "AUTH_FAILURE"; payload: string }
   | { type: "LOGOUT" }
-  | { type: "CLEAR_ERROR" }
-  | { type: "SET_LOADING"; payload: boolean };
+  | { type: "CLEAR_ERROR" };
 
 interface AuthContextType extends AuthState {
   login: (
     role: Role,
-    data: { email: string; password: string; schoolCode: number },
+    data: { email: string; password: string; schoolCode: number }
   ) => Promise<void>;
   registerSchool: (data: RegisterSchoolPayload) => Promise<void>;
   logout: () => Promise<void>;
   refetchUser: () => Promise<void>;
-  setAuthUser: (user: User) => void;
+  switchRole: (role: Role) => void;
   clearError: () => void;
+  setAuthUser: (user: Omit<User, "activeRole">) => void;
 }
 
-/* ================= INITIAL STATE & REDUCER ================= */
+/* ================= REDUCER ================= */
 
 const initialState: AuthState = {
   user: null,
@@ -80,11 +83,8 @@ const initialState: AuthState = {
 function authReducer(state: AuthState, action: AuthAction): AuthState {
   switch (action.type) {
     case "AUTH_START":
-      return {
-        ...state,
-        loading: true,
-        error: null,
-      };
+      return { ...state, loading: true, error: null };
+
     case "AUTH_SUCCESS":
       return {
         ...state,
@@ -93,6 +93,7 @@ function authReducer(state: AuthState, action: AuthAction): AuthState {
         isAuthenticated: true,
         error: null,
       };
+
     case "AUTH_FAILURE":
       return {
         ...state,
@@ -101,24 +102,13 @@ function authReducer(state: AuthState, action: AuthAction): AuthState {
         isAuthenticated: false,
         error: action.payload,
       };
+
     case "LOGOUT":
-      return {
-        ...state,
-        user: null,
-        loading: false,
-        isAuthenticated: false,
-        error: null,
-      };
+      return { ...state, user: null, isAuthenticated: false, loading: false };
+
     case "CLEAR_ERROR":
-      return {
-        ...state,
-        error: null,
-      };
-    case "SET_LOADING":
-      return {
-        ...state,
-        loading: action.payload,
-      };
+      return { ...state, error: null };
+
     default:
       return state;
   }
@@ -134,123 +124,134 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [state, dispatch] = useReducer(authReducer, initialState);
   const router = useRouter();
 
-  /* -------- Restore session on refresh -------- */
+  /* ---------- Restore session ---------- */
   useEffect(() => {
     refetchUser();
   }, []);
 
-  function setAuthUser(user: User) {
-    dispatch({ type: "AUTH_SUCCESS", payload: user });
+  /* ---------- Helpers ---------- */
+
+  function resolveActiveRole(roles: Role[]): Role {
+    const saved = localStorage.getItem("activeRole") as Role | null;
+    if (saved && roles.includes(saved)) return saved;
+    return roles[0];
   }
 
-  /* -------- Fetch Logged-in User -------- */
+  /* ---------- Fetch current user ---------- */
   async function refetchUser() {
     dispatch({ type: "AUTH_START" });
 
     try {
-      // Try each role endpoint until we find a valid session
-      const roles: Role[] = ["principal", "teacher", "student"];
-      let userFound = false;
+      const res = await apiFetch("/api/auth/me");
 
-      for (const role of roles) {
-        try {
-          const meEndpoint: Record<Role, string> = {
-            principal: "/api/auth/principal/me",
-            teacher: "/api/teacher/me",
-            student: "/api/student/me",
-          };
+      const activeRole = resolveActiveRole(res.user.roles);
 
-          const res = await apiFetch(meEndpoint[role]);
-
-          if (res.user) {
-            dispatch({ type: "AUTH_SUCCESS", payload: res.user });
-            userFound = true;
-            break;
-          }
-        } catch (err) {
-          // Continue to next role
-          continue;
-        }
-      }
-
-      if (!userFound) {
-        dispatch({ type: "AUTH_FAILURE", payload: "No valid session found" });
-      }
-    } catch (err) {
-      dispatch({ type: "AUTH_FAILURE", payload: "Failed to verify session" });
+      dispatch({
+        type: "AUTH_SUCCESS",
+        payload: {
+          ...res.user,
+          activeRole,
+        },
+      });
+    } catch {
+      dispatch({
+        type: "AUTH_FAILURE",
+        payload: "Session expired",
+      });
     }
   }
 
-  /* ------------------------------------
-  //      Register School
-  //   ------------------------------------ */
+  /* ---------- Switch role ---------- */
+  function switchRole(role: Role) {
+    if (!state.user?.roles.includes(role)) return;
+
+    localStorage.setItem("activeRole", role);
+
+    dispatch({
+      type: "AUTH_SUCCESS",
+      payload: { ...state.user, activeRole: role },
+    });
+
+    router.push(getDashboardPath(role));
+  }
+
+  /* ---------- Register ---------- */
   async function registerSchool(data: RegisterSchoolPayload) {
     dispatch({ type: "AUTH_START" });
 
     try {
-      const res = await apiFetch("/api/auth/register-school", {
+      await apiFetch("/api/auth/register-school", {
         method: "POST",
         body: JSON.stringify(data),
       });
 
-      // Cookies are set automatically by the backend
-      dispatch({ type: "AUTH_SUCCESS", payload: res.user });
+      await refetchUser();
       router.push("/dashboard");
-    } catch (error: any) {
+    } catch (err: any) {
       dispatch({
         type: "AUTH_FAILURE",
-        payload: error.message || "Registration failed",
+        payload: err.message || "Registration failed",
       });
-      throw error;
+      throw err;
     }
   }
 
-  /* -------- Login -------- */
+  /* ---------- Login ---------- */
   async function login(
     role: Role,
-    data: { email: string; password: string; schoolCode: number },
+    data: { email: string; password: string; schoolCode: number }
   ) {
     dispatch({ type: "AUTH_START" });
-    
+
     try {
       const endpointMap: Record<Role, string> = {
         principal: "/api/auth/principal/login",
         teacher: "/api/auth/teacher/login",
         student: "/api/auth/student/login",
+        coordinator: "/api/auth/teacher/login", // coordinator uses staff login
       };
 
-      const res = await apiFetch(endpointMap[role], {
+      await apiFetch(endpointMap[role], {
         method: "POST",
         body: JSON.stringify(data),
       });
 
-      // Cookies are set automatically by the backend
-      dispatch({ type: "AUTH_SUCCESS", payload: res.user });
-      router.push("/dashboard");
-    } catch (error: any) {
+      await refetchUser();
+      router.push(getDashboardPath(role));
+    } catch (err: any) {
       dispatch({
         type: "AUTH_FAILURE",
-        payload: error.message || "Login failed",
+        payload: err.message || "Login failed",
       });
-      throw error;
+      throw err;
     }
   }
 
-  /* -------- Logout -------- */
-  async function logout() {
-    dispatch({ type: "AUTH_START" });
+  function setAuthUser(user: Omit<User, "activeRole">) {
+    const activeRole = resolveActiveRole(user.roles);
+    localStorage.setItem("activeRole", activeRole);
 
+    dispatch({
+      type: "AUTH_SUCCESS",
+      payload: {
+        ...user,
+        activeRole,
+      },
+    });
+  }
+
+
+  /* ---------- Logout ---------- */
+  async function logout() {
     try {
       await apiFetch("/api/auth/logout", { method: "POST" });
-    } catch (error) {
-      console.error("Logout error:", error);
-    } finally {
-      dispatch({ type: "LOGOUT" });
-      router.replace("/auth/school-code");
-    }
+    } catch {}
+
+    localStorage.removeItem("activeRole");
+    dispatch({ type: "LOGOUT" });
+    router.replace("/auth/school-code");
   }
 
-  /* -------- Clear Error -------- */
   function clearError() {
     dispatch({ type: "CLEAR_ERROR" });
   }
@@ -260,11 +261,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       value={{
         ...state,
         login,
-        logout,
         registerSchool,
+        logout,
         refetchUser,
-        setAuthUser,
+        switchRole,
         clearError,
+        setAuthUser,
       }}
     >
       {children}
@@ -276,30 +278,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
 export function useAuth() {
   const ctx = useContext(AuthContext);
-  if (!ctx) {
-    throw new Error("useAuth must be used inside AuthProvider");
-  }
+  if (!ctx) throw new Error("useAuth must be used inside AuthProvider");
   return ctx;
-}
-
-/* ================= SELECTORS (Optional) ================= */
-
-export function useAuthUser() {
-  const { user } = useAuth();
-  return user;
-}
-
-export function useAuthLoading() {
-  const { loading } = useAuth();
-  return loading;
-}
-
-export function useAuthError() {
-  const { error, clearError } = useAuth();
-  return { error, clearError };
-}
-
-export function useIsAuthenticated() {
-  const { isAuthenticated } = useAuth();
-  return isAuthenticated;
 }
