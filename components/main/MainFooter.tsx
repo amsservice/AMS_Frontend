@@ -8,8 +8,8 @@ type MainFooterProps = {
 
 export default function MainFooter({ isDark }: MainFooterProps) {
   return (
-    <footer className="py-12 px-4 sm:px-6 border-t bg-white dark:bg-gray-800 border-gray-200/50 dark:border-gray-700/50">
-      <div className="max-w-7xl mx-auto">
+    <footer className="py-12 border-t bg-white dark:bg-gray-800 border-gray-200/50 dark:border-gray-700/50">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6">
         <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-8 mb-8">
           <div>
             <div className="flex items-center gap-2 mb-4">
