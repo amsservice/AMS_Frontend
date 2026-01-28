@@ -32,7 +32,10 @@ interface UpdateClassPayload {
 export const useClasses = () =>
   useQuery({
     queryKey: ['classes'],
-    queryFn: () => apiFetch('/api/class')
+    queryFn: async () => {
+      const data = await apiFetch('/api/class');
+      return Array.isArray(data) ? data : (data as any)?.data ?? [];
+    }
   });
 
 /* =====================================================
