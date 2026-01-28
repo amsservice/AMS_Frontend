@@ -1,6 +1,5 @@
 
 
-
 "use client";
 
 import {
@@ -8,56 +7,55 @@ import {
   BookOpen,
   TrendingUp,
   Calendar,
-  ChevronLeft,
-  ChevronRight,
   CheckCircle,
   XCircle,
-  Clock,
   ClipboardList,
 } from "lucide-react";
+import { useAuth } from "@/app/context/AuthContext"
+import { useMyTeacherFullProfile } from "@/app/querry/useTeachers";
+
 import { useState } from "react";
-import { useAuth } from "@/app/context/AuthContext";
-import { useStudents } from "@/app/querry/useStudent";
+import SchoolCalendar from "@/components/holidays/SchoolCalendar"; // Import the SchoolCalendar component
 
 export default function TeacherDashboard() {
-  // Mock user data - replace with actual auth context
-  const { user, loading } = useAuth();
-   const { data: students = [], isLoading, error } = useStudents();
-  
+  // Mock data
+  // const user = { name: "Sarah Johnson" };
+  const { user } = useAuth();
+  const students = Array(35).fill(null);
 
-  // Mock teacher profile data
-  const teacherProfile = {
-    assignedClass: {
-      className: "10th Grade",
-      section: "A"
-    }
-  };
-  const profileLoading = false;
+  const { data, isLoading } = useMyTeacherFullProfile();
+  const activeClass = data?.data?.history?.find(h => h.isActive);
+
+
 
   const stats = [
     {
+      id: "students",
       icon: Users,
       value: students.length,
       label: "Total Students",
-      bgColor: "accent-blue"
+      bgGradient: "from-purple-500 to-blue-500"
     },
     {
+      id: "present",
       icon: CheckCircle,
       value: "32",
       label: "Present Today",
-      bgColor: "accent-green"
+      bgGradient: "from-blue-500 to-indigo-500"
     },
     {
+      id: "absent",
       icon: XCircle,
       value: "3",
       label: "Absent Today",
-      bgColor: "bg-red-500"
+      bgGradient: "from-indigo-500 to-purple-500"
     },
     {
+      id: "rate",
       icon: TrendingUp,
       value: "91.4%",
       label: "Attendance Rate",
-      bgColor: "accent-teal"
+      bgGradient: "from-purple-400 to-blue-400"
     }
   ];
 
@@ -65,22 +63,22 @@ export default function TeacherDashboard() {
     {
       icon: ClipboardList,
       title: "Mark Attendance",
-      bgColor: "accent-blue"
+      bgGradient: "from-purple-500 to-blue-500"
     },
     {
       icon: Users,
       title: "View Students",
-      bgColor: "accent-teal"
+      bgGradient: "from-blue-500 to-indigo-500"
     },
     {
       icon: BookOpen,
       title: "My Class",
-      bgColor: "accent-purple"
+      bgGradient: "from-indigo-500 to-purple-500"
     },
     {
       icon: Calendar,
       title: "Attendance History",
-      bgColor: "accent-orange"
+      bgGradient: "from-purple-400 to-blue-400"
     }
   ];
 
@@ -111,274 +109,165 @@ export default function TeacherDashboard() {
     }
   ];
 
-  const upcomingEvents = [
-    {
-      icon: Calendar,
-      title: "Staff Meeting",
-      date: "Dec 31"
-    },
-    {
-      icon: Calendar,
-      title: "Parent Meeting",
-      date: "Jan 2"
-    },
-    {
-      icon: Clock,
-      title: "Exam Week Starts",
-      date: "Jan 5"
-    }
-  ];
-
-  // Generate calendar days
-  const generateCalendarDays = () => {
-    const days = [];
-    // Start from day 30 (previous month)
-    days.push({ day: 30, isCurrentMonth: false });
-    
-    // Add days of current month
-    for (let i = 1; i <= 31; i++) {
-      days.push({ day: i, isCurrentMonth: true });
-    }
-    
-    // Add next month days to fill grid
-    for (let i = 1; i <= 3; i++) {
-      days.push({ day: i, isCurrentMonth: false });
-    }
-    return days;
-  };
-
   return (
-    <div className="space-y-6">
-      {/* Welcome Section */}
-      <div>
-        <h2 className="text-2xl lg:text-3xl font-bold dashboard-text mb-2">
-          Welcome, {user?.name?.split(" ")[0] || "Teacher"}! 📚
-        </h2>
-        {profileLoading ? (
-          <p className="text-sm lg:text-base dashboard-text-muted">
-            Loading class information...
-          </p>
-        ) : teacherProfile?.assignedClass ? (
-          <p className="text-sm lg:text-base dashboard-text-muted">
-            Class {teacherProfile.assignedClass.className} - {teacherProfile.assignedClass.section}
-          </p>
-        ) : (
-          <p className="text-sm lg:text-base dashboard-text-muted">
-            No class assigned yet
-          </p>
-        )}
-      </div>
+    <div className="relative bg-gradient-to-br from-purple-50 via-white to-blue-50 dark:from-purple-900 dark:via-gray-900 dark:to-blue-950 overflow-hidden">
+      {/* Header with matching gradient */}
+      <header className="bg-gradient-to-r from-purple-600 via-blue-600 to-indigo-600 dark:from-purple-800 dark:via-blue-800 dark:to-indigo-900 shadow-2xl border-b border-purple-500/20">
+        <div className="max-w-7xl mx-auto py-6 sm:py-8 px-4 sm:px-6 lg:px-8">
+          <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between space-y-4 lg:space-y-0">
+            <div className="flex-1">
+              <h1 className="text-2xl sm:text-3xl lg:text-4xl font-bold text-white tracking-tight drop-shadow-lg">
+                Welcome back, {user?.name?.split(" ")[0] || "Teacher"}! 📚
+              </h1>
+              <p className="mt-2 text-sm sm:text-base text-purple-100 font-medium">
+                {isLoading
+                  ? "Loading class..."
+                  : activeClass
+                    ? `Class ${activeClass.className} - ${activeClass.section}`
+                    : "No class assigned"}
+              </p>
 
-      {/* Mark Attendance Button - Mobile */}
-      <button className="lg:hidden w-full accent-blue text-white font-semibold py-3 px-4 rounded-xl flex items-center justify-center gap-2 shadow-lg hover:opacity-90 transition-dashboard">
-        <ClipboardList className="w-5 h-5" />
-        <span>Mark Attendance</span>
-      </button>
-
-      {/* Stats Grid */}
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-        {stats.map((stat) => (
-          <div
-            key={stat.label}
-            className="dashboard-card border rounded-xl p-4 lg:p-6 hover:shadow-lg transition-shadow"
-          >
-            <div className="flex flex-col gap-3">
-              <div className={`${stat.bgColor} p-3 rounded-xl w-fit`}>
-                <stat.icon className="w-5 h-5 lg:w-6 lg:h-6 text-white" />
-              </div>
-              <div>
-                <div className="text-xs dashboard-text-muted mb-1">
-                  {stat.label}
-                </div>
-                <div className="text-2xl lg:text-3xl font-bold dashboard-text">
-                  {stat.value}
-                </div>
-              </div>
+            </div>
+            <div className="flex flex-col sm:flex-row gap-3 sm:gap-4">
+              <button className="px-4 sm:px-6 py-2.5 sm:py-3 bg-white/95 backdrop-blur-sm text-purple-600 rounded-xl text-sm font-semibold hover:bg-white transition-all duration-200 transform hover:scale-105 shadow-lg hover:shadow-xl flex items-center justify-center border border-purple-200/50">
+                <ClipboardList className="h-4 w-4 sm:h-5 sm:w-5 mr-2" />
+                <span>Mark Attendance</span>
+              </button>
             </div>
           </div>
-        ))}
-      </div>
-
-      {/* Quick Actions & Recent Attendance */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        {/* Quick Actions */}
-        <div className="dashboard-card border rounded-xl p-6">
-          <h3 className="text-lg lg:text-xl font-semibold dashboard-text mb-1">
-            Quick Actions
-          </h3>
-          <p className="text-sm dashboard-text-muted mb-6">
-            Common tasks for your class
-          </p>
-
-          <div className="grid grid-cols-2 gap-4">
-            {quickActions.map((action) => (
-              <button
-                key={action.title}
-                className="flex flex-col items-center justify-center p-6 lg:p-8 rounded-xl hover:bg-gray-50 dark:hover:bg-gray-700/50 transition-dashboard group"
-              >
-                <div
-                  className={`${action.bgColor} p-4 rounded-xl mb-3 group-hover:scale-110 transition-transform`}
-                >
-                  <action.icon className="w-6 h-6 lg:w-7 lg:h-7 text-white" />
-                </div>
-                <span className="text-xs lg:text-sm font-medium dashboard-text text-center">
-                  {action.title}
-                </span>
-              </button>
-            ))}
-          </div>
         </div>
+      </header>
 
-        {/* Recent Attendance */}
-        <div className="dashboard-card border rounded-xl p-6">
-          <h3 className="text-lg lg:text-xl font-semibold dashboard-text mb-1">
-            Recent Attendance
-          </h3>
-          <p className="text-sm dashboard-text-muted mb-6">
-            Last 4 days attendance summary
-          </p>
-
-          <div className="space-y-3">
-            {recentAttendance.map((record, index) => (
+      {/* Main Content */}
+      <main className="max-w-7xl mx-auto py-4 sm:py-6 px-4 sm:px-6 lg:px-8">
+        <div className="space-y-6 sm:space-y-8">
+          {/* Stats Cards */}
+          <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4 lg:gap-6">
+            {stats.map((stat) => (
               <div
-                key={index}
-                className="flex items-center justify-between p-4 rounded-lg bg-blue-50 dark:bg-blue-900/20 border border-blue-100 dark:border-blue-800"
+                key={stat.id}
+                className="group relative bg-white/90 dark:bg-gray-800/90 backdrop-blur-sm rounded-2xl shadow-lg hover:shadow-2xl transition-all duration-300 transform hover:-translate-y-2 border border-purple-200/50 dark:border-purple-700/30 overflow-hidden"
               >
-                <div className="flex items-center gap-3">
-                  <Calendar className="w-5 h-5 text-blue-500" />
-                  <div>
-                    <div className="text-sm font-semibold dashboard-text">
-                      {record.date}
-                    </div>
-                    <div className="text-xs dashboard-text-muted">
-                      {record.present} present, {record.absent} absent
+                <div className={`absolute top-0 left-0 right-0 h-1 bg-gradient-to-r ${stat.bgGradient}`}></div>
+
+                <div className="p-4 sm:p-5">
+                  <div className="flex items-start justify-between mb-3">
+                    <div className={`p-2.5 bg-gradient-to-br ${stat.bgGradient} rounded-xl shadow-lg`}>
+                      <stat.icon className="h-5 w-5 sm:h-6 sm:w-6 text-white" />
                     </div>
                   </div>
-                </div>
-                <div className="text-lg font-bold dashboard-text">
-                  {record.rate}
+
+                  <p className="text-xs sm:text-sm font-semibold text-gray-600 dark:text-gray-400 uppercase tracking-wider mb-2">
+                    {stat.label}
+                  </p>
+
+                  <p className="text-2xl sm:text-3xl font-bold bg-gradient-to-r from-purple-600 to-blue-600 dark:from-purple-400 dark:to-blue-400 bg-clip-text text-transparent">
+                    {stat.value}
+                  </p>
                 </div>
               </div>
             ))}
           </div>
-        </div>
-      </div>
 
-      {/* Class Calendar */}
-      <div className="dashboard-card border rounded-xl p-6">
-        <div className="flex items-start gap-3 mb-6">
-          <Calendar className="w-6 h-6 text-blue-500 flex-shrink-0 mt-1" />
-          <div className="flex-1">
-            <h3 className="text-lg lg:text-xl font-semibold dashboard-text">
-              Class Calendar
-            </h3>
-            <p className="text-sm dashboard-text-muted">
-              View class events and attendance schedule
-            </p>
-          </div>
-        </div>
+          {/* Quick Actions & Recent Attendance */}
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 lg:gap-6">
+            {/* Quick Actions */}
+            <div className="bg-white/90 dark:bg-gray-800/90 backdrop-blur-sm shadow-xl rounded-2xl border border-purple-200/50 dark:border-purple-700/30 p-5 sm:p-6 relative overflow-hidden">
+              <div className="absolute top-0 right-0 w-32 h-32 bg-gradient-to-br from-purple-500/10 to-blue-500/10 dark:from-purple-500/5 dark:to-blue-500/5 rounded-full blur-3xl"></div>
 
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-          {/* Calendar */}
-          <div>
-            <div className="flex items-center justify-between mb-6">
-              <button className="p-2 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition-dashboard">
-                <ChevronLeft className="w-5 h-5 dashboard-text" />
-              </button>
-              <span className="text-base font-semibold dashboard-text">
-                December 2025
-              </span>
-              <button className="p-2 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition-dashboard">
-                <ChevronRight className="w-5 h-5 dashboard-text" />
-              </button>
-            </div>
-
-            <div className="grid grid-cols-7 gap-2">
-              {["Su", "Mo", "Tu", "We", "Th", "Fr", "Sa"].map((day) => (
-                <div
-                  key={day}
-                  className="text-sm font-semibold dashboard-text-muted py-2 text-center"
-                >
-                  {day}
-                </div>
-              ))}
-              {generateCalendarDays().map((item, index) => (
-                <button
-                  key={index}
-                  className={`py-2.5 text-sm rounded-lg transition-dashboard ${
-                    item.day === 31 && item.isCurrentMonth
-                      ? "accent-teal text-white hover:opacity-90"
-                      : item.isCurrentMonth
-                      ? "dashboard-text hover:bg-gray-100 dark:hover:bg-gray-700"
-                      : "text-gray-400 dark:text-gray-600 opacity-40"
-                  }`}
-                >
-                  {item.day}
-                </button>
-              ))}
-            </div>
-          </div>
-
-          {/* Today's Events & Upcoming */}
-          <div className="space-y-6">
-            <div>
-              <div className="text-sm font-semibold dashboard-text mb-3">
-                Wednesday, December 31
-              </div>
-              <div className="p-4 bg-blue-50 dark:bg-blue-900/20 rounded-xl border border-blue-200 dark:border-blue-800">
-                <div className="flex items-center gap-3 text-sm text-blue-700 dark:text-blue-400">
-                  <Calendar className="w-5 h-5" />
-                  <span className="font-medium">Staff Meeting</span>
-                </div>
-              </div>
-            </div>
-
-            <div>
-              <h4 className="text-sm font-semibold dashboard-text mb-4">
-                Upcoming Events
-              </h4>
-              <div className="space-y-3">
-                {upcomingEvents.map((event, index) => (
-                  <div
-                    key={index}
-                    className="flex items-center justify-between p-3 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700/50 transition-dashboard"
-                  >
-                    <div className="flex items-center gap-3">
-                      <event.icon className="w-4 h-4 dashboard-text-muted flex-shrink-0" />
-                      <span className="text-sm dashboard-text">
-                        {event.title}
-                      </span>
-                    </div>
-                    <span className="text-sm dashboard-text-muted font-medium">
-                      {event.date}
-                    </span>
+              <div className="relative">
+                <div className="flex items-center mb-5 sm:mb-6">
+                  <div className="p-2.5 bg-gradient-to-br from-purple-600 to-blue-600 rounded-xl shadow-lg">
+                    <ClipboardList className="h-5 w-5 sm:h-6 sm:w-6 text-white" />
                   </div>
-                ))}
-              </div>
+                  <div className="ml-3">
+                    <h3 className="text-base sm:text-xl font-bold bg-gradient-to-r from-purple-600 to-blue-600 dark:from-purple-400 dark:to-blue-400 bg-clip-text text-transparent">
+                      Quick Actions
+                    </h3>
+                    <p className="text-xs sm:text-sm text-gray-600 dark:text-gray-400">
+                      Common tasks for your class
+                    </p>
+                  </div>
+                </div>
 
-              {/* Legend */}
-              <div className="flex flex-wrap items-center gap-4 mt-6 pt-4 border-t dashboard-card-border">
-                <div className="flex items-center gap-2">
-                  <div className="w-3 h-3 rounded-full bg-blue-500"></div>
-                  <span className="text-xs dashboard-text-muted">Event</span>
+                <div className="grid grid-cols-2 gap-3 sm:gap-4">
+                  {quickActions.map((action) => (
+                    <button
+                      key={action.title}
+                      className="group flex flex-col items-center justify-center p-4 sm:p-5 rounded-xl bg-gradient-to-br from-purple-50/50 to-blue-50/50 dark:from-purple-900/20 dark:to-blue-900/20 hover:from-purple-100 hover:to-blue-100 dark:hover:from-purple-900/40 dark:hover:to-blue-900/40 transition-all duration-300 transform hover:-translate-y-1 hover:shadow-lg border border-purple-200/50 dark:border-purple-700/30"
+                    >
+                      <div
+                        className={`bg-gradient-to-br ${action.bgGradient} p-3 sm:p-3.5 rounded-xl mb-2 sm:mb-3 group-hover:scale-110 transition-transform shadow-md`}
+                      >
+                        <action.icon className="w-5 h-5 sm:w-6 sm:h-6 text-white" />
+                      </div>
+                      <span className="text-xs sm:text-sm font-semibold text-gray-900 dark:text-white text-center">
+                        {action.title}
+                      </span>
+                    </button>
+                  ))}
                 </div>
-                <div className="flex items-center gap-2">
-                  <div className="w-3 h-3 rounded-full bg-gray-400"></div>
-                  <span className="text-xs dashboard-text-muted">Holiday</span>
+              </div>
+            </div>
+
+            {/* Recent Attendance */}
+            <div className="bg-white/90 dark:bg-gray-800/90 backdrop-blur-sm shadow-xl rounded-2xl border border-purple-200/50 dark:border-purple-700/30 p-5 sm:p-6 relative overflow-hidden">
+              <div className="absolute top-0 left-0 w-32 h-32 bg-gradient-to-br from-blue-500/10 to-indigo-500/10 dark:from-blue-500/5 dark:to-indigo-500/5 rounded-full blur-3xl"></div>
+
+              <div className="relative">
+                <div className="flex items-center mb-5 sm:mb-6">
+                  <div className="p-2.5 bg-gradient-to-br from-blue-600 to-indigo-600 rounded-xl shadow-lg">
+                    <Calendar className="h-5 w-5 sm:h-6 sm:w-6 text-white" />
+                  </div>
+                  <div className="ml-3">
+                    <h3 className="text-base sm:text-xl font-bold bg-gradient-to-r from-purple-600 to-blue-600 dark:from-purple-400 dark:to-blue-400 bg-clip-text text-transparent">
+                      Recent Attendance
+                    </h3>
+                    <p className="text-xs sm:text-sm text-gray-600 dark:text-gray-400">
+                      Last 4 days attendance summary
+                    </p>
+                  </div>
                 </div>
-                <div className="flex items-center gap-2">
-                  <div className="w-3 h-3 rounded-full bg-amber-500"></div>
-                  <span className="text-xs dashboard-text-muted">Alert</span>
-                </div>
-                <div className="flex items-center gap-2">
-                  <div className="w-3 h-3 rounded-full bg-green-500"></div>
-                  <span className="text-xs dashboard-text-muted">Present</span>
+
+                <div className="space-y-3">
+                  {recentAttendance.map((record, index) => (
+                    <div
+                      key={index}
+                      className="flex items-center justify-between p-3 sm:p-4 rounded-xl bg-gradient-to-br from-purple-50/50 to-blue-50/50 dark:from-purple-900/20 dark:to-blue-900/20 hover:from-purple-100 hover:to-blue-100 dark:hover:from-purple-900/30 dark:hover:to-blue-900/30 transition-all duration-200 border border-purple-200/30 dark:border-purple-700/20"
+                    >
+                      <div className="flex items-center gap-3">
+                        <Calendar className="w-4 h-4 sm:w-5 sm:h-5 text-purple-500 dark:text-purple-400" />
+                        <div>
+                          <div className="text-xs sm:text-sm font-semibold text-gray-900 dark:text-white">
+                            {record.date}
+                          </div>
+                          <div className="text-xs text-gray-600 dark:text-gray-400">
+                            {record.present} present, {record.absent} absent
+                          </div>
+                        </div>
+                      </div>
+                      <div className="text-base sm:text-lg font-bold bg-gradient-to-r from-purple-600 to-blue-600 dark:from-purple-400 dark:to-blue-400 bg-clip-text text-transparent">
+                        {record.rate}
+                      </div>
+                    </div>
+                  ))}
                 </div>
               </div>
             </div>
           </div>
+
+          {/* School Calendar Component */}
+          <div className="bg-white/90 dark:bg-gray-800/90 backdrop-blur-sm shadow-xl rounded-2xl border border-purple-200/50 dark:border-purple-700/30 p-5 sm:p-6 relative overflow-hidden">
+            {/* Decorative gradient corners */}
+            <div className="absolute top-0 right-0 w-40 h-40 bg-gradient-to-br from-purple-500/10 to-blue-500/10 dark:from-purple-500/5 dark:to-blue-500/5 rounded-full blur-3xl"></div>
+            <div className="absolute bottom-0 left-0 w-40 h-40 bg-gradient-to-tr from-blue-500/10 to-indigo-500/10 dark:from-blue-500/5 dark:to-indigo-500/5 rounded-full blur-3xl"></div>
+
+            <div className="relative">
+              <SchoolCalendar />
+            </div>
+          </div>
         </div>
-      </div>
+      </main>
     </div>
   );
 }
