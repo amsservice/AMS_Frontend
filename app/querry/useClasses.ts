@@ -33,7 +33,11 @@ export const useClasses = () =>
   useQuery({
     queryKey: ['classes'],
     queryFn: () => apiFetch('/api/class')
+    
   });
+
+
+
 
 /* =====================================================
    ➕ Create Class (POST /api/class)
