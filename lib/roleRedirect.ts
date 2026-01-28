@@ -4,8 +4,9 @@ import type { Role } from "@/app/context/AuthContext";
 export function getDashboardPath(role: Role) {
   switch (role) {
     case "principal":
-    case "coordinator":
       return "/dashboard/principal";
+    case "coordinator":
+      return "/dashboard/coordinator";
     case "teacher":
       return "/dashboard/teacher";
     case "student":

@@ -54,10 +54,10 @@ export default function BulkUploadModal({
                 </div>
                 <div>
                   <h3 className="text-lg font-bold text-gray-900 dark:text-white">
-                    Bulk Upload Teachers
+                    Bulk Upload Staff
                   </h3>
                   <p className="text-sm text-gray-600 dark:text-gray-400">
-                    Upload a CSV to create teachers
+                    Upload a CSV to create staff accounts
                   </p>
                 </div>
               </div>
@@ -74,7 +74,7 @@ export default function BulkUploadModal({
 
             <div className="flex items-center justify-between flex-wrap gap-3 mb-4">
               <p className="text-sm text-gray-600 dark:text-gray-400">
-                Required columns: Name, Email, Password, Phone, Dob, Gender <br />
+                Required columns: Name, Email, Password, Phone, Dob, Gender, Role <br />
                 Optional: Highest Qualification, Experience Years, Address
               </p>
               <button

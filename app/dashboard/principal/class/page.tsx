@@ -15,7 +15,8 @@ import {
   useClasses,
   useCreateClass,
   useUpdateClass,
-  useDeleteClass
+  useDeleteClass,
+  useBulkDeactivateClasses
 } from '@/app/querry/useClasses';
 
 interface Class {
@@ -52,7 +53,10 @@ export default function ClassesPage() {
   const { mutate: createClass, isPending: isCreating } = useCreateClass();
   const { mutate: updateClass, isPending: isUpdating } = useUpdateClass();
   const { mutate: deleteClass } = useDeleteClass();
+  const bulkDeactivateClassesMutation = useBulkDeactivateClasses();
   const { data: classWiseStats = [] } = useStudentsClassWiseStats();
+
+  const [selectedClassIds, setSelectedClassIds] = useState<Set<string>>(new Set());
 
   const getClassSortKey = (nameRaw: string) => {
     const name = (nameRaw ?? '').trim().toUpperCase();
@@ -73,6 +77,24 @@ export default function ClassesPage() {
 
     return (a.section ?? '').localeCompare(b.section ?? '', undefined, { numeric: true, sensitivity: 'base' });
   });
+
+  const allClassesSelected =
+    sortedClasses.length > 0 && sortedClasses.every((c: Class) => selectedClassIds.has(String(c.id)));
+  const someClassesSelected =
+    sortedClasses.some((c: Class) => selectedClassIds.has(String(c.id))) && !allClassesSelected;
+
+  const toggleSelectAllClasses = () => {
+    setSelectedClassIds((prev) => {
+      const next = new Set(prev);
+      const allNow = sortedClasses.length > 0 && sortedClasses.every((c: Class) => next.has(String(c.id)));
+      if (allNow) {
+        sortedClasses.forEach((c: Class) => next.delete(String(c.id)));
+      } else {
+        sortedClasses.forEach((c: Class) => next.add(String(c.id)));
+      }
+      return next;
+    });
+  };
 
   const stats = {
     total: classes.length,
@@ -419,8 +441,8 @@ export default function ClassesPage() {
   const statsData = [
     { label: 'Total Classes', value: stats.total, bgGradient: 'from-purple-500 to-blue-500', icon: BookOpen },
     { label: 'Total Students', value: stats.totalStudents, bgGradient: 'from-blue-500 to-indigo-500', icon: Users },
-    { label: 'With Teachers', value: stats.withTeacher, bgGradient: 'from-indigo-500 to-purple-500', icon: Users },
-    { label: 'Need Teachers', value: stats.needTeacher, bgGradient: 'from-purple-400 to-blue-400', icon: Users }
+    { label: 'With Staff', value: stats.withTeacher, bgGradient: 'from-indigo-500 to-purple-500', icon: Users },
+    { label: 'Need Staff', value: stats.needTeacher, bgGradient: 'from-purple-400 to-blue-400', icon: Users }
   ];
 
   return (
@@ -481,6 +503,85 @@ export default function ClassesPage() {
                 </div>
               </div>
             ))}
+          </div>
+
+          <div className="bg-white/80 dark:bg-gray-800/80 backdrop-blur-sm shadow-xl rounded-2xl border border-gray-200/50 dark:border-gray-700/50 p-4 flex items-center justify-between gap-3 flex-wrap">
+            <div className="flex items-center gap-3">
+              <input
+                type="checkbox"
+                checked={allClassesSelected}
+                ref={(el) => {
+                  if (el) el.indeterminate = someClassesSelected && !allClassesSelected;
+                }}
+                onChange={toggleSelectAllClasses}
+                aria-label="Select all classes"
+              />
+              <div className="text-sm text-gray-700 dark:text-gray-300">Selected: {selectedClassIds.size}</div>
+            </div>
+            <div className="flex items-center gap-2 flex-wrap">
+              <button
+                onClick={() => {
+                  const ids = Array.from(selectedClassIds);
+                  if (!ids.length) {
+                    toast.error('Please select at least one class');
+                    return;
+                  }
+
+                  bulkDeactivateClassesMutation.mutate(ids, {
+                    onSuccess: (resp: any) => {
+                      const results = Array.isArray(resp?.results) ? resp.results : [];
+                      const failed = results.filter((r: any) => !r?.ok);
+                      const successCount = results.filter((r: any) => r?.ok).length;
+
+                      if (failed.length > 0) {
+                        const firstMsg = failed[0]?.message || 'Some classes could not be deleted';
+                        toast.error(`Deleted ${successCount}. Failed ${failed.length}. ${firstMsg}`);
+                      } else {
+                        toast.success(`Deleted ${successCount} classes successfully`);
+                      }
+
+                      setSelectedClassIds(new Set());
+                    },
+                    onError: (err: any) => toast.error(err?.message || 'Failed to delete classes')
+                  });
+                }}
+                disabled={bulkDeactivateClassesMutation.isPending}
+                className="bg-red-600 hover:bg-red-700 disabled:opacity-50 text-white font-semibold py-2 px-4 rounded-xl transition-all text-sm"
+              >
+                Delete selected
+              </button>
+              <button
+                onClick={() => {
+                  const ids = sortedClasses.map((c: Class) => String(c.id));
+                  if (!ids.length) {
+                    toast.error('No classes to delete');
+                    return;
+                  }
+
+                  bulkDeactivateClassesMutation.mutate(ids, {
+                    onSuccess: (resp: any) => {
+                      const results = Array.isArray(resp?.results) ? resp.results : [];
+                      const failed = results.filter((r: any) => !r?.ok);
+                      const successCount = results.filter((r: any) => r?.ok).length;
+
+                      if (failed.length > 0) {
+                        const firstMsg = failed[0]?.message || 'Some classes could not be deleted';
+                        toast.error(`Deleted ${successCount}. Failed ${failed.length}. ${firstMsg}`);
+                      } else {
+                        toast.success(`Deleted ${successCount} classes successfully`);
+                      }
+
+                      setSelectedClassIds(new Set());
+                    },
+                    onError: (err: any) => toast.error(err?.message || 'Failed to delete classes')
+                  });
+                }}
+                disabled={bulkDeactivateClassesMutation.isPending}
+                className="bg-red-600 hover:bg-red-700 disabled:opacity-50 text-white font-semibold py-2 px-4 rounded-xl transition-all text-sm"
+              >
+                Delete all
+              </button>
+            </div>
           </div>
 
           <AnimatePresence>
@@ -553,6 +654,23 @@ export default function ClassesPage() {
                   key={`${cls.id}-${index}`}
                   className="group bg-white/80 dark:bg-gray-800/80 backdrop-blur-sm shadow-lg hover:shadow-xl rounded-2xl border border-gray-200/50 dark:border-gray-700/50 p-5 flex flex-col transition-all duration-300 transform hover:-translate-y-1"
                 >
+                  <div className="flex items-center justify-between mb-3">
+                    <input
+                      type="checkbox"
+                      checked={selectedClassIds.has(String(cls.id))}
+                      onChange={() => {
+                        const id = String(cls.id);
+                        setSelectedClassIds((prev) => {
+                          const next = new Set(prev);
+                          if (next.has(id)) next.delete(id);
+                          else next.add(id);
+                          return next;
+                        });
+                      }}
+                      aria-label={`Select class ${cls.name} ${cls.section}`}
+                      onClick={(e) => e.stopPropagation()}
+                    />
+                  </div>
                   <div className="bg-gradient-to-br from-blue-600 to-indigo-600 p-3 rounded-xl w-fit mb-4 shadow-lg group-hover:scale-110 transition-transform">
                     <BookOpen className="w-6 h-6 text-white" />
                   </div>
@@ -562,7 +680,7 @@ export default function ClassesPage() {
                   </h3>
 
                   <p className="text-sm text-gray-600 dark:text-gray-400 mb-3">
-                    {cls.teacher || 'No teacher assigned'}
+                    {cls.teacher || 'No staff assigned'}
                   </p>
 
                   <div className="flex items-center text-sm text-gray-600 dark:text-gray-400 mb-4 p-2 rounded-lg bg-gray-50 dark:bg-gray-700/50">

@@ -137,12 +137,16 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     return roles[0];
   }
 
+  async function fetchMe() {
+    return apiFetch("/api/auth/me");
+  }
+
   /* ---------- Fetch current user ---------- */
   async function refetchUser() {
     dispatch({ type: "AUTH_START" });
 
     try {
-      const res = await apiFetch("/api/auth/me");
+      const res = await fetchMe();
 
       const activeRole = resolveActiveRole(res.user.roles);
 
@@ -216,8 +220,20 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         body: JSON.stringify(data),
       });
 
-      await refetchUser();
-      router.push(getDashboardPath(role));
+      const res = await fetchMe();
+      const roles: Role[] = Array.isArray(res?.user?.roles) ? res.user.roles : [];
+      const activeRole = roles.includes(role) ? role : resolveActiveRole(roles);
+      localStorage.setItem("activeRole", activeRole);
+
+      dispatch({
+        type: "AUTH_SUCCESS",
+        payload: {
+          ...res.user,
+          activeRole,
+        },
+      });
+
+      router.push(getDashboardPath(activeRole));
     } catch (err: any) {
       dispatch({
         type: "AUTH_FAILURE",

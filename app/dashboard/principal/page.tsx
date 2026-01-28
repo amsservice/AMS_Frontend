@@ -38,6 +38,10 @@ export default function PrincipalDashboard() {
   // Fetch dashboard stats using React Query
   const { data: totalclasscount, isLoading: statsLoading } = useTotalClasses();
   const isAllowed = user?.roles.includes("principal") || user?.roles.includes("coordinator");
+  const isCoordinator = user?.activeRole === "coordinator";
+
+  const dashboardLabel = isCoordinator ? "Coordinator" : "Principal";
+  const dashboardBasePath = isCoordinator ? "/dashboard/coordinator" : "/dashboard/principal";
 
 
   useEffect(() => {
@@ -93,7 +97,7 @@ export default function PrincipalDashboard() {
         const res = await apiFetch("/api/staff/active-teachers");
         setActiveTeachers(res.totalActiveTeachers || 0);
       } catch (err) {
-        console.error("Failed to fetch active teachers", err);
+        console.error("Failed to fetch active staff", err);
       }
     };
 
@@ -114,10 +118,10 @@ export default function PrincipalDashboard() {
       bgGradient: "from-purple-500 to-blue-500"
     },
     {
-      id: "teachers",
+      id: "staff",
       icon: Users,
       value: activeTeachers ? activeTeachers.toString() : "0",
-      label: "Total Teachers",
+      label: "Total Staff",
       bgGradient: "from-blue-500 to-indigo-500"
     },
     {
@@ -140,28 +144,28 @@ export default function PrincipalDashboard() {
     {
       icon: Calendar,
       title: "New Session",
-      href: "/dashboard/principal/session",
+      href: isCoordinator ? "" : `${dashboardBasePath}/session`,
       bgGradient: "from-purple-500 to-blue-500"
     },
     {
       icon: BookOpen,
       title: "Add Class",
-      href: "/dashboard/principal/class",
+      href: `${dashboardBasePath}/class`,
       bgGradient: "from-blue-500 to-indigo-500"
     },
     {
       icon: UserPlus,
-      title: "Add Teacher",
-      href: "/dashboard/principal/teachers",
+      title: "Add Staff",
+      href: `${dashboardBasePath}/teachers`,
       bgGradient: "from-indigo-500 to-purple-500"
     },
     {
       icon: FileText,
       title: "View Reports",
-      href: "/dashboard/principal/reports",
+      href: isCoordinator ? "" : `${dashboardBasePath}/reports`,
       bgGradient: "from-purple-400 to-blue-400"
     }
-  ];
+  ].filter((a) => a.href);
 
   const recentActivities = [
     {
@@ -172,7 +176,7 @@ export default function PrincipalDashboard() {
     },
     {
       icon: UserPlus,
-      text: "New teacher added: Sarah Johnson",
+      text: "New staff added: Sarah Johnson",
       time: "1 hour ago",
       color: "text-blue-500 dark:text-blue-400"
     },
@@ -198,7 +202,7 @@ export default function PrincipalDashboard() {
           <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between space-y-4 lg:space-y-0">
             <div className="flex-1">
               <h1 className="text-2xl sm:text-3xl lg:text-4xl font-bold text-white tracking-tight drop-shadow-lg">
-                Welcome back, {user?.name?.split(" ")[0] || "Principal"}! 
+                Welcome back, {user?.name?.split(" ")[0] || dashboardLabel}!
               </h1>
               <p className="mt-2 text-sm sm:text-base text-purple-100 font-medium">
                 Here's what's happening at your school today
@@ -207,8 +211,8 @@ export default function PrincipalDashboard() {
             <div className="flex flex-col sm:flex-row gap-3 sm:gap-4">
               <button className="px-4 sm:px-6 py-2.5 sm:py-3 bg-white/95 backdrop-blur-sm text-purple-600 rounded-xl text-sm font-semibold hover:bg-white transition-all duration-200 transform hover:scale-105 shadow-lg hover:shadow-xl flex items-center justify-center border border-purple-200/50">
                 <UserPlus className="h-4 w-4 sm:h-5 sm:w-5 mr-2" />
-                <span className="hidden sm:inline">Add Teacher</span>
-                <span className="sm:hidden">Teacher</span>
+                <span className="hidden sm:inline">Add Staff</span>
+                <span className="sm:hidden">Staff</span>
               </button>
             </div>
           </div>

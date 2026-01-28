@@ -60,7 +60,7 @@ export default function DeleteConfirmModal({
           >
             <div className="flex items-center justify-between mb-3">
               <h3 className="text-lg font-bold text-gray-900 dark:text-white">
-                Delete Teacher
+                Deactivate Staff
               </h3>
               <button
                 onClick={onClose}
@@ -71,8 +71,8 @@ export default function DeleteConfirmModal({
             </div>
 
             <p className="text-sm text-gray-600 dark:text-gray-400 mb-5">
-              Are you sure you want to remove this teacher? This will mark the
-              teacher as inactive.
+              Are you sure you want to deactivate this staff member? This will mark the
+              staff member as inactive.
               <span className="font-semibold text-gray-900 dark:text-white">
                 {" "}
                 {confirmDelete.name}
@@ -86,7 +86,7 @@ export default function DeleteConfirmModal({
                     onClick={() => setShowReassignOnDelete(true)}
                     className="w-full px-4 py-2.5 bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 text-gray-900 dark:text-white font-semibold rounded-xl hover:bg-gray-50 dark:hover:bg-gray-600 transition-all text-sm shadow-sm"
                   >
-                    Reassign class to another teacher
+                    Reassign class to another staff member
                   </button>
                 ) : (
                   <div className="p-4 rounded-xl bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800">
@@ -100,7 +100,7 @@ export default function DeleteConfirmModal({
                       onChange={(e) => setReassignToTeacherId(e.target.value)}
                       className="h-10 w-full bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 text-gray-900 dark:text-white rounded-xl px-3 text-sm"
                     >
-                      <option value="">Select unassigned teacher</option>
+                      <option value="">Select available staff member</option>
                       {unassignedTeachers.map((t) => (
                         <option key={t.id} value={t.id}>
                           {t.name}
@@ -110,7 +110,7 @@ export default function DeleteConfirmModal({
 
                     {unassignedTeachers.length === 0 && (
                       <p className="text-xs text-orange-700 dark:text-orange-400 mt-2">
-                        No unassigned teachers available.
+                        No available staff members.
                       </p>
                     )}
 
@@ -147,7 +147,7 @@ export default function DeleteConfirmModal({
                 Cancel
               </Button>
 
-              {!showReassignOnDelete && (
+              {!showReassignOnDelete && !teacherToDelete?.currentClass && (
                 <button
                   onClick={() => onDeleteDirect(confirmDelete.id)}
                   disabled={isReassigning}

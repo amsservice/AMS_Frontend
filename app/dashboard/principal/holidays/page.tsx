@@ -31,12 +31,20 @@ export default function HolidayPage() {
 
   const [editing, setEditing] = useState<any>(null);
   const [deleting, setDeleting] = useState<any>(null); // PGhosal 13th
-  const [filter, setFilter] = useState<'ALL' | HolidayCategory>('ALL');
+  const [filter, setFilter] = useState<'ALL' | 'SUNDAYS' | HolidayCategory>('ALL');
+
+  const isSundayHoliday = (h: any) => {
+    const name = String(h?.name ?? '').trim().toLowerCase();
+    if (name === 'sunday') return true;
+    return false;
+  };
 
   const filtered =
     filter === 'ALL'
-      ? holidays
-      : holidays.filter((h) => h.category === filter);
+      ? holidays.filter((h) => !isSundayHoliday(h))
+      : filter === 'SUNDAYS'
+        ? holidays.filter((h) => isSundayHoliday(h))
+        : holidays.filter((h) => h.category === filter && !isSundayHoliday(h));
 
   const isPastHoliday = (h: any) => {
     const today = new Date();
@@ -51,7 +59,17 @@ export default function HolidayPage() {
   const normalizeDateKey = (iso: string) => {
     const d = new Date(iso);
     d.setHours(0, 0, 0, 0);
-    return d.toISOString().slice(0, 10);
+    return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(
+      d.getDate()
+    ).padStart(2, '0')}`;
+  };
+
+  const formatLocalDateKey = (d: Date) => {
+    const x = new Date(d);
+    x.setHours(0, 0, 0, 0);
+    return `${x.getFullYear()}-${String(x.getMonth() + 1).padStart(2, '0')}-${String(
+      x.getDate()
+    ).padStart(2, '0')}`;
   };
 
   const handleMarkAllSundays = async () => {
@@ -87,14 +105,14 @@ export default function HolidayPage() {
     const cursor = new Date(from);
     while (cursor.getTime() <= sessionEnd.getTime()) {
       if (cursor.getDay() === 0) {
-        const key = cursor.toISOString().slice(0, 10);
+        const key = formatLocalDateKey(cursor);
         if (!existingDateKeys.has(key)) sundays.push(key);
       }
       cursor.setDate(cursor.getDate() + 1);
     }
 
     if (sundays.length === 0) {
-      toast.error('All upcoming Sundays are already marked as holidays.');
+      toast('All upcoming Sundays are already marked as holidays.');
       return;
     }
 
@@ -113,17 +131,37 @@ export default function HolidayPage() {
       );
 
       const results = await Promise.allSettled(requests);
+      const isAlreadyMarked = (reason: any) => {
+        const status = reason?.status ?? reason?.response?.status;
+        if (status === 409) return true;
+        const msg = String(
+          reason?.response?.data?.message ?? reason?.message ?? reason
+        ).toLowerCase();
+        return msg.includes('duplicate') || msg.includes('e11000');
+      };
+
       const successCount = results.filter((r) => r.status === 'fulfilled').length;
-      const failedCount = results.length - successCount;
+      const alreadyMarkedCount = results.filter(
+        (r) => r.status === 'rejected' && isAlreadyMarked((r as any).reason)
+      ).length;
+      const realFailureCount = results.filter(
+        (r) => r.status === 'rejected' && !isAlreadyMarked((r as any).reason)
+      ).length;
 
       await queryClient.invalidateQueries({ queryKey: ['holidays'] });
       await queryClient.refetchQueries({ queryKey: ['holidays'] });
 
       toast.dismiss(toastId);
-      if (failedCount === 0) {
+      if (successCount > 0) {
         toast.success(`Marked ${successCount} Sunday(s) successfully!`);
       } else {
-        toast.error(`Marked ${successCount} Sunday(s). Failed: ${failedCount}.`);
+        toast('All upcoming Sundays are already marked as holidays.');
+      }
+
+      if (realFailureCount > 0) {
+        toast.error(`Failed to mark ${realFailureCount} Sunday(s).`);
+      } else {
+        void alreadyMarkedCount;
       }
     } catch (error: any) {
       toast.dismiss(toastId);
@@ -203,6 +241,15 @@ export default function HolidayPage() {
                   }`}
               >
                 All
+              </button>
+              <button
+                onClick={() => setFilter('SUNDAYS')}
+                className={`px-4 py-2 rounded-xl font-medium transition-all duration-200 transform hover:scale-105 shadow-sm ${filter === 'SUNDAYS'
+                  ? 'bg-gradient-to-br from-blue-600 to-indigo-600 text-white shadow-lg'
+                  : 'bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 text-gray-900 dark:text-white hover:bg-gray-50 dark:hover:bg-gray-600'
+                  }`}
+              >
+                Sundays
               </button>
               {Object.entries(HOLIDAY_CATEGORIES).map(([k, v]) => (
                 <button

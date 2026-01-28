@@ -23,7 +23,7 @@ const UpastithiPageLoader = dynamic(
   { ssr: false },
 );
 
-type Role = "principal" | "teacher" | "student";
+type Role = "principal" | "teacher" | "coordinator" | "student";
 
 /* ===============================
    SCHOOL THEME PALETTE
@@ -267,8 +267,8 @@ export default function LoginPage() {
           </div>
 
           {/* Role Selection */}
-          <div className="grid grid-cols-3 gap-3 mb-6">
-            {(["principal", "teacher", "student"] as Role[]).map((r) => (
+          <div className="grid grid-cols-4 gap-3 mb-6">
+            {(["principal", "teacher", "coordinator", "student"] as Role[]).map((r) => (
               <button
                 key={r}
                 type="button"
@@ -282,7 +282,11 @@ export default function LoginPage() {
                     : "border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 bg-white dark:bg-gray-700"
                 }`}
               >
-                {r.charAt(0).toUpperCase() + r.slice(1)}
+                {r === "teacher"
+                  ? "Teacher"
+                  : r === "coordinator"
+                    ? "Coordinator"
+                    : r.charAt(0).toUpperCase() + r.slice(1)}
               </button>
             ))}
           </div>
