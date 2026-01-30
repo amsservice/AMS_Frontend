@@ -3,5 +3,5 @@
 import PrincipalTeachersPage from "@/app/dashboard/principal/teachers/page";
 
 export default function CoordinatorTeachersPage() {
-  return <PrincipalTeachersPage />;
+  return <PrincipalTeachersPage isCoordinatorView />;
 }

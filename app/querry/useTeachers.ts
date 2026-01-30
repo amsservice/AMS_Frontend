@@ -191,6 +191,30 @@ export const useTeachers = () =>
     }
   });
 
+export const useStaffList = (params?: { q?: string; isActive?: boolean }) => {
+  const q = typeof params?.q === 'string' ? params.q : '';
+  const isActive = typeof params?.isActive === 'boolean' ? params.isActive : undefined;
+
+  return useQuery<StaffListItem[]>({
+    queryKey: ['teachers', { q, isActive }],
+    queryFn: async () => {
+      const sp = new URLSearchParams();
+      if (q) sp.set('q', q);
+      if (typeof isActive === 'boolean') sp.set('isActive', String(isActive));
+
+      const resp: any = await apiFetch(`/api/staff?${sp.toString()}`);
+      const list = Array.isArray(resp) ? resp : Array.isArray(resp?.items) ? resp.items : [];
+      return list
+        .map((s: any) => ({
+          ...s,
+          id: String(s?.id || s?._id || '')
+        }))
+        .filter((s: any) => s.id);
+    },
+    staleTime: 1000 * 30
+  });
+};
+
 export const useInfiniteTeachers = (
   params?: {
     limit?: number;

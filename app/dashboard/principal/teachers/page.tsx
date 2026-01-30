@@ -1,7 +1,7 @@
 
 "use client";
 
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { toast } from "sonner";
 
 import PageHeader from "./components/PageHeader";
@@ -16,7 +16,7 @@ import AssignClassModal from "./components/AssignClassModal";
 import SwapClassModal from "./components/SwapClassModal";
 
 import {
-  useInfiniteTeachers,
+  useStaffList,
   useCreateTeacher,
   useDeleteTeacher,
   useBulkDeactivateTeachers,
@@ -51,7 +51,9 @@ interface Teacher {
   };
 }
 
-export default function TeachersPage() {
+export default function TeachersPage(
+  { isCoordinatorView }: { isCoordinatorView?: boolean } = {}
+) {
   const [isAddTeacherOpen, setIsAddTeacherOpen] = useState(false);
   const [isBulkUploadOpen, setIsBulkUploadOpen] = useState(false);
   const [assigningTeacherId, setAssigningTeacherId] = useState<string | null>(null);
@@ -95,10 +97,9 @@ export default function TeachersPage() {
     roles: ["teacher"] as ("teacher" | "coordinator")[],
   });
 
-  const staffListQuery = useInfiniteTeachers({ limit: 50 });
+  const staffListQuery = useStaffList({ isActive: true });
   const teachers = useMemo(() => {
-    const pages = staffListQuery.data?.pages || [];
-    const all = pages.flatMap((p: any) => (Array.isArray(p?.items) ? p.items : []));
+    const all = Array.isArray(staffListQuery.data) ? staffListQuery.data : [];
     const byId = new Map<string, any>();
     all.forEach((t: any) => {
       const id = String(t?.id || '');
@@ -111,8 +112,14 @@ export default function TeachersPage() {
   const [selectedTeacherIds, setSelectedTeacherIds] = useState<Set<string>>(new Set());
 
   const selectableTeachers = useMemo(
-    () => (teachers || []).filter((t: any) => t?.isActive),
-    [teachers]
+    () =>
+      (teachers || []).filter((t: any) => {
+        if (!t?.isActive) return false;
+        if (!isCoordinatorView) return true;
+        const roles = Array.isArray(t?.roles) ? t.roles : [];
+        return !roles.includes('coordinator');
+      }),
+    [teachers, isCoordinatorView]
   );
 
   const allSelected =
@@ -127,6 +134,24 @@ export default function TeachersPage() {
       if (next.has(id)) next.delete(id);
       else next.add(id);
       return next;
+    });
+  };
+
+  const toDeletableIds = (ids: string[]) => {
+    const trimmed = ids.map((x) => String(x || '').trim()).filter(Boolean);
+    if (!isCoordinatorView) return trimmed;
+
+    const byId = new Map<string, any>();
+    (teachers || []).forEach((t: any) => {
+      const id = String(t?.id || '').trim();
+      if (!id) return;
+      byId.set(id, t);
+    });
+
+    return trimmed.filter((id) => {
+      const t = byId.get(id);
+      const roles = Array.isArray(t?.roles) ? t.roles : [];
+      return !roles.includes('coordinator');
     });
   };
 
@@ -146,7 +171,7 @@ export default function TeachersPage() {
   };
 
   const handleBulkDeleteSelectedTeachers = () => {
-    const ids = Array.from(selectedTeacherIds);
+    const ids = toDeletableIds(Array.from(selectedTeacherIds));
     if (!ids.length) {
       toast.error('Please select at least one staff member');
       return;
@@ -177,7 +202,7 @@ export default function TeachersPage() {
       return;
     }
 
-    const ids = selectableTeachers.map((t: any) => String(t.id));
+    const ids = toDeletableIds(selectableTeachers.map((t: any) => String(t.id)));
     bulkDeactivateTeachersMutation.mutate(ids, {
       onSuccess: (resp: any) => {
         const results = Array.isArray(resp?.results) ? resp.results : [];
@@ -196,31 +221,9 @@ export default function TeachersPage() {
       onError: (err: any) => toast.error(getErrorMessage(err))
     });
   };
-  const totalStaff = staffListQuery.data?.pages?.[0]?.total;
   const isLoading = staffListQuery.isLoading;
   const { data: classes = [] } = useClasses();
   const { data: sessions = [] } = useSessions();
-
-  const loadMoreRef = useRef<HTMLDivElement | null>(null);
-
-  useEffect(() => {
-    const el = loadMoreRef.current;
-    if (!el) return;
-    if (!staffListQuery.hasNextPage) return;
-
-    const obs = new IntersectionObserver(
-      (entries) => {
-        const first = entries[0];
-        if (!first?.isIntersecting) return;
-        if (staffListQuery.isFetchingNextPage) return;
-        staffListQuery.fetchNextPage();
-      },
-      { root: null, rootMargin: "200px", threshold: 0 }
-    );
-
-    obs.observe(el);
-    return () => obs.disconnect();
-  }, [staffListQuery.hasNextPage, staffListQuery.isFetchingNextPage, staffListQuery.fetchNextPage]);
 
   const activeSessionId = useMemo(() => {
     const active = (sessions as any[]).find((s) => s?.isActive);
@@ -251,8 +254,19 @@ export default function TeachersPage() {
 
   const [confirmReactivate, setConfirmReactivate] = useState<{ id: string; email: string } | null>(null);
 
-  const { data: teacherFullData, isLoading: isLoadingFullProfile } = useTeacherFullProfile(viewingTeacherId || "");
+  const {
+    data: teacherFullData,
+    isLoading: isLoadingFullProfile,
+    isFetching: isFetchingFullProfile,
+  } = useTeacherFullProfile(viewingTeacherId || "");
   const updateTeacherMutation = useUpdateTeacherProfileByPrincipal(viewingTeacherId || "");
+
+  const activeTeacherFullData = useMemo(() => {
+    const loadedId = String((teacherFullData as any)?.data?._id || "").trim();
+    const activeId = String(viewingTeacherId || "").trim();
+    if (!loadedId || !activeId || loadedId !== activeId) return null;
+    return teacherFullData;
+  }, [teacherFullData, viewingTeacherId]);
 
   const validateTeacherProfile = (data: {
     name?: string;
@@ -536,6 +550,10 @@ export default function TeachersPage() {
     if (!isEditing) return;
     if (!teacherFullData?.data) return;
 
+    const loadedId = String((teacherFullData as any)?.data?._id || "").trim();
+    const activeId = String(viewingTeacherId || "").trim();
+    if (!loadedId || !activeId || loadedId !== activeId) return;
+
     setEditFormData({
       name: teacherFullData.data.name || "",
       email: teacherFullData.data.email || "",
@@ -552,7 +570,7 @@ export default function TeachersPage() {
     });
 
     setAutoEnableEditOnLoad(false);
-  }, [autoEnableEditOnLoad, isEditing, teacherFullData]);
+  }, [autoEnableEditOnLoad, isEditing, teacherFullData, viewingTeacherId]);
 
   const handleEnableEdit = () => {
     if (teacherFullData?.data) {
@@ -620,7 +638,7 @@ export default function TeachersPage() {
   };
 
   const stats = [
-    { label: "Total Staff", value: typeof totalStaff === 'number' ? totalStaff : teachers.length, bgGradient: "from-blue-500 to-indigo-600" },
+    { label: "Total Staff", value: teachers.length, bgGradient: "from-blue-500 to-indigo-600" },
     { label: "Assigned", value: teachers.filter((t: Teacher) => t.currentClass).length, bgGradient: "from-purple-500 to-violet-600" },
   ];
 
@@ -744,6 +762,7 @@ export default function TeachersPage() {
               setShowReassignOnDelete(false);
               setReassignToTeacherId("");
             }}
+            isCoordinatorView={isCoordinatorView}
             selectedIds={selectedTeacherIds}
             onToggleSelected={toggleTeacherSelected}
             onToggleSelectAll={toggleSelectAllTeachers}
@@ -751,7 +770,6 @@ export default function TeachersPage() {
             someSelected={someSelected}
           />
 
-          <div ref={loadMoreRef} />
         </div>
       </main>
 
@@ -798,8 +816,8 @@ export default function TeachersPage() {
 
       <ViewStaffModal
         viewingTeacherId={viewingTeacherId}
-        teacherFullData={teacherFullData}
-        isLoading={isLoadingFullProfile}
+        teacherFullData={activeTeacherFullData}
+        isLoading={isLoadingFullProfile || isFetchingFullProfile}
         isEditing={isEditing}
         editFormData={editFormData}
         setEditFormData={setEditFormData}
