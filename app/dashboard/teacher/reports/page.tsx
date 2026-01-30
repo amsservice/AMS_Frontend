@@ -2,6 +2,7 @@
 
 import { useState, useMemo } from "react";
 import { motion } from "framer-motion";
+
 import {
   Calendar as CalendarIcon,
   ChevronLeft,
@@ -11,7 +12,6 @@ import {
   XCircle,
   TrendingUp,
   Search,
-  Filter,
   Download,
   Loader2,
   AlertCircle,
@@ -21,9 +21,13 @@ import { Input } from "@/components/ui/input";
 import {
   useTeacherTodayStudents,
   useTeacherTodaySummary,
+  useTeacherAssignedClass,
   AttendanceStatus,
 } from "@/app/querry/useAttendance";
+import { useHolidays } from "@/app/querry/useHolidays";
 import { toast } from "sonner";
+
+import StudentPersonalAttendanceSection from "./StudentPersonalAttendanceSection";
 
 interface CalendarDay {
   date: number;
@@ -31,8 +35,7 @@ interface CalendarDay {
   isPast: boolean;
   isToday: boolean;
   hasData: boolean;
-  presentCount?: number;
-  absentCount?: number;
+  isHoliday: boolean;
 }
 
 export default function AttendanceViewPage() {
@@ -41,7 +44,12 @@ export default function AttendanceViewPage() {
   const [searchQuery, setSearchQuery] = useState("");
   const [filterStatus, setFilterStatus] = useState<AttendanceStatus | "all">("all");
 
-  const formattedDate = selectedDate.toISOString().split("T")[0];
+  const formattedDate = useMemo(() => {
+    const y = selectedDate.getFullYear();
+    const m = String(selectedDate.getMonth() + 1).padStart(2, "0");
+    const d = String(selectedDate.getDate()).padStart(2, "0");
+    return `${y}-${m}-${d}`;
+  }, [selectedDate]);
 
   const {
     data: students = [],
@@ -53,6 +61,9 @@ export default function AttendanceViewPage() {
     data: summary,
     isLoading: summaryLoading,
   } = useTeacherTodaySummary(formattedDate);
+
+  const { data: assignedClass } = useTeacherAssignedClass();
+  const { data: holidays = [] } = useHolidays();
 
   // Filter students based on search and status
   const filteredStudents = useMemo(() => {
@@ -76,6 +87,57 @@ export default function AttendanceViewPage() {
     return filtered;
   }, [students, searchQuery, filterStatus]);
 
+  const holidayDateSet = useMemo(() => {
+    const set = new Set<string>();
+
+    const formatIstDateKey = (value: string | Date) => {
+      const dt = new Date(value);
+      if (!Number.isFinite(dt.getTime())) return null;
+
+      return new Intl.DateTimeFormat("en-CA", {
+        timeZone: "Asia/Kolkata",
+        year: "numeric",
+        month: "2-digit",
+        day: "2-digit",
+      }).format(dt);
+    };
+
+    const parseDateKeyToLocalDate = (key: string) => {
+      const [y, m, d] = key.split("-").map((x) => Number(x));
+      if (!y || !m || !d) return null;
+
+      const dt = new Date(y, m - 1, d);
+      dt.setHours(0, 0, 0, 0);
+      return dt;
+    };
+
+    const formatLocalDateKey = (dt: Date) => {
+      const x = new Date(dt);
+      x.setHours(0, 0, 0, 0);
+      return `${x.getFullYear()}-${String(x.getMonth() + 1).padStart(2, "0")}-${String(
+        x.getDate()
+      ).padStart(2, "0")}`;
+    };
+
+    (holidays as any[]).forEach((h) => {
+      const startKey = formatIstDateKey(h?.startDate);
+      const endKey = formatIstDateKey(h?.endDate ?? h?.startDate);
+      if (!startKey) return;
+
+      const start = parseDateKeyToLocalDate(startKey);
+      const end = parseDateKeyToLocalDate(endKey || startKey) ?? start;
+      if (!start || !end) return;
+
+      const cursor = new Date(start);
+      while (cursor.getTime() <= end.getTime()) {
+        set.add(formatLocalDateKey(cursor));
+        cursor.setDate(cursor.getDate() + 1);
+      }
+    });
+
+    return set;
+  }, [holidays]);
+
   // Generate calendar days
   const calendarDays = useMemo(() => {
     const year = currentMonth.getFullYear();
@@ -97,6 +159,7 @@ export default function AttendanceViewPage() {
         isPast: true,
         isToday: false,
         hasData: false,
+        isHoliday: false,
       });
     }
 
@@ -108,6 +171,8 @@ export default function AttendanceViewPage() {
       const currentDate = new Date(year, month, date);
       currentDate.setHours(0, 0, 0, 0);
 
+      const dateKey = `${year}-${String(month + 1).padStart(2, "0")}-${String(date).padStart(2, "0")}`;
+
       const isPast = currentDate < today;
       const isToday = currentDate.getTime() === today.getTime();
 
@@ -116,9 +181,8 @@ export default function AttendanceViewPage() {
         isCurrentMonth: true,
         isPast,
         isToday,
-        hasData: isPast || isToday, // Assume we have data for past and today
-        presentCount: isPast || isToday ? Math.floor(Math.random() * 10) : undefined,
-        absentCount: isPast || isToday ? Math.floor(Math.random() * 3) : undefined,
+        hasData: isPast || isToday,
+        isHoliday: holidayDateSet.has(dateKey),
       });
     }
 
@@ -131,27 +195,37 @@ export default function AttendanceViewPage() {
         isPast: false,
         isToday: false,
         hasData: false,
+        isHoliday: false,
       });
     }
 
     return days;
-  }, [currentMonth]);
+  }, [currentMonth, holidayDateSet]);
 
   const handlePrevMonth = () => {
-    setCurrentMonth(
-      new Date(currentMonth.getFullYear(), currentMonth.getMonth() - 1, 1)
-    );
+    const nextMonth = new Date(currentMonth.getFullYear(), currentMonth.getMonth() - 1, 1);
+    const daysInNextMonth = new Date(nextMonth.getFullYear(), nextMonth.getMonth() + 1, 0).getDate();
+    const nextSelectedDay = Math.min(selectedDate.getDate(), daysInNextMonth);
+    setCurrentMonth(nextMonth);
+    setSelectedDate(new Date(nextMonth.getFullYear(), nextMonth.getMonth(), nextSelectedDay));
   };
 
   const handleNextMonth = () => {
-    setCurrentMonth(
-      new Date(currentMonth.getFullYear(), currentMonth.getMonth() + 1, 1)
-    );
+    const nextMonth = new Date(currentMonth.getFullYear(), currentMonth.getMonth() + 1, 1);
+    const daysInNextMonth = new Date(nextMonth.getFullYear(), nextMonth.getMonth() + 1, 0).getDate();
+    const nextSelectedDay = Math.min(selectedDate.getDate(), daysInNextMonth);
+    setCurrentMonth(nextMonth);
+    setSelectedDate(new Date(nextMonth.getFullYear(), nextMonth.getMonth(), nextSelectedDay));
   };
 
   const handleDateClick = (day: CalendarDay) => {
     if (!day.isCurrentMonth) return;
-    
+
+    if (day.isHoliday) {
+      toast("It's a holiday, no attendance is there");
+      return;
+    }
+
     const newDate = new Date(
       currentMonth.getFullYear(),
       currentMonth.getMonth(),
@@ -159,6 +233,10 @@ export default function AttendanceViewPage() {
     );
     setSelectedDate(newDate);
   };
+
+  const classLabel = assignedClass?.name && assignedClass?.section
+    ? `Class ${assignedClass.name}-${assignedClass.section}`
+    : 'Class';
 
   const getStatusColor = (status: AttendanceStatus) => {
     switch (status) {
@@ -239,7 +317,7 @@ export default function AttendanceViewPage() {
               Class Attendance
             </h1>
             <p className="mt-2 text-sm sm:text-base text-blue-100 font-medium">
-              View date-wise attendance for your class students (Class 10-A)
+              View date-wise attendance for your class students ({classLabel})
             </p>
           </div>
         </div>
@@ -259,11 +337,11 @@ export default function AttendanceViewPage() {
                 <div className="flex items-center gap-2 mb-2">
                   <Users className="w-4 h-4 text-gray-600 dark:text-gray-400" />
                   <p className="text-xs text-gray-600 dark:text-gray-400 font-medium">
-                    Total Days
+                    Total Students
                   </p>
                 </div>
                 <p className="text-2xl font-bold text-gray-900 dark:text-white">
-                  {summaryLoading ? "..." : summary?.total || 230}
+                  {studentsLoading ? "..." : students.length}
                 </p>
               </motion.div>
 
@@ -280,7 +358,7 @@ export default function AttendanceViewPage() {
                   </p>
                 </div>
                 <p className="text-2xl font-bold text-green-900 dark:text-green-100">
-                  {summaryLoading ? "..." : summary?.present || 191}
+                  {summaryLoading ? "..." : summary?.present || 0}
                 </p>
               </motion.div>
 
@@ -297,7 +375,7 @@ export default function AttendanceViewPage() {
                   </p>
                 </div>
                 <p className="text-2xl font-bold text-red-900 dark:text-red-100">
-                  {summaryLoading ? "..." : summary?.absent || 39}
+                  {summaryLoading ? "..." : summary?.absent || 0}
                 </p>
               </motion.div>
 
@@ -314,7 +392,7 @@ export default function AttendanceViewPage() {
                   </p>
                 </div>
                 <p className="text-2xl font-bold text-blue-900 dark:text-blue-100">
-                  {summaryLoading ? "..." : `${summary?.presentPercentage || 83}%`}
+                  {summaryLoading ? "..." : `${summary?.presentPercentage || 0}%`}
                 </p>
               </motion.div>
             </div>
@@ -327,13 +405,13 @@ export default function AttendanceViewPage() {
                     <CalendarIcon className="w-5 h-5 text-white" />
                   </div>
                   <h3 className="text-lg font-bold text-gray-900 dark:text-white">
-                    Class 10-A Attendance Calendar
+                    {classLabel} Attendance Calendar
                   </h3>
                 </div>
               </div>
 
               <p className="text-sm text-gray-600 dark:text-gray-400 mb-4">
-                Select a student to view their individual attendance records
+                Select a date to view attendance records
               </p>
 
               {/* Calendar Header */}
@@ -383,7 +461,7 @@ export default function AttendanceViewPage() {
                     <button
                       key={index}
                       onClick={() => handleDateClick(day)}
-                      disabled={!day.isCurrentMonth || !day.hasData}
+                      disabled={!day.isCurrentMonth || (!day.hasData && !day.isHoliday)}
                       className={`
                         relative aspect-square rounded-lg text-sm font-medium transition-all
                         ${
@@ -395,13 +473,13 @@ export default function AttendanceViewPage() {
                             ? "bg-gradient-to-br from-blue-600 to-indigo-600 text-white shadow-lg"
                             : day.isToday
                             ? "bg-teal-100 dark:bg-teal-900/30 text-teal-900 dark:text-teal-100 border border-teal-500"
-                            : day.hasData && day.absentCount && day.absentCount > 0
-                            ? "bg-red-100 dark:bg-red-900/20 text-red-900 dark:text-red-100 hover:bg-red-200 dark:hover:bg-red-900/30"
+                            : day.isHoliday
+                            ? "bg-orange-100 dark:bg-orange-900/30 text-orange-900 dark:text-orange-100 border border-orange-500"
                             : day.hasData
-                            ? "bg-green-100 dark:bg-green-900/20 text-green-900 dark:text-green-100 hover:bg-green-200 dark:hover:bg-green-900/30"
+                            ? "bg-gray-100 dark:bg-gray-700/50 text-gray-900 dark:text-gray-100 hover:bg-gray-200 dark:hover:bg-gray-700"
                             : "text-gray-400 dark:text-gray-600 cursor-not-allowed"
                         }
-                        ${day.isCurrentMonth && day.hasData ? "cursor-pointer" : ""}
+                        ${day.isCurrentMonth && (day.hasData || day.isHoliday) ? "cursor-pointer" : ""}
                       `}
                     >
                       {day.date}
@@ -413,14 +491,6 @@ export default function AttendanceViewPage() {
               {/* Legend */}
               <div className="mt-4 pt-4 border-t border-gray-200 dark:border-gray-700">
                 <div className="flex items-center justify-between text-xs">
-                  <div className="flex items-center gap-2">
-                    <div className="w-3 h-3 bg-green-500 rounded-full"></div>
-                    <span className="text-gray-600 dark:text-gray-400">Present</span>
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <div className="w-3 h-3 bg-red-500 rounded-full"></div>
-                    <span className="text-gray-600 dark:text-gray-400">Absent</span>
-                  </div>
                   <div className="flex items-center gap-2">
                     <div className="w-3 h-3 bg-orange-500 rounded-full"></div>
                     <span className="text-gray-600 dark:text-gray-400">Holiday</span>
@@ -571,6 +641,12 @@ export default function AttendanceViewPage() {
             </div>
           </div>
         </div>
+
+        <StudentPersonalAttendanceSection
+          students={students}
+          studentsLoading={studentsLoading}
+          classLabel={classLabel}
+        />
       </main>
     </div>
   );

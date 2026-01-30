@@ -25,9 +25,18 @@ export default function TeacherDashboard() {
   const { user } = useAuth();
   const students = Array(35).fill(null);
 
+  const getIstDateKey = (value: Date = new Date()) => {
+    return new Intl.DateTimeFormat('en-CA', {
+      timeZone: 'Asia/Kolkata',
+      year: 'numeric',
+      month: '2-digit',
+      day: '2-digit'
+    }).format(value);
+  };
+
   const { data, isLoading } = useMyTeacherFullProfile();
   const activeClass = data?.data?.history?.find(h => h.isActive);
-  const today = new Date().toISOString().split("T")[0];
+  const today = getIstDateKey();
 
   const { data: summary } = useTeacherTodaySummary(today);
   const {

@@ -1,5 +1,3 @@
-
-
 'use client';
 
 import { useEffect, useState, useMemo } from 'react';
@@ -7,6 +5,7 @@ import { Calendar, CheckCircle, XCircle, Users, Save, Edit2, Search, Clock } fro
 import { toast } from 'sonner';
 
 import { useStudents } from '@/app/querry/useStudent';
+import { useHolidays } from '@/app/querry/useHolidays';
 import {
   useTeacherTodayStudents,
   useMarkAttendance,
@@ -16,18 +15,28 @@ import {
 
 type MarkStatus = Exclude<AttendanceStatus, 'not_marked'>;
 
+const getIstDateKey = (value: Date = new Date()) => {
+  return new Intl.DateTimeFormat('en-CA', {
+    timeZone: 'Asia/Kolkata',
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit'
+  }).format(value);
+};
+
 export default function TeacherAttendancePage() {
   const { data: students = [], isLoading } = useStudents();
+  const { data: holidays = [] } = useHolidays();
 
   /* ===============================
      DATE STATE
   =============================== */
   const [date, setDate] = useState<string>(
-    new Date().toISOString().split('T')[0]
+    getIstDateKey()
   );
 
   // Get today's date for comparison
-  const today = new Date().toISOString().split('T')[0];
+  const today = getIstDateKey();
 
   const {
     data: todayAttendance = [],
@@ -47,6 +56,62 @@ export default function TeacherAttendancePage() {
     data: summary,
     isLoading: summaryLoading
   } = useTeacherTodaySummary(date);
+
+  const holidayNameByDateKey = useMemo(() => {
+    const map = new Map<string, string>();
+
+    const formatIstDateKey = (value: string | Date) => {
+      const dt = new Date(value);
+      if (!Number.isFinite(dt.getTime())) return null;
+      return new Intl.DateTimeFormat('en-CA', {
+        timeZone: 'Asia/Kolkata',
+        year: 'numeric',
+        month: '2-digit',
+        day: '2-digit'
+      }).format(dt);
+    };
+
+    const parseDateKeyToLocalDate = (key: string) => {
+      const parts = key.split('-').map((x) => Number(x));
+      if (parts.length !== 3) return null;
+      const [y, m, d] = parts;
+      if (!y || !m || !d) return null;
+      const dt = new Date(y, m - 1, d);
+      dt.setHours(0, 0, 0, 0);
+      return dt;
+    };
+
+    const formatLocalDateKey = (dt: Date) => {
+      const x = new Date(dt);
+      x.setHours(0, 0, 0, 0);
+      return `${x.getFullYear()}-${String(x.getMonth() + 1).padStart(2, '0')}-${String(
+        x.getDate()
+      ).padStart(2, '0')}`;
+    };
+
+    (holidays as any[]).forEach((h) => {
+      const name = String(h?.name || '').trim();
+      const startKey = formatIstDateKey(h?.startDate);
+      const endKey = formatIstDateKey(h?.endDate ?? h?.startDate);
+      if (!startKey || !name) return;
+
+      const start = parseDateKeyToLocalDate(startKey);
+      const end = parseDateKeyToLocalDate(endKey || startKey) ?? start;
+      if (!start || !end) return;
+
+      const cursor = new Date(start);
+      while (cursor.getTime() <= end.getTime()) {
+        const key = formatLocalDateKey(cursor);
+        if (!map.has(key)) map.set(key, name);
+        cursor.setDate(cursor.getDate() + 1);
+      }
+    });
+
+    return map;
+  }, [holidays]);
+
+  const holidayName = holidayNameByDateKey.get(date) || null;
+  const isHoliday = Boolean(holidayName);
 
   /* ===============================
      CHECK IF ATTENDANCE ALREADY SUBMITTED
@@ -91,6 +156,10 @@ export default function TeacherAttendancePage() {
      TOGGLE ATTENDANCE
   =============================== */
   const toggleAttendance = (studentId: string) => {
+    if (isHoliday) {
+      toast.error(`It's a holiday: ${holidayName}`);
+      return;
+    }
     setAttendance((prev) => {
       const current = prev[studentId];
       let next: MarkStatus;
@@ -109,6 +178,10 @@ export default function TeacherAttendancePage() {
      BULK ACTIONS
   =============================== */
   const markAllPresent = () => {
+    if (isHoliday) {
+      toast.error(`It's a holiday: ${holidayName}`);
+      return;
+    }
     const map: Record<string, MarkStatus> = {};
     students.forEach((s) => {
       map[s._id] = 'present';
@@ -118,6 +191,10 @@ export default function TeacherAttendancePage() {
   };
 
   const markAllAbsent = () => {
+    if (isHoliday) {
+      toast.error(`It's a holiday: ${holidayName}`);
+      return;
+    }
     const map: Record<string, MarkStatus> = {};
     students.forEach((s) => {
       map[s._id] = 'absent';
@@ -130,6 +207,10 @@ export default function TeacherAttendancePage() {
      SUBMIT / EDIT
   =============================== */
   const submitAttendance = async () => {
+    if (isHoliday) {
+      toast.error(`Attendance is blocked. It's a holiday: ${holidayName}`);
+      return;
+    }
     if (!students.length) {
       toast.error('No students found');
       return;
@@ -150,6 +231,10 @@ export default function TeacherAttendancePage() {
   };
 
   const handleEdit = () => {
+    if (isHoliday) {
+      toast.error(`Attendance is blocked. It's a holiday: ${holidayName}`);
+      return;
+    }
     setIsSubmitted(false);
     toast.info('You can now edit the attendance');
   };
@@ -264,6 +349,12 @@ export default function TeacherAttendancePage() {
       {/* Main Content */}
       <main className="max-w-7xl mx-auto py-4 px-4 sm:px-6 lg:px-8">
         <div className="space-y-4">
+          {isHoliday && (
+            <div className="bg-orange-50 dark:bg-orange-900/20 border border-orange-200/60 dark:border-orange-700/30 text-orange-900 dark:text-orange-100 rounded-2xl px-4 py-3 shadow-lg">
+              <div className="text-sm font-semibold">It&apos;s a holiday: {holidayName}</div>
+              <div className="text-xs opacity-80 mt-0.5">Attendance marking is disabled for this date.</div>
+            </div>
+          )}
           {/* Search Bar */}
           <div className="relative">
             <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400 dark:text-gray-500" />
@@ -280,7 +371,7 @@ export default function TeacherAttendancePage() {
           <div className="flex gap-2">
             <button
               onClick={markAllPresent}
-              disabled={isSubmitted}
+              disabled={isSubmitted || isHoliday}
               className="flex-1 flex items-center justify-center gap-2 px-4 py-2.5 bg-gradient-to-r from-green-500 to-emerald-500 text-white rounded-xl text-sm font-semibold hover:from-green-600 hover:to-emerald-600 transition-all duration-200 shadow-lg hover:shadow-xl disabled:opacity-50 disabled:cursor-not-allowed"
             >
               <CheckCircle className="h-4 w-4" />
@@ -289,7 +380,7 @@ export default function TeacherAttendancePage() {
 
             <button
               onClick={markAllAbsent}
-              disabled={isSubmitted}
+              disabled={isSubmitted || isHoliday}
               className="flex-1 flex items-center justify-center gap-2 px-4 py-2.5 bg-gradient-to-r from-red-500 to-rose-500 text-white rounded-xl text-sm font-semibold hover:from-red-600 hover:to-rose-600 transition-all duration-200 shadow-lg hover:shadow-xl disabled:opacity-50 disabled:cursor-not-allowed"
             >
               <XCircle className="h-4 w-4" />
@@ -331,16 +422,16 @@ export default function TeacherAttendancePage() {
                     <button
                       key={s._id}
                       onClick={() => {
-                        if (isSubmitted) return;
+                        if (isSubmitted || isHoliday) return;
                         toggleAttendance(s._id);
                       }}
-                      disabled={isSubmitted}
+                      disabled={isSubmitted || isHoliday}
                       className={`w-full flex items-center gap-3 p-4 transition-all duration-200 ${isPresent
                           ? 'bg-green-50 dark:bg-green-900/20 hover:bg-green-100 dark:hover:bg-green-900/30'
                           : isAbsent
                             ? 'bg-red-50 dark:bg-red-900/20 hover:bg-red-100 dark:hover:bg-red-900/30'
                             : 'bg-white dark:bg-gray-800 hover:bg-purple-50 dark:hover:bg-gray-700/50'
-                        } ${isSubmitted ? 'cursor-not-allowed opacity-70' : 'cursor-pointer'}`}
+                        } ${isSubmitted || isHoliday ? 'cursor-not-allowed opacity-70' : 'cursor-pointer'}`}
                     >
                       {/* Roll Number Badge */}
                       <div
@@ -397,7 +488,7 @@ export default function TeacherAttendancePage() {
               <>
                 <button
                   onClick={submitAttendance}
-                  disabled={isPending || leftCount > 0}
+                  disabled={isPending || leftCount > 0 || isHoliday}
                   className="w-full flex items-center justify-center gap-3 px-6 py-4 bg-gradient-to-r from-purple-600 to-blue-600 text-white rounded-xl text-lg font-bold hover:from-purple-700 hover:to-blue-700 transition-all duration-200 shadow-xl hover:shadow-2xl disabled:opacity-50 disabled:cursor-not-allowed"
                 >
                   <Save className="h-6 w-6" />
@@ -414,22 +505,21 @@ export default function TeacherAttendancePage() {
               <>
                 <button
                   onClick={handleEdit}
-                  className="w-full flex items-center justify-center gap-3 px-6 py-4 bg-gradient-to-r from-amber-500 to-orange-500 text-white rounded-xl text-lg font-bold hover:from-amber-600 hover:to-orange-600 transition-all duration-200 shadow-xl hover:shadow-2xl"
+                  disabled={isHoliday}
+                  className="w-full flex items-center justify-center gap-3 px-6 py-4 bg-gradient-to-r from-amber-500 to-orange-500 text-white rounded-xl text-lg font-bold hover:from-amber-600 hover:to-orange-600 transition-all duration-200 shadow-xl hover:shadow-2xl disabled:opacity-50 disabled:cursor-not-allowed"
                 >
                   <Edit2 className="h-6 w-6" />
                   <span>Edit Attendance</span>
                 </button>
 
-                {!isSubmitted && (
-                  <button
-                    onClick={submitAttendance}
-                    disabled={isPending || leftCount > 0}
-                    className="w-full flex items-center justify-center gap-3 px-6 py-4 bg-gradient-to-r from-purple-600 to-blue-600 text-white rounded-xl text-lg font-bold hover:from-purple-700 hover:to-blue-700 transition-all duration-200 shadow-xl hover:shadow-2xl disabled:opacity-50 disabled:cursor-not-allowed"
-                  >
-                    <Save className="h-6 w-6" />
-                    <span>{isPending ? 'Updating…' : 'Resubmit Attendance'}</span>
-                  </button>
-                )}
+                <button
+                  onClick={submitAttendance}
+                  disabled={isPending || leftCount > 0 || isHoliday}
+                  className="w-full flex items-center justify-center gap-3 px-6 py-4 bg-gradient-to-r from-purple-600 to-blue-600 text-white rounded-xl text-lg font-bold hover:from-purple-700 hover:to-blue-700 transition-all duration-200 shadow-xl hover:shadow-2xl disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  <Save className="h-6 w-6" />
+                  <span>{isPending ? 'Updating…' : 'Resubmit Attendance'}</span>
+                </button>
               </>
             )}
           </div>
