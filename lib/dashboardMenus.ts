@@ -6,7 +6,8 @@ import {
   ClipboardList,
   Umbrella,
   BarChart3,
-  School
+  School,
+  User
 } from "lucide-react";
 
 export type Role = "principal" | "teacher" | "student" | "coordinator";
@@ -42,9 +43,10 @@ const coordinatorMenus: MenuItem[] = principalMenus
 
 const teacherMenus: MenuItem[] = [
   { icon: Home, text: "Overview", path: "/dashboard/teacher" },
-  { icon: BookOpen, text: "My Class", path: "/dashboard/teacher/classes" },
   { icon: Users, text: "Students", path: "/dashboard/teacher/student" },
-  { icon: ClipboardList, text: "Attendance", path: "/dashboard/teacher/attendance" },
+  { icon: ClipboardList, text: "Attendance", path: "/dashboard/teacher/attendance-mark" },
+   { icon: BarChart3, text: "Reports", path: "/dashboard/teacher/reports" },
+     { icon: User, text: "My Profile", path: "/dashboard/teacher/teacher-profile" },
 ];
 
 const studentMenus: MenuItem[] = [

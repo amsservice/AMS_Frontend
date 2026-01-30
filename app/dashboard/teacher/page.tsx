@@ -13,6 +13,8 @@ import {
 } from "lucide-react";
 import { useAuth } from "@/app/context/AuthContext"
 import { useMyTeacherFullProfile } from "@/app/querry/useTeachers";
+import { useTeacherTodaySummary, useTeacherTodayStudents } from "@/app/querry/useAttendance";
+
 
 import { useState } from "react";
 import SchoolCalendar from "@/components/holidays/SchoolCalendar"; // Import the SchoolCalendar component
@@ -25,6 +27,14 @@ export default function TeacherDashboard() {
 
   const { data, isLoading } = useMyTeacherFullProfile();
   const activeClass = data?.data?.history?.find(h => h.isActive);
+  const today = new Date().toISOString().split("T")[0];
+
+  const { data: summary } = useTeacherTodaySummary(today);
+  const {
+    data: todayStudents = [],
+    isLoading: studentsLoading
+  } = useTeacherTodayStudents(today);
+
 
 
 
@@ -32,28 +42,28 @@ export default function TeacherDashboard() {
     {
       id: "students",
       icon: Users,
-      value: students.length,
+      value: summary?.total ?? 0,
       label: "Total Students",
       bgGradient: "from-purple-500 to-blue-500"
     },
     {
       id: "present",
       icon: CheckCircle,
-      value: "32",
+      value: summary?.present ?? 0,
       label: "Present Today",
       bgGradient: "from-blue-500 to-indigo-500"
     },
     {
       id: "absent",
       icon: XCircle,
-      value: "3",
+      value: summary?.absent ?? 0,
       label: "Absent Today",
       bgGradient: "from-indigo-500 to-purple-500"
     },
     {
       id: "rate",
       icon: TrendingUp,
-      value: "91.4%",
+      value: `${summary?.presentPercentage ?? 0}%`,
       label: "Attendance Rate",
       bgGradient: "from-purple-400 to-blue-400"
     }
@@ -82,32 +92,32 @@ export default function TeacherDashboard() {
     }
   ];
 
-  const recentAttendance = [
-    {
-      date: "2024-03-15",
-      present: 33,
-      absent: 2,
-      rate: "94.3%"
-    },
-    {
-      date: "2024-03-14",
-      present: 31,
-      absent: 4,
-      rate: "88.6%"
-    },
-    {
-      date: "2024-03-13",
-      present: 34,
-      absent: 1,
-      rate: "97.1%"
-    },
-    {
-      date: "2024-03-12",
-      present: 30,
-      absent: 5,
-      rate: "85.7%"
-    }
-  ];
+  // const recentAttendance = [
+  //   {
+  //     date: "2024-03-15",
+  //     present: 33,
+  //     absent: 2,
+  //     rate: "94.3%"
+  //   },
+  //   {
+  //     date: "2024-03-14",
+  //     present: 31,
+  //     absent: 4,
+  //     rate: "88.6%"
+  //   },
+  //   {
+  //     date: "2024-03-13",
+  //     present: 34,
+  //     absent: 1,
+  //     rate: "97.1%"
+  //   },
+  //   {
+  //     date: "2024-03-12",
+  //     present: 30,
+  //     absent: 5,
+  //     rate: "85.7%"
+  //   }
+  // ];
 
   return (
     <div className="relative bg-gradient-to-br from-purple-50 via-white to-blue-50 dark:from-purple-900 dark:via-gray-900 dark:to-blue-950 overflow-hidden">
@@ -211,7 +221,7 @@ export default function TeacherDashboard() {
             </div>
 
             {/* Recent Attendance */}
-            <div className="bg-white/90 dark:bg-gray-800/90 backdrop-blur-sm shadow-xl rounded-2xl border border-purple-200/50 dark:border-purple-700/30 p-5 sm:p-6 relative overflow-hidden">
+            {/* <div className="bg-white/90 dark:bg-gray-800/90 backdrop-blur-sm shadow-xl rounded-2xl border border-purple-200/50 dark:border-purple-700/30 p-5 sm:p-6 relative overflow-hidden">
               <div className="absolute top-0 left-0 w-32 h-32 bg-gradient-to-br from-blue-500/10 to-indigo-500/10 dark:from-blue-500/5 dark:to-indigo-500/5 rounded-full blur-3xl"></div>
 
               <div className="relative">
@@ -253,7 +263,64 @@ export default function TeacherDashboard() {
                   ))}
                 </div>
               </div>
+            </div> */}
+
+            {/* Today's Attendance – Student List */}
+            <div className="bg-white/90 dark:bg-gray-800/90 backdrop-blur-sm shadow-xl rounded-2xl border border-purple-200/50 dark:border-purple-700/30 p-5 sm:p-6 relative overflow-hidden">
+              <div className="absolute top-0 left-0 w-32 h-32 bg-gradient-to-br from-blue-500/10 to-indigo-500/10 dark:from-blue-500/5 dark:to-indigo-500/5 rounded-full blur-3xl"></div>
+
+              <div className="relative">
+                <div className="flex items-center mb-5 sm:mb-6">
+                  <div className="p-2.5 bg-gradient-to-br from-blue-600 to-indigo-600 rounded-xl shadow-lg">
+                    <ClipboardList className="h-5 w-5 sm:h-6 sm:w-6 text-white" />
+                  </div>
+                  <div className="ml-3">
+                    <h3 className="text-base sm:text-xl font-bold bg-gradient-to-r from-purple-600 to-blue-600 dark:from-purple-400 dark:to-blue-400 bg-clip-text text-transparent">
+                      Today’s Attendance
+                    </h3>
+                    <p className="text-xs sm:text-sm text-gray-600 dark:text-gray-400">
+                      Student-wise attendance status
+                    </p>
+                  </div>
+                </div>
+
+                {/* CONTENT */}
+                {studentsLoading ? (
+                  <p className="text-sm text-gray-500">Loading students...</p>
+                ) : todayStudents.length === 0 ? (
+                  <p className="text-sm text-gray-500">Attendance not marked yet</p>
+                ) : (
+                  <div className="space-y-3 max-h-[320px] overflow-y-auto pr-1">
+                    {todayStudents.map((s) => (
+                      <div
+                        key={s.studentId}
+                        className="flex items-center justify-between p-3 rounded-xl bg-gradient-to-br from-purple-50/50 to-blue-50/50 dark:from-purple-900/20 dark:to-blue-900/20 border border-purple-200/30 dark:border-purple-700/20"
+                      >
+                        <div>
+                          <div className="text-sm font-semibold text-gray-900 dark:text-white">
+                            {s.rollNo ? `${s.rollNo}. ` : ""}{s.name}
+                          </div>
+                        </div>
+
+                        <span
+                          className={`text-xs font-semibold px-3 py-1 rounded-full ${s.status === "present"
+                              ? "bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400"
+                              : s.status === "absent"
+                                ? "bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400"
+                                : s.status === "late"
+                                  ? "bg-yellow-100 text-yellow-700 dark:bg-yellow-900/30 dark:text-yellow-400"
+                                  : "bg-gray-100 text-gray-600 dark:bg-gray-700 dark:text-gray-300"
+                            }`}
+                        >
+                          {s.status.replace("_", " ")}
+                        </span>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
             </div>
+
           </div>
 
           {/* School Calendar Component */}
