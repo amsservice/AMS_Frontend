@@ -87,6 +87,16 @@ export default function StudentPersonalAttendanceSection(props: {
     error: historyError,
   } = useTeacherStudentMonthlyHistory(selectedStudentId, monthYear.year, monthYear.month);
 
+  const statusByDateKey = useMemo(() => {
+    const m = new Map<string, AttendanceStatus>();
+    (selectedStudentHistory as any[]).forEach((i) => {
+      const key = toIstDateKey(i?.date);
+      if (!key) return;
+      m.set(String(key), i?.status as AttendanceStatus);
+    });
+    return m;
+  }, [selectedStudentHistory]);
+
   const summary = useMemo(() => {
     const s = { present: 0, absent: 0, late: 0, total: 0 };
     (selectedStudentHistory || []).forEach((i: any) => {
@@ -103,6 +113,36 @@ export default function StudentPersonalAttendanceSection(props: {
       month: "long",
       year: "numeric",
     });
+  };
+
+  const getMonthMeta = () => {
+    const year = currentMonth.getFullYear();
+    const monthIndex = currentMonth.getMonth();
+    const first = new Date(year, monthIndex, 1);
+    const daysInMonth = new Date(year, monthIndex + 1, 0).getDate();
+    const firstWeekday = first.getDay();
+    return { year, monthIndex, month: monthIndex + 1, daysInMonth, firstWeekday };
+  };
+
+  const buildDateKey = (day: number) => {
+    const meta = getMonthMeta();
+    const y = meta.year;
+    const m = String(meta.month).padStart(2, '0');
+    const d = String(day).padStart(2, '0');
+    return `${y}-${m}-${d}`;
+  };
+
+  const getDayCellClass = (status?: AttendanceStatus) => {
+    switch (status) {
+      case 'present':
+        return 'bg-green-50 dark:bg-green-900/20 border-green-200/60 dark:border-green-700/30 text-green-900 dark:text-green-100';
+      case 'absent':
+        return 'bg-red-50 dark:bg-red-900/20 border-red-200/60 dark:border-red-700/30 text-red-900 dark:text-red-100';
+      case 'late':
+        return 'bg-orange-50 dark:bg-orange-900/20 border-orange-200/60 dark:border-orange-700/30 text-orange-900 dark:text-orange-100';
+      default:
+        return 'bg-gray-50 dark:bg-gray-700/50 border-gray-200/50 dark:border-gray-700/50 text-gray-900 dark:text-white';
+    }
   };
 
   const handlePrevMonth = () => {
@@ -304,23 +344,59 @@ export default function StudentPersonalAttendanceSection(props: {
             ) : (selectedStudentHistory || []).length === 0 ? (
               <div className="text-sm text-gray-600 dark:text-gray-400">No attendance records found for this month.</div>
             ) : (
-              <div className="space-y-2 max-h-[420px] overflow-y-auto">
-                {(selectedStudentHistory as any[]).map((item, idx) => (
-                  <div
-                    key={`${String(item.date)}-${idx}`}
-                    className="flex items-center justify-between p-3 rounded-xl bg-gray-50 dark:bg-gray-700/50"
-                  >
-                    <div className="text-sm font-medium text-gray-900 dark:text-white">
-                      {formatDisplayFromDateKey(
-                        toIstDateKey(item.date),
-                        String(item.date)
-                      )}
+              <div>
+                <div className="grid grid-cols-7 gap-2 mb-2">
+                  {['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'].map((d) => (
+                    <div
+                      key={d}
+                      className="text-xs font-semibold text-gray-600 dark:text-gray-400 text-center"
+                    >
+                      {d}
                     </div>
-                    <div className={`px-3 py-1 rounded-lg text-xs font-semibold ${getStatusPill(item.status)}`}>
-                      {getStatusLabel(item.status)}
+                  ))}
+                </div>
+
+                {(() => {
+                  const meta = getMonthMeta();
+                  const cells: Array<{ day: number | null; key: string | null }> = [];
+
+                  for (let i = 0; i < meta.firstWeekday; i += 1) {
+                    cells.push({ day: null, key: null });
+                  }
+                  for (let day = 1; day <= meta.daysInMonth; day += 1) {
+                    const key = buildDateKey(day);
+                    cells.push({ day, key });
+                  }
+
+                  while (cells.length % 7 !== 0) {
+                    cells.push({ day: null, key: null });
+                  }
+
+                  return (
+                    <div className="grid grid-cols-7 gap-2">
+                      {cells.map((c, idx) => {
+                        const status = c.key ? statusByDateKey.get(c.key) : undefined;
+                        return (
+                          <div
+                            key={`${c.key ?? 'empty'}-${idx}`}
+                            className={`rounded-xl border p-2 min-h-[52px] flex items-start justify-start ${getDayCellClass(status)}`}
+                          >
+                            {c.day ? (
+                              <div className="w-full">
+                                <div className="text-sm font-bold leading-none">{c.day}</div>
+                                {status ? (
+                                  <div className="text-[10px] font-semibold opacity-90 mt-1">
+                                    {getStatusLabel(status)}
+                                  </div>
+                                ) : null}
+                              </div>
+                            ) : null}
+                          </div>
+                        );
+                      })}
                     </div>
-                  </div>
-                ))}
+                  );
+                })()}
               </div>
             )}
           </div>
