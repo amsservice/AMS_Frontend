@@ -7,7 +7,8 @@ import {
   Umbrella,
   BarChart3,
   School,
-  User
+  User,
+  FileText
 } from "lucide-react";
 
 export type Role = "principal" | "teacher" | "student" | "coordinator";
@@ -27,6 +28,7 @@ const principalMenus: MenuItem[] = [
   { icon: Users, text: "Students", path: "/dashboard/principal/students" },
   { icon: Umbrella, text: "Holidays", path: "/dashboard/principal/holidays" },
   { icon: BarChart3, text: "Reports", path: "/dashboard/principal/reports" },
+  { icon: FileText, text: "Audit Logs", path: "/dashboard/principal/audit-logs" },
 ];
 
 const coordinatorMenus: MenuItem[] = principalMenus
