@@ -18,6 +18,7 @@ export default function TeacherLayout({
 
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [darkMode, setDarkMode] = useState(false);
+  const [themeInitialized, setThemeInitialized] = useState(false);
 
   /* 🔐 Role Guard */
   useEffect(() => {
@@ -34,8 +35,36 @@ export default function TeacherLayout({
 
   /* 🌙 Dark Mode */
   useEffect(() => {
+    try {
+      const savedTheme = window.localStorage.getItem("Upastithi-theme");
+      if (savedTheme === "dark") {
+        setDarkMode(true);
+        document.documentElement.classList.add("dark");
+      } else if (savedTheme === "light") {
+        setDarkMode(false);
+        document.documentElement.classList.remove("dark");
+      } else {
+        const prefersDark =
+          typeof window !== "undefined" &&
+          window.matchMedia("(prefers-color-scheme: dark)").matches;
+
+        setDarkMode(prefersDark);
+        document.documentElement.classList.toggle("dark", prefersDark);
+      }
+    } catch (e) {
+    } finally {
+      setThemeInitialized(true);
+    }
+  }, []);
+
+  useEffect(() => {
+    if (!themeInitialized) return;
     document.documentElement.classList.toggle("dark", darkMode);
-  }, [darkMode]);
+    try {
+      window.localStorage.setItem("Upastithi-theme", darkMode ? "dark" : "light");
+    } catch (e) {
+    }
+  }, [darkMode, themeInitialized]);
 
   if (loading || !user) return null;
 
