@@ -239,63 +239,54 @@ export default function TeacherAttendancePage() {
     toast.info('You can now edit the attendance');
   };
 
-  /* ===============================
+/* ===============================
      CALCULATE SUMMARY
   =============================== */
-  const presentCount = Object.values(attendance).filter((s) => s === 'present').length;
-  const absentCount = Object.values(attendance).filter((s) => s === 'absent').length;
-  const leftCount = students.length - presentCount - absentCount;
-  const attendanceProgress = students.length > 0 ? Math.round((presentCount / students.length) * 100) : 0;
+const presentCount = Object.values(attendance).filter((s) => s === 'present').length;
+const absentCount = Object.values(attendance).filter((s) => s === 'absent').length;
+const leftCount = students.length - presentCount - absentCount;
+const attendanceProgress = students.length > 0 ? Math.round((presentCount / students.length) * 100) : 0;
 
-  if (isLoading || attendanceLoading) {
-    return (
-      <div className="min-h-screen bg-gradient-to-br from-purple-50 via-white to-blue-50 dark:from-purple-900 dark:via-gray-900 dark:to-blue-950 flex items-center justify-center">
-        <p className="text-lg text-gray-600 dark:text-gray-400">Loading attendance…</p>
-      </div>
-    );
-  }
-
+if (isLoading || attendanceLoading) {
   return (
-    <div className="relative bg-gradient-to-br from-purple-50 via-white to-blue-50 dark:from-purple-900 dark:via-gray-900 dark:to-blue-950 min-h-screen overflow-hidden">
-      {/* Header */}
-      <header className="bg-gradient-to-r from-purple-600 via-blue-600 to-indigo-600 dark:from-purple-800 dark:via-blue-800 dark:to-indigo-900 shadow-2xl border-b border-purple-500/20">
-        <div className="max-w-7xl mx-auto py-6 sm:py-8 px-4 sm:px-6 lg:px-8">
-          <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between space-y-4 lg:space-y-0">
-            <div className="flex-1">
-              <h1 className="text-2xl sm:text-3xl lg:text-4xl font-bold text-white tracking-tight drop-shadow-lg">
-                Take Attendance 📋
-              </h1>
-              <p className="mt-2 text-sm sm:text-base text-purple-100 font-medium">
-                Tap card once for present, twice for absent
-              </p>
-            </div>
+    <div className="min-h-screen dashboard-bg flex items-center justify-center p-4">
+      <p className="text-lg dashboard-text-muted">Loading attendance…</p>
+    </div>
+  );
+}
 
-            {/* Date Picker */}
-            <div className="flex items-center gap-3 bg-white/95 backdrop-blur-sm rounded-xl px-4 py-3 shadow-lg border border-purple-200/50">
-              <Calendar className="w-5 h-5 text-purple-600" />
-              <input
-                type="date"
-                value={date}
-                max={today}
-                onChange={(e) => setDate(e.target.value)}
-                className="bg-transparent text-purple-900 font-semibold outline-none cursor-pointer"
-              />
+return (
+  <div className="min-h-screen dashboard-bg p-4 sm:p-6 lg:p-8">
+    <div className="max-w-7xl mx-auto">
+      <div className="dashboard-card shadow-dashboard-lg rounded-2xl border dashboard-card-border p-4 sm:p-6">
+        <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
+          <div className="flex-1">
+            <h1 className="text-2xl sm:text-3xl font-bold dashboard-text tracking-tight">
+              Take Attendance 📋
+            </h1>
+            <p className="mt-1 text-sm dashboard-text-muted font-medium">
+              Tap card once for present, twice for absent
+            </p>
+          </div>
 
-            </div>
+          <div className="flex items-center gap-3 rounded-xl px-4 py-3 border dashboard-card-border bg-white/70 dark:bg-white/5">
+            <Calendar className="w-5 h-5 text-blue-600 dark:text-blue-400" />
+            <input
+              type="date"
+              value={date}
+              max={today}
+              onChange={(e) => setDate(e.target.value)}
+              className="bg-transparent dashboard-text font-semibold outline-none cursor-pointer"
+            />
           </div>
         </div>
-      </header>
+      </div>
 
-      {/* Progress Cards  */}
-      <div className="bg-white/90 dark:bg-gray-800/90 backdrop-blur-sm rounded-2xl p-4 border border-purple-200/50 dark:border-purple-700/30 my-4 mx-3">
+      <div className="dashboard-card shadow-dashboard rounded-2xl p-4 border dashboard-card-border mt-4">
         {/* Progress Header */}
-        {/* <div className="flex items-center justify-between mb-3">
-                <span className="text-sm text-gray-600 dark:text-gray-400 font-medium">Attendance Progress</span>
-                <span className="text-2xl font-bold text-gray-900 dark:text-white">{attendanceProgress}%</span>
-              </div> */}
         <div className="flex items-center justify-between mb-2">
-          <span className="text-sm text-gray-600 dark:text-gray-400 font-medium">Attendance Progress</span>
-          <span className="text-2xl font-bold text-gray-900 dark:text-white">{attendanceProgress}%</span>
+          <span className="text-sm dashboard-text-muted font-medium">Attendance Progress</span>
+          <span className="text-2xl font-bold dashboard-text">{attendanceProgress}%</span>
         </div>
 
         {/* Progress Bar */}
@@ -346,15 +337,15 @@ export default function TeacherAttendancePage() {
         </div>
       </div>
 
-      {/* Main Content */}
-      <main className="max-w-7xl mx-auto py-4 px-4 sm:px-6 lg:px-8">
+      <main className="py-4">
         <div className="space-y-4">
           {isHoliday && (
-            <div className="bg-orange-50 dark:bg-orange-900/20 border border-orange-200/60 dark:border-orange-700/30 text-orange-900 dark:text-orange-100 rounded-2xl px-4 py-3 shadow-lg">
+            <div className="dashboard-card shadow-dashboard rounded-2xl px-4 py-3 border dashboard-card-border">
               <div className="text-sm font-semibold">It&apos;s a holiday: {holidayName}</div>
               <div className="text-xs opacity-80 mt-0.5">Attendance marking is disabled for this date.</div>
             </div>
           )}
+
           {/* Search Bar */}
           <div className="relative">
             <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400 dark:text-gray-500" />
@@ -363,7 +354,7 @@ export default function TeacherAttendancePage() {
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
               placeholder="Search by name or roll number..."
-              className="w-full pl-12 pr-4 py-3 bg-white/90 dark:bg-gray-800/90 border border-purple-200/50 dark:border-purple-700/30 rounded-xl text-gray-900 dark:text-white placeholder-gray-400 dark:placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-purple-500 dark:focus:ring-purple-400 focus:border-transparent transition-all shadow-lg backdrop-blur-sm"
+              className="w-full pl-12 pr-4 py-3 rounded-xl dashboard-input focus:outline-none focus:ring-2 focus:ring-blue-500/30 dark:focus:ring-blue-500/30 transition-all shadow-dashboard"
             />
           </div>
 
@@ -389,31 +380,32 @@ export default function TeacherAttendancePage() {
           </div>
 
           {/* Students List */}
-          <div className="bg-white/90 dark:bg-gray-800/90 shadow-xl rounded-2xl border border-purple-200/50 dark:border-purple-700/30 overflow-hidden backdrop-blur-sm">
-            <div className="p-4 border-b border-purple-200/50 dark:border-purple-700/30">
-              <h3 className="text-lg font-bold text-gray-900 dark:text-white flex items-center gap-2">
-                <Users className="h-5 w-5 text-purple-600 dark:text-purple-400" />
+          <div className="dashboard-card shadow-dashboard-lg rounded-2xl border dashboard-card-border overflow-hidden">
+            <div className="p-4 border-b dashboard-card-border">
+              <h3 className="text-lg font-bold dashboard-text flex items-center gap-2">
+                <Users className="h-5 w-5 text-blue-600 dark:text-blue-400" />
                 Student List
                 {searchQuery && (
-                  <span className="text-sm font-normal text-gray-500 dark:text-gray-400">
+                  <span className="text-sm font-normal dashboard-text-muted">
                     ({filteredStudents.length} results)
                   </span>
                 )}
               </h3>
-              <p className="text-sm text-gray-600 dark:text-gray-400 mt-1">
+              <p className="text-sm dashboard-text-muted mt-1">
                 Tap once for present, tap again for absent
               </p>
             </div>
 
             {/* Students */}
-            <div className="divide-y divide-purple-200/50 dark:divide-purple-700/30 max-h-[500px] overflow-y-auto">
+            <div className="divide-y dashboard-card-border max-h-[500px] overflow-y-auto">
               {filteredStudents.length === 0 ? (
-                <div className="p-8 text-center text-gray-500 dark:text-gray-400">
+                <div className="p-8 text-center dashboard-text-muted">
                   No students found
                 </div>
               ) : (
                 filteredStudents.map((s) => {
                   const active = s.history?.find((h) => h.isActive);
+
                   const status = attendance[s._id];
                   const isPresent = status === 'present';
                   const isAbsent = status === 'absent';
@@ -430,7 +422,7 @@ export default function TeacherAttendancePage() {
                           ? 'bg-green-50 dark:bg-green-900/20 hover:bg-green-100 dark:hover:bg-green-900/30'
                           : isAbsent
                             ? 'bg-red-50 dark:bg-red-900/20 hover:bg-red-100 dark:hover:bg-red-900/30'
-                            : 'bg-white dark:bg-gray-800 hover:bg-purple-50 dark:hover:bg-gray-700/50'
+                            : 'bg-transparent hover:bg-black/5 dark:hover:bg-white/5'
                         } ${isSubmitted || isHoliday ? 'cursor-not-allowed opacity-70' : 'cursor-pointer'}`}
                     >
                       {/* Roll Number Badge */}
@@ -447,10 +439,10 @@ export default function TeacherAttendancePage() {
 
                       {/* Student Info */}
                       <div className="flex-1 text-left min-w-0">
-                        <h4 className="text-base font-semibold text-gray-900 dark:text-white truncate">
+                        <h4 className="text-base font-semibold dashboard-text truncate">
                           {s.name}
                         </h4>
-                        <p className="text-sm text-gray-600 dark:text-gray-400">
+                        <p className="text-sm dashboard-text-muted">
                           Roll #{active?.rollNo}
                         </p>
                       </div>
@@ -460,7 +452,7 @@ export default function TeacherAttendancePage() {
                         <div
                           className={`p-2 rounded-lg transition-all duration-200 ${isPresent
                               ? 'bg-green-500 text-white shadow-lg'
-                              : 'bg-gray-200 dark:bg-gray-700 text-gray-400'
+                              : 'bg-black/5 dark:bg-white/10 text-gray-400'
                             }`}
                         >
                           <CheckCircle className="w-5 h-5" />
@@ -469,7 +461,7 @@ export default function TeacherAttendancePage() {
                         <div
                           className={`p-2 rounded-lg transition-all duration-200 ${isAbsent
                               ? 'bg-red-500 text-white shadow-lg'
-                              : 'bg-gray-200 dark:bg-gray-700 text-gray-400'
+                              : 'bg-black/5 dark:bg-white/10 text-gray-400'
                             }`}
                         >
                           <XCircle className="w-5 h-5" />
@@ -526,5 +518,6 @@ export default function TeacherAttendancePage() {
         </div>
       </main>
     </div>
-  );
+  </div>
+);
 }
