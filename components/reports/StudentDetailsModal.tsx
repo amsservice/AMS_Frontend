@@ -238,9 +238,10 @@
 
 'use client';
 
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { X, Edit } from 'lucide-react';
-import { useStudentById } from '@/app/querry/useStudent';
+import { toast } from 'sonner';
+import { useStudentById, useUpdateStudent } from '@/app/querry/useStudent';
 
 interface Props {
   studentId: string;
@@ -249,8 +250,77 @@ interface Props {
 
 export default function StudentDetailsModal({ studentId, onClose }: Props) {
   const { data: student, isLoading } = useStudentById(studentId);
+  const { mutate: updateStudent, isPending: isUpdating } = useUpdateStudent();
   const [activeTab, setActiveTab] = useState<'personal' | 'academic' | 'contact'>('personal');
   const [isEditing, setIsEditing] = useState(false);
+
+  type EditForm = {
+    name: string;
+    fatherName: string;
+    motherName: string;
+    parentsPhone: string;
+    rollNo: string;
+    dob: string;
+    gender: '' | 'male' | 'female' | 'other';
+    bloodGroup: '' | 'A+' | 'A-' | 'B+' | 'B-' | 'AB+' | 'AB-' | 'O+' | 'O-';
+  };
+
+  const [form, setForm] = useState<EditForm>({
+    name: '',
+    fatherName: '',
+    motherName: '',
+    parentsPhone: '',
+    rollNo: '',
+    dob: '',
+    gender: '',
+    bloodGroup: ''
+  });
+
+  const [formErrors, setFormErrors] = useState<Partial<Record<keyof EditForm, string>>>({});
+
+  useEffect(() => {
+    if (!student) return;
+    const activeHistory = student.history?.find(h => h.isActive) || student.history?.[0];
+
+    const normalizeDateInputValue = (raw: unknown) => {
+      if (!raw) return '';
+      const d = new Date(String(raw));
+      if (Number.isNaN(d.getTime())) return '';
+      const yyyy = d.getFullYear();
+      const mm = String(d.getMonth() + 1).padStart(2, '0');
+      const dd = String(d.getDate()).padStart(2, '0');
+      return `${yyyy}-${mm}-${dd}`;
+    };
+
+    setForm({
+      name: student.name || '',
+      fatherName: student.fatherName || '',
+      motherName: student.motherName || '',
+      parentsPhone: student.parentsPhone || '',
+      rollNo: String(activeHistory?.rollNo ?? ''),
+      dob: normalizeDateInputValue((student as any).dob),
+      gender: ((student as any).gender as EditForm['gender']) || '',
+      bloodGroup: ((student as any).bloodGroup as EditForm['bloodGroup']) || ''
+    });
+    setFormErrors({});
+    setIsEditing(false);
+  }, [studentId, student]);
+
+  const isValidDateInputValue = (value: string) => {
+    if (!value) return true;
+    const d = new Date(value);
+    return !Number.isNaN(d.getTime());
+  };
+
+  const calcAgeYears = (dob: Date) => {
+    const today = new Date();
+    let age = today.getFullYear() - dob.getFullYear();
+    const m = today.getMonth() - dob.getMonth();
+    if (m < 0 || (m === 0 && today.getDate() < dob.getDate())) {
+      age -= 1;
+    }
+    return age;
+  };
 
   if (isLoading || !student) {
     return (
@@ -261,6 +331,140 @@ export default function StudentDetailsModal({ studentId, onClose }: Props) {
   }
 
   const activeHistory = student.history?.find(h => h.isActive) || student.history?.[0];
+
+  const normalizePhoneTo10Digits = (raw: string) => {
+    const digits = raw.replace(/\D/g, '');
+
+    if (digits.length === 10) {
+      return { ok: true as const, digits10: digits, hasCountryCode: false };
+    }
+
+    if (digits.length === 12 && digits.startsWith('91')) {
+      return { ok: true as const, digits10: digits.slice(2), hasCountryCode: true };
+    }
+
+    return { ok: false as const, digits10: '', hasCountryCode: false };
+  };
+
+  const validateForm = () => {
+    const nextErrors: Partial<Record<keyof EditForm, string>> = {};
+
+    if (form.name.trim().length < 3) {
+      nextErrors.name = 'Name must be at least 3 characters';
+    }
+
+    if (form.fatherName.trim().length < 3) {
+      nextErrors.fatherName = "Father's name must be at least 3 characters";
+    }
+
+    if (form.motherName.trim().length < 3) {
+      nextErrors.motherName = "Mother's name must be at least 3 characters";
+    }
+
+    const phoneCheck = normalizePhoneTo10Digits(form.parentsPhone);
+    if (!phoneCheck.ok) {
+      nextErrors.parentsPhone = 'Phone number must be 10 digits (or +91 followed by 10 digits)';
+    }
+
+    const rollNoNum = Number(form.rollNo);
+    if (!form.rollNo || Number.isNaN(rollNoNum) || rollNoNum <= 0 || !Number.isInteger(rollNoNum)) {
+      nextErrors.rollNo = 'Roll number must be a positive integer';
+    } else if (rollNoNum > 200) {
+      nextErrors.rollNo = 'Roll number cannot be greater than 200';
+    }
+
+    if (!isValidDateInputValue(form.dob)) {
+      nextErrors.dob = 'DOB is invalid';
+    } else if (form.dob) {
+      const d = new Date(form.dob);
+      const today = new Date();
+      today.setHours(0, 0, 0, 0);
+      if (d > today) {
+        nextErrors.dob = 'DOB cannot be in the future';
+      } else if (calcAgeYears(d) < 2) {
+        nextErrors.dob = 'DOB must be at least 2 years ago';
+      }
+    }
+
+    if (form.gender && !['male', 'female', 'other'].includes(form.gender)) {
+      nextErrors.gender = 'Gender is invalid';
+    }
+
+    if (
+      form.bloodGroup &&
+      !['A+', 'A-', 'B+', 'B-', 'AB+', 'AB-', 'O+', 'O-'].includes(form.bloodGroup)
+    ) {
+      nextErrors.bloodGroup = 'Blood group is invalid';
+    }
+
+    setFormErrors(nextErrors);
+    return nextErrors;
+  };
+
+  const handleCancelEdit = () => {
+    const normalizeDateInputValue = (raw: unknown) => {
+      if (!raw) return '';
+      const d = new Date(String(raw));
+      if (Number.isNaN(d.getTime())) return '';
+      const yyyy = d.getFullYear();
+      const mm = String(d.getMonth() + 1).padStart(2, '0');
+      const dd = String(d.getDate()).padStart(2, '0');
+      return `${yyyy}-${mm}-${dd}`;
+    };
+
+    setForm({
+      name: student.name || '',
+      fatherName: student.fatherName || '',
+      motherName: student.motherName || '',
+      parentsPhone: student.parentsPhone || '',
+      rollNo: String(activeHistory?.rollNo ?? ''),
+      dob: normalizeDateInputValue((student as any).dob),
+      gender: ((student as any).gender as EditForm['gender']) || '',
+      bloodGroup: ((student as any).bloodGroup as EditForm['bloodGroup']) || ''
+    });
+    setFormErrors({});
+    setIsEditing(false);
+  };
+
+  const handleSave = () => {
+    const errors = validateForm();
+    if (Object.keys(errors).length) {
+      toast.error(Object.values(errors)[0] || 'Please fix the form errors');
+      return;
+    }
+
+    const phoneCheck = normalizePhoneTo10Digits(form.parentsPhone);
+    const phoneToStore = phoneCheck.ok
+      ? phoneCheck.hasCountryCode
+        ? `+91 ${phoneCheck.digits10}`
+        : form.parentsPhone.trim()
+      : form.parentsPhone.trim();
+
+    updateStudent(
+      {
+        id: studentId,
+        data: {
+          name: form.name.trim(),
+          dob: form.dob ? new Date(form.dob).toISOString() : undefined,
+          gender: form.gender || undefined,
+          bloodGroup: form.bloodGroup || undefined,
+          fatherName: form.fatherName.trim(),
+          motherName: form.motherName.trim(),
+          parentsPhone: phoneToStore,
+          rollNo: Number(form.rollNo)
+        }
+      },
+      {
+        onSuccess: () => {
+          toast.success('Student updated successfully');
+          setIsEditing(false);
+        },
+        onError: (err: any) => {
+          toast.error(err?.message || 'Failed to update student');
+        }
+      }
+    );
+  };
 
   const modalStudent = {
     rollNo: activeHistory?.rollNo || 0,
@@ -274,7 +478,7 @@ export default function StudentDetailsModal({ studentId, onClose }: Props) {
     attendance: (student as any).attendance || 0,
     email: student.email || '',
     motherName: student.motherName,
-    parentName: student.fatherName,
+    fatherName: student.fatherName,
     parentPhone: student.parentsPhone,
     admissionNo: student.admissionNo
   };
@@ -294,7 +498,7 @@ export default function StudentDetailsModal({ studentId, onClose }: Props) {
 
   return (
     <div className="fixed inset-0 z-50 bg-black/60 flex items-center justify-center px-4">
-      <div className="bg-gray-800 rounded-2xl w-full max-w-2xl shadow-2xl relative overflow-hidden">
+      <div className="dashboard-card border dashboard-card-border rounded-2xl w-full max-w-2xl shadow-2xl relative overflow-hidden">
         {/* Header */}
         <div className="bg-gradient-to-r from-blue-600 via-purple-600 to-purple-700 p-8 relative">
           <button
@@ -322,7 +526,7 @@ export default function StudentDetailsModal({ studentId, onClose }: Props) {
         </div>
 
         {/* Tabs */}
-        <div className="flex gap-6 px-6 pt-6 border-b border-gray-700">
+        <div className="flex gap-6 px-6 pt-6 border-b dashboard-card-border">
           {renderTabButton('personal', 'Personal Info')}
           {renderTabButton('academic', 'Academic Info')}
           {renderTabButton('contact', 'Contact Info')}
@@ -333,12 +537,105 @@ export default function StudentDetailsModal({ studentId, onClose }: Props) {
           {/* PERSONAL INFO */}
           {activeTab === 'personal' && (
             <div className="grid grid-cols-2 gap-6">
-              <InfoRow label="FULL NAME" value={modalStudent.name} editable={isEditing} />
-              <InfoRow label="EMAIL ADDRESS" value={modalStudent.email} editable={isEditing} />
+              <InfoRow
+                label="FULL NAME"
+                value={form.name}
+                editable={isEditing}
+                onChange={(v) => setForm((p) => ({ ...p, name: v }))}
+                error={formErrors.name}
+              />
+              <InfoRow label="EMAIL ADDRESS" value={modalStudent.email} />
               
-              <InfoRow label="DATE OF BIRTH" value={modalStudent.dob} editable={isEditing} />
-              <InfoRow label="GENDER" value={modalStudent.gender} editable={isEditing} />
-              <InfoRow label="BLOOD GROUP" value={modalStudent.bloodGroup} editable={isEditing} />
+              <div className="space-y-2">
+                <label className="text-xs font-medium text-slate-500 dark:text-slate-400 uppercase tracking-wider">
+                  DATE OF BIRTH
+                </label>
+                {isEditing ? (
+                  <input
+                    type="date"
+                    value={form.dob}
+                    onChange={(e) => {
+                      setForm((p) => ({ ...p, dob: e.target.value }));
+                      setFormErrors((prev) => ({ ...prev, dob: undefined }));
+                    }}
+                    className="w-full px-3 py-2 text-sm dashboard-card border dashboard-card-border rounded-lg dashboard-text focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  />
+                ) : (
+                  <div className="dashboard-text font-medium text-sm">
+                    {form.dob || '-'}
+                  </div>
+                )}
+                {formErrors.dob && (
+                  <p className="text-xs text-red-600 dark:text-red-400 font-medium">
+                    {formErrors.dob}
+                  </p>
+                )}
+              </div>
+
+              <div className="space-y-2">
+                <label className="text-xs font-medium text-slate-500 dark:text-slate-400 uppercase tracking-wider">
+                  GENDER
+                </label>
+                {isEditing ? (
+                  <select
+                    value={form.gender}
+                    onChange={(e) => {
+                      setForm((p) => ({ ...p, gender: e.target.value as EditForm['gender'] }));
+                      setFormErrors((prev) => ({ ...prev, gender: undefined }));
+                    }}
+                    className="w-full px-3 py-2 text-sm dashboard-card border dashboard-card-border rounded-lg dashboard-text focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  >
+                    <option value="">Select</option>
+                    <option value="male">Male</option>
+                    <option value="female">Female</option>
+                    <option value="other">Other</option>
+                  </select>
+                ) : (
+                  <div className="dashboard-text font-medium text-sm">
+                    {form.gender || '-'}
+                  </div>
+                )}
+                {formErrors.gender && (
+                  <p className="text-xs text-red-600 dark:text-red-400 font-medium">
+                    {formErrors.gender}
+                  </p>
+                )}
+              </div>
+
+              <div className="space-y-2">
+                <label className="text-xs font-medium text-slate-500 dark:text-slate-400 uppercase tracking-wider">
+                  BLOOD GROUP
+                </label>
+                {isEditing ? (
+                  <select
+                    value={form.bloodGroup}
+                    onChange={(e) => {
+                      setForm((p) => ({ ...p, bloodGroup: e.target.value as EditForm['bloodGroup'] }));
+                      setFormErrors((prev) => ({ ...prev, bloodGroup: undefined }));
+                    }}
+                    className="w-full px-3 py-2 text-sm dashboard-card border dashboard-card-border rounded-lg dashboard-text focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  >
+                    <option value="">Select</option>
+                    <option value="A+">A+</option>
+                    <option value="A-">A-</option>
+                    <option value="B+">B+</option>
+                    <option value="B-">B-</option>
+                    <option value="AB+">AB+</option>
+                    <option value="AB-">AB-</option>
+                    <option value="O+">O+</option>
+                    <option value="O-">O-</option>
+                  </select>
+                ) : (
+                  <div className="dashboard-text font-medium text-sm">
+                    {form.bloodGroup || '-'}
+                  </div>
+                )}
+                {formErrors.bloodGroup && (
+                  <p className="text-xs text-red-600 dark:text-red-400 font-medium">
+                    {formErrors.bloodGroup}
+                  </p>
+                )}
+              </div>
              
             </div>
           )}
@@ -347,7 +644,13 @@ export default function StudentDetailsModal({ studentId, onClose }: Props) {
           {activeTab === 'academic' && (
             <>
               <div className="grid grid-cols-2 gap-6">
-                <InfoRow label="ROLL NUMBER" value={modalStudent.rollNo.toString()} />
+                <InfoRow
+                  label="ROLL NUMBER"
+                  value={form.rollNo}
+                  editable={isEditing}
+                  onChange={(v) => setForm((p) => ({ ...p, rollNo: v }))}
+                  error={formErrors.rollNo}
+                />
                 <InfoRow label="ADMISSION NO" value={modalStudent.admissionNo} />
                 <InfoRow label="CLASS" value={modalStudent.class} />
                 <InfoRow label="SECTION" value={modalStudent.section} />
@@ -361,23 +664,59 @@ export default function StudentDetailsModal({ studentId, onClose }: Props) {
             <div className="grid grid-cols-2 gap-6">
               <InfoRow label="EMAIL" value={modalStudent.email} editable={isEditing} />
            
-              <InfoRow label="FATHER NAME" value={modalStudent.parentName} editable={isEditing} />
-              <InfoRow label="MOTHER NAME" value={modalStudent.motherName} editable={isEditing} />
-              <InfoRow label="PARENT PHONE" value={modalStudent.parentPhone} editable={isEditing} />
+              <InfoRow
+                label="FATHER NAME"
+                value={form.fatherName}
+                editable={isEditing}
+                onChange={(v) => setForm((p) => ({ ...p, fatherName: v }))}
+                error={formErrors.fatherName}
+              />
+              <InfoRow
+                label="MOTHER NAME"
+                value={form.motherName}
+                editable={isEditing}
+                onChange={(v) => setForm((p) => ({ ...p, motherName: v }))}
+                error={formErrors.motherName}
+              />
+              <InfoRow
+                label="PARENT PHONE"
+                value={form.parentsPhone}
+                editable={isEditing}
+                onChange={(v) => setForm((p) => ({ ...p, parentsPhone: v }))}
+                error={formErrors.parentsPhone}
+              />
             </div>
           )}
         </div>
 
         {/* Footer */}
         <div className="flex justify-end gap-3 px-6 pb-6">
-          {activeTab !== 'academic' && (
+          {!isEditing ? (
             <button
-              onClick={() => setIsEditing(!isEditing)}
+              onClick={() => setIsEditing(true)}
               className="px-6 py-2.5 rounded-lg bg-blue-600 text-white text-sm font-medium flex items-center gap-2 hover:bg-blue-700 transition-colors"
             >
               <Edit className="w-4 h-4" />
-              {isEditing ? 'Save Changes' : 'Edit Details'}
+              Edit Details
             </button>
+          ) : (
+            <>
+              <button
+                onClick={handleCancelEdit}
+                disabled={isUpdating}
+                className="px-6 py-2.5 rounded-lg dashboard-card border dashboard-card-border text-sm font-medium hover:bg-gray-50 dark:hover:bg-slate-800/40 transition-colors disabled:opacity-50"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handleSave}
+                disabled={isUpdating}
+                className="px-6 py-2.5 rounded-lg bg-blue-600 text-white text-sm font-medium flex items-center gap-2 hover:bg-blue-700 transition-colors disabled:opacity-50"
+              >
+                <Edit className="w-4 h-4" />
+                {isUpdating ? 'Saving...' : 'Save Changes'}
+              </button>
+            </>
           )}
         </div>
       </div>
@@ -391,26 +730,37 @@ export default function StudentDetailsModal({ studentId, onClose }: Props) {
 function InfoRow({
   label,
   value,
-  editable
+  editable,
+  onChange,
+  error
 }: {
   label: string;
   value: string;
   editable?: boolean;
+  onChange?: (value: string) => void;
+  error?: string;
 }) {
   return (
     <div className="space-y-2">
-      <label className="text-xs font-medium text-gray-400 uppercase tracking-wider">
+      <label className="text-xs font-medium text-slate-500 dark:text-slate-400 uppercase tracking-wider">
         {label}
       </label>
       {editable ? (
         <input
-          defaultValue={value}
-          className="w-full bg-gray-700/50 border border-gray-600 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+          value={value}
+          onChange={(e) => onChange?.(e.target.value)}
+          className="w-full px-3 py-2 text-sm dashboard-card border dashboard-card-border rounded-lg dashboard-text focus:outline-none focus:ring-2 focus:ring-blue-500"
         />
       ) : (
-        <div className="text-white font-medium text-sm">
+        <div className="dashboard-text font-medium text-sm">
           {value}
         </div>
+      )}
+
+      {error && (
+        <p className="text-xs text-red-600 dark:text-red-400 font-medium">
+          {error}
+        </p>
       )}
     </div>
   );

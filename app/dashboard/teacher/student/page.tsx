@@ -1,20 +1,14 @@
-
-
-
-
-
 'use client';
 
 import { useState, DragEvent, useEffect, useRef, type ChangeEvent } from 'react';
-import { Upload, UserPlus, Download, FileSpreadsheet, UploadCloud, X, CheckCircle, Users, Mail, Phone, Edit2, Trash2 } from 'lucide-react';
+import { Upload, UserPlus, Download, FileSpreadsheet, UploadCloud, X, CheckCircle, Users, Mail, Phone, Edit2 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { toast } from 'sonner';
 
 /* =====================================================
   IMPORT YOUR ACTUAL API HOOKS
 ===================================================== */
-import { useBulkUploadStudents, useCreateStudent, useDeactivateStudent, useStudents, useBulkDeactivateStudents, type Student } from '@/app/querry/useStudent';
-import { useAuth } from '@/app/context/AuthContext';
+import { useBulkUploadStudents, useCreateStudent, useStudents, type Student } from '@/app/querry/useStudent';
 import StudentDetailsModal from '@/components/reports/StudentDetailsModal';
 
 /* =====================================================
@@ -227,8 +221,6 @@ const strictEmailRegex =
 ===================================================== */
 
 export default function TeacherStudentsPage() {
-  const { user } = useAuth();
-
   const {
     mutate: createStudent,
     isPending: creatingStudent,
@@ -245,18 +237,12 @@ export default function TeacherStudentsPage() {
 
   const { data: students = [], isLoading: studentsLoading, error: studentsError } = useStudents();
 
-  const { mutate: deactivateStudent } = useDeactivateStudent();
-  const bulkDeactivateStudentsMutation = useBulkDeactivateStudents();
-  const [confirmDeactivate, setConfirmDeactivate] = useState<{ id: string; name: string } | null>(null);
-
   const [searchTerm, setSearchTerm] = useState('');
   const [openSingle, setOpenSingle] = useState(false);
   const [openBulk, setOpenBulk] = useState(false);
 
   const loadMoreRef = useRef<HTMLDivElement | null>(null);
   const [visibleCount, setVisibleCount] = useState(10);
-
-  const [selectedStudentIds, setSelectedStudentIds] = useState<Set<string>>(new Set());
   const [selectedStudentId, setSelectedStudentId] = useState<string | null>(null);
 
   const [isBulkUiLocked, setIsBulkUiLocked] = useState(false);
@@ -689,104 +675,9 @@ export default function TeacherStudentsPage() {
                 </div>
               ) : (
                 <div className="overflow-x-auto">
-                  <div className="px-6 py-3 border-b dashboard-card-border flex items-center justify-between gap-3 flex-wrap">
-                    <div className="text-sm dashboard-text-muted">Selected: {selectedStudentIds.size}</div>
-                    <div className="flex items-center gap-2 flex-wrap">
-                      <button
-                        onClick={() => {
-                          const ids = Array.from(selectedStudentIds);
-                          if (!ids.length) {
-                            toast.error('Please select at least one student');
-                            return;
-                          }
-
-                          bulkDeactivateStudentsMutation.mutate(ids, {
-                            onSuccess: (resp: any) => {
-                              const results = Array.isArray(resp?.results) ? resp.results : [];
-                              const failed = results.filter((r: any) => !r?.ok);
-                              const successCount = results.filter((r: any) => r?.ok).length;
-
-                              if (failed.length > 0) {
-                                const firstMsg = failed[0]?.message || 'Some students could not be deleted';
-                                toast.error(`Deleted ${successCount}. Failed ${failed.length}. ${firstMsg}`);
-                              } else {
-                                toast.success(`Deleted ${successCount} students successfully`);
-                              }
-
-                              setSelectedStudentIds(new Set());
-                            },
-                            onError: (err: any) => toast.error(err?.message || 'Failed to delete students')
-                          });
-                        }}
-                        disabled={bulkDeactivateStudentsMutation.isPending || isBulkUiLocked}
-                        className="px-4 py-2 rounded-xl bg-red-600 text-white hover:bg-red-700 disabled:opacity-50 transition-colors text-sm font-semibold"
-                      >
-                        Delete selected
-                      </button>
-                      <button
-                        onClick={() => {
-                          const ids = (visibleStudents || []).map((s: Student) => String(s._id));
-                          if (!ids.length) {
-                            toast.error('No students to delete');
-                            return;
-                          }
-
-                          bulkDeactivateStudentsMutation.mutate(ids, {
-                            onSuccess: (resp: any) => {
-                              const results = Array.isArray(resp?.results) ? resp.results : [];
-                              const failed = results.filter((r: any) => !r?.ok);
-                              const successCount = results.filter((r: any) => r?.ok).length;
-
-                              if (failed.length > 0) {
-                                const firstMsg = failed[0]?.message || 'Some students could not be deleted';
-                                toast.error(`Deleted ${successCount}. Failed ${failed.length}. ${firstMsg}`);
-                              } else {
-                                toast.success(`Deleted ${successCount} students successfully`);
-                              }
-
-                              setSelectedStudentIds(new Set());
-                            },
-                            onError: (err: any) => toast.error(err?.message || 'Failed to delete students')
-                          });
-                        }}
-                        disabled={bulkDeactivateStudentsMutation.isPending || isBulkUiLocked}
-                        className="px-4 py-2 rounded-xl bg-red-600 text-white hover:bg-red-700 disabled:opacity-50 transition-colors text-sm font-semibold"
-                      >
-                        Delete all
-                      </button>
-                    </div>
-                  </div>
                   <table className="w-full">
                     <thead className="bg-gray-50 dark:bg-slate-800/40 border-b dashboard-card-border">
                       <tr>
-                        <th className="px-6 py-3 text-left text-xs font-medium text-slate-600 dark:text-slate-400 uppercase tracking-wider">
-                          <input
-                            type="checkbox"
-                            checked={visibleStudents.length > 0 && visibleStudents.every((s: Student) => selectedStudentIds.has(String(s._id)))}
-                            ref={(el) => {
-                              if (!el) return;
-                              const all = visibleStudents.length > 0 && visibleStudents.every((s: Student) => selectedStudentIds.has(String(s._id)));
-                              const some = visibleStudents.some((s: Student) => selectedStudentIds.has(String(s._id)));
-                              el.indeterminate = some && !all;
-                            }}
-                            onChange={() => {
-                              setSelectedStudentIds((prev) => {
-                                const next = new Set(prev);
-                                const allSelectedNow =
-                                  visibleStudents.length > 0 &&
-                                  visibleStudents.every((s: Student) => next.has(String(s._id)));
-                                if (allSelectedNow) {
-                                  visibleStudents.forEach((s: Student) => next.delete(String(s._id)));
-                                } else {
-                                  visibleStudents.forEach((s: Student) => next.add(String(s._id)));
-                                }
-                                return next;
-                              });
-                            }}
-                            aria-label="Select all students"
-                            disabled={isBulkUiLocked}
-                          />
-                        </th>
                         <th className="px-6 py-3 text-left text-xs font-medium text-slate-600 dark:text-slate-400 uppercase tracking-wider">
                           Student
                         </th>
@@ -812,23 +703,6 @@ export default function TeacherStudentsPage() {
                         return (
                           <tr key={s._id} className="hover:bg-gray-50 dark:hover:bg-slate-800/30">
                             <td className="px-6 py-4 whitespace-nowrap">
-                              <input
-                                type="checkbox"
-                                checked={selectedStudentIds.has(String(s._id))}
-                                onChange={() => {
-                                  const id = String(s._id);
-                                  setSelectedStudentIds((prev) => {
-                                    const next = new Set(prev);
-                                    if (next.has(id)) next.delete(id);
-                                    else next.add(id);
-                                    return next;
-                                  });
-                                }}
-                                aria-label={`Select ${s.name}`}
-                                disabled={isBulkUiLocked}
-                              />
-                            </td>
-                            <td className="px-6 py-4 whitespace-nowrap">
                               <div>
                                 <div className="text-sm font-medium dashboard-text">{s.name}</div>
                                 <div className="text-sm dashboard-text-muted flex items-center gap-1">
@@ -849,6 +723,7 @@ export default function TeacherStudentsPage() {
                             <td className="px-6 py-4 whitespace-nowrap">
                               <div className="text-sm dashboard-text">
                                 <div>Father: {s.fatherName}</div>
+                                <div>Mother: {s.motherName}</div>
                                 <div className="flex items-center gap-1 dashboard-text-muted">
                                   <Phone className="w-3 h-3" />
                                   {s.parentsPhone}
@@ -864,14 +739,6 @@ export default function TeacherStudentsPage() {
                                 >
                                   <Edit2 className="w-4 h-4" />
                                   View
-                                </button>
-                                <button
-                                  onClick={() => setConfirmDeactivate({ id: s._id, name: s.name })}
-                                  className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-red-600 text-white hover:bg-red-700 transition-colors"
-                                  title="Delete"
-                                >
-                                  <Trash2 className="w-4 h-4" />
-                                  Delete
                                 </button>
                               </div>
                             </td>
@@ -1090,69 +957,6 @@ export default function TeacherStudentsPage() {
                     </div>
                   </div>
                 </div>
-              </motion.div>
-            )}
-          </AnimatePresence>
-
-          {/* DELETE CONFIRMATION MODAL */}
-          <AnimatePresence>
-            {confirmDeactivate && (
-              <motion.div
-                initial={{ opacity: 0 }}
-                animate={{ opacity: 1 }}
-                exit={{ opacity: 0 }}
-                className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 p-4"
-                onClick={() => setConfirmDeactivate(null)}
-              >
-                <motion.div
-                  initial={{ scale: 0.92, y: 10 }}
-                  animate={{ scale: 1, y: 0 }}
-                  exit={{ scale: 0.92, y: 10 }}
-                  onClick={(e) => e.stopPropagation()}
-                  className="bg-white/95 dark:bg-slate-900/95 backdrop-blur-sm border border-gray-200/50 dark:border-slate-700/50 rounded-2xl shadow-2xl p-6 w-full max-w-md"
-                >
-                  <div className="flex items-center justify-between mb-3">
-                    <h3 className="text-lg font-bold text-gray-900 dark:text-white">Delete Student</h3>
-                    <button
-                      onClick={() => setConfirmDeactivate(null)}
-                      className="text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-slate-800 rounded-lg p-2 transition-colors"
-                    >
-                      <X className="w-5 h-5" />
-                    </button>
-                  </div>
-
-                  <p className="text-sm text-gray-600 dark:text-gray-400 mb-5">
-                    Are you sure you want to delete
-                    <span className="font-semibold text-gray-900 dark:text-white"> {confirmDeactivate.name}</span>?
-                    This will mark the student as inactive.
-                  </p>
-
-                  <div className="flex gap-3 justify-end">
-                    <button
-                      onClick={() => setConfirmDeactivate(null)}
-                      className="px-6 py-2.5 bg-white dark:bg-slate-800 border border-gray-300 dark:border-slate-700 text-gray-900 dark:text-white font-semibold rounded-xl hover:bg-gray-50 dark:hover:bg-slate-700 transition-all text-sm shadow-sm"
-                    >
-                      Cancel
-                    </button>
-                    <button
-                      onClick={() => {
-                        const id = confirmDeactivate.id;
-                        setConfirmDeactivate(null);
-                        deactivateStudent(id, {
-                          onSuccess: (resp: any) => {
-                            toast.success(resp?.message || 'Student deactivated successfully');
-                          },
-                          onError: (err: any) => {
-                            toast.error(err?.message || 'Failed to deactivate student');
-                          }
-                        });
-                      }}
-                      className="px-6 py-2.5 bg-red-600 hover:bg-red-700 text-white font-semibold rounded-xl transition-all shadow-lg"
-                    >
-                      Yes, Delete
-                    </button>
-                  </div>
-                </motion.div>
               </motion.div>
             )}
           </AnimatePresence>
