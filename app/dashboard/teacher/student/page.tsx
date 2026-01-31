@@ -103,7 +103,7 @@ function DragDropCSV({ onFileSelect, onClear, selectedFile }: DragDropCSVProps) 
                   <div className="p-4 bg-gradient-to-br from-green-500 to-emerald-600 rounded-2xl shadow-lg">
                     <FileSpreadsheet className="w-10 h-10 sm:w-12 sm:h-12 text-white" />
                   </div>
-                  <div className="absolute -top-1 -right-1 p-1 bg-white dark:bg-gray-800 rounded-full">
+                  <div className="absolute -top-1 -right-1 p-1 bg-white dark:bg-slate-900 rounded-full">
                     <CheckCircle className="w-5 h-5 text-green-600" />
                   </div>
                 </div>
@@ -170,7 +170,7 @@ function DragDropCSV({ onFileSelect, onClear, selectedFile }: DragDropCSVProps) 
       </div>
 
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-        <div className="flex items-start gap-3 p-3 bg-gray-50 dark:bg-gray-800/50 border dashboard-card-border rounded-xl">
+        <div className="flex items-start gap-3 p-3 bg-slate-50 dark:bg-slate-800/50 border dashboard-card-border rounded-xl">
           <div className="p-1.5 bg-blue-100 dark:bg-blue-900/30 rounded-lg">
             <FileSpreadsheet className="w-4 h-4 text-blue-600 dark:text-blue-400" />
           </div>
@@ -180,7 +180,7 @@ function DragDropCSV({ onFileSelect, onClear, selectedFile }: DragDropCSVProps) 
           </div>
         </div>
 
-        <div className="flex items-start gap-3 p-3 bg-gray-50 dark:bg-gray-800/50 border dashboard-card-border rounded-xl">
+        <div className="flex items-start gap-3 p-3 bg-slate-50 dark:bg-slate-800/50 border dashboard-card-border rounded-xl">
           <div className="p-1.5 bg-purple-100 dark:bg-purple-900/30 rounded-lg">
             <UploadCloud className="w-4 h-4 text-purple-600 dark:text-purple-400" />
           </div>
@@ -190,7 +190,7 @@ function DragDropCSV({ onFileSelect, onClear, selectedFile }: DragDropCSVProps) 
           </div>
         </div>
 
-        <div className="flex items-start gap-3 p-3 bg-gray-50 dark:bg-gray-800/50 border dashboard-card-border rounded-xl">
+        <div className="flex items-start gap-3 p-3 bg-slate-50 dark:bg-slate-800/50 border dashboard-card-border rounded-xl">
           <div className="p-1.5 bg-green-100 dark:bg-green-900/30 rounded-lg">
             <CheckCircle className="w-4 h-4 text-green-600 dark:text-green-400" />
           </div>
@@ -601,15 +601,15 @@ export default function TeacherStudentsPage() {
   };
 
   return (
-    <div className="relative bg-gradient-to-br from-purple-50 via-white to-blue-50 dark:from-purple-900 dark:via-gray-900 dark:to-blue-950 overflow-hidden min-h-screen">
-      <header className="bg-gradient-to-r from-blue-600 via-purple-600 to-indigo-700 dark:from-blue-800 dark:via-purple-800 dark:to-indigo-900 shadow-xl">
+    <div className="relative bg-gradient-to-br from-indigo-50 via-white to-purple-50 dark:from-indigo-950 dark:via-slate-900 dark:to-purple-950 overflow-hidden min-h-screen">
+      <header className="bg-gradient-to-r from-indigo-600 via-purple-600 to-indigo-700 dark:from-indigo-900 dark:via-purple-900 dark:to-indigo-950 shadow-xl">
         <div className="max-w-7xl mx-auto py-6 sm:py-8 px-4 sm:px-6 lg:px-8">
           <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between space-y-4 lg:space-y-0">
             <div className="flex-1">
               <h1 className="text-2xl sm:text-3xl lg:text-4xl font-bold text-white tracking-tight">
                 My Students
               </h1>
-              <p className="mt-2 text-sm sm:text-base text-blue-100 font-medium">
+              <p className="mt-2 text-sm sm:text-base text-indigo-100 font-medium">
                 Manage your class students ({students.length} total)
               </p>
             </div>
@@ -682,7 +682,7 @@ export default function TeacherStudentsPage() {
                 </div>
               ) : filteredStudents.length === 0 ? (
                 <div className="p-8 text-center">
-                  <Users className="w-12 h-12 text-gray-400 mx-auto mb-4" />
+                  <Users className="w-12 h-12 text-slate-400 dark:text-slate-500 mx-auto mb-4" />
                   <p className="dashboard-text-muted">
                     {searchTerm ? 'No students found matching your search.' : 'No students added yet.'}
                   </p>
@@ -757,9 +757,9 @@ export default function TeacherStudentsPage() {
                     </div>
                   </div>
                   <table className="w-full">
-                    <thead className="bg-gray-50 dark:bg-gray-800/40 border-b dashboard-card-border">
+                    <thead className="bg-gray-50 dark:bg-slate-800/40 border-b dashboard-card-border">
                       <tr>
-                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                        <th className="px-6 py-3 text-left text-xs font-medium text-slate-600 dark:text-slate-400 uppercase tracking-wider">
                           <input
                             type="checkbox"
                             checked={visibleStudents.length > 0 && visibleStudents.every((s: Student) => selectedStudentIds.has(String(s._id)))}
@@ -787,19 +787,19 @@ export default function TeacherStudentsPage() {
                             disabled={isBulkUiLocked}
                           />
                         </th>
-                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                        <th className="px-6 py-3 text-left text-xs font-medium text-slate-600 dark:text-slate-400 uppercase tracking-wider">
                           Student
                         </th>
-                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                        <th className="px-6 py-3 text-left text-xs font-medium text-slate-600 dark:text-slate-400 uppercase tracking-wider">
                           Admission No
                         </th>
-                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                        <th className="px-6 py-3 text-left text-xs font-medium text-slate-600 dark:text-slate-400 uppercase tracking-wider">
                           Roll No
                         </th>
-                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                        <th className="px-6 py-3 text-left text-xs font-medium text-slate-600 dark:text-slate-400 uppercase tracking-wider">
                           Parent Contact
                         </th>
-                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                        <th className="px-6 py-3 text-left text-xs font-medium text-slate-600 dark:text-slate-400 uppercase tracking-wider">
                           Action
                         </th>
                       </tr>
@@ -810,7 +810,7 @@ export default function TeacherStudentsPage() {
                         const active = s.history?.find(h => h.isActive) || s.history?.[0];
 
                         return (
-                          <tr key={s._id} className="hover:bg-gray-50 dark:hover:bg-gray-800/30">
+                          <tr key={s._id} className="hover:bg-gray-50 dark:hover:bg-slate-800/30">
                             <td className="px-6 py-4 whitespace-nowrap">
                               <input
                                 type="checkbox"
@@ -920,7 +920,7 @@ export default function TeacherStudentsPage() {
                     </div>
                     <button
                       onClick={() => setOpenSingle(false)}
-                      className="p-2 rounded-xl hover:bg-gray-100 dark:hover:bg-gray-800 transition-all"
+                      className="p-2 rounded-xl hover:bg-gray-100 dark:hover:bg-slate-800 transition-all"
                     >
                       <X className="w-5 h-5" />
                     </button>
@@ -962,7 +962,7 @@ export default function TeacherStudentsPage() {
                     <div className="flex gap-3 pt-2">
                       <button
                         onClick={() => setOpenSingle(false)}
-                        className="flex-1 px-6 py-3 dashboard-card border dashboard-card-border rounded-xl font-semibold hover:bg-gray-50 dark:hover:bg-gray-800/40 transition-all"
+                        className="flex-1 px-6 py-3 dashboard-card border dashboard-card-border rounded-xl font-semibold hover:bg-gray-50 dark:hover:bg-slate-800/40 transition-all"
                       >
                         Cancel
                       </button>
@@ -1010,7 +1010,7 @@ export default function TeacherStudentsPage() {
                     </div>
                     <button
                       onClick={() => setOpenBulk(false)}
-                      className="p-2 rounded-xl hover:bg-gray-100 dark:hover:bg-gray-800 transition-all"
+                      className="p-2 rounded-xl hover:bg-gray-100 dark:hover:bg-slate-800 transition-all"
                     >
                       <X className="w-5 h-5" />
                     </button>
@@ -1022,7 +1022,7 @@ export default function TeacherStudentsPage() {
                         <div className="dashboard-text font-semibold">Upload CSV for your class</div>
                         <button
                           onClick={downloadSample}
-                          className="px-4 py-2 dashboard-card border dashboard-card-border rounded-xl hover:bg-gray-50 dark:hover:bg-gray-700 transition-all flex items-center gap-2"
+                          className="px-4 py-2 dashboard-card border dashboard-card-border rounded-xl hover:bg-gray-50 dark:hover:bg-slate-800 transition-all flex items-center gap-2"
                         >
                           <Download className="w-4 h-4 text-accent-teal" />
                           <span className="dashboard-text text-sm font-medium">Sample CSV</span>
@@ -1039,7 +1039,7 @@ export default function TeacherStudentsPage() {
                         <p className="text-sm dashboard-text font-medium mb-2">
                           <strong>Required CSV columns:</strong>
                         </p>
-                        <code className="block text-xs dashboard-text-muted font-mono bg-white dark:bg-gray-800 p-3 rounded-lg border dashboard-card-border">
+                        <code className="block text-xs dashboard-text-muted font-mono bg-white dark:bg-slate-900 p-3 rounded-lg border dashboard-card-border">
                           name, email, password, admissionNo, fatherName, motherName, parentsPhone, rollNo
                         </code>
                       </div>
@@ -1109,13 +1109,13 @@ export default function TeacherStudentsPage() {
                   animate={{ scale: 1, y: 0 }}
                   exit={{ scale: 0.92, y: 10 }}
                   onClick={(e) => e.stopPropagation()}
-                  className="bg-white/95 dark:bg-gray-800/95 backdrop-blur-sm border border-gray-200/50 dark:border-gray-700/50 rounded-2xl shadow-2xl p-6 w-full max-w-md"
+                  className="bg-white/95 dark:bg-slate-900/95 backdrop-blur-sm border border-gray-200/50 dark:border-slate-700/50 rounded-2xl shadow-2xl p-6 w-full max-w-md"
                 >
                   <div className="flex items-center justify-between mb-3">
                     <h3 className="text-lg font-bold text-gray-900 dark:text-white">Delete Student</h3>
                     <button
                       onClick={() => setConfirmDeactivate(null)}
-                      className="text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg p-2 transition-colors"
+                      className="text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-slate-800 rounded-lg p-2 transition-colors"
                     >
                       <X className="w-5 h-5" />
                     </button>
@@ -1130,7 +1130,7 @@ export default function TeacherStudentsPage() {
                   <div className="flex gap-3 justify-end">
                     <button
                       onClick={() => setConfirmDeactivate(null)}
-                      className="px-6 py-2.5 bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 text-gray-900 dark:text-white font-semibold rounded-xl hover:bg-gray-50 dark:hover:bg-gray-600 transition-all text-sm shadow-sm"
+                      className="px-6 py-2.5 bg-white dark:bg-slate-800 border border-gray-300 dark:border-slate-700 text-gray-900 dark:text-white font-semibold rounded-xl hover:bg-gray-50 dark:hover:bg-slate-700 transition-all text-sm shadow-sm"
                     >
                       Cancel
                     </button>

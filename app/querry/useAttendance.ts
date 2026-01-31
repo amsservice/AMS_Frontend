@@ -41,6 +41,13 @@ export interface StudentSessionItem {
   status: AttendanceStatus;
 }
 
+export interface TeacherAssignedClass {
+  classId: string;
+  name: string;
+  section: string;
+  sessionId: string;
+}
+
 /* =====================================================
    TEACHER QUERIES
 ===================================================== */
@@ -68,6 +75,33 @@ export const useTeacherTodaySummary = (date: string) => {
       );
       return res.data;
     }
+  });
+};
+
+export const useTeacherAssignedClass = () => {
+  return useQuery<TeacherAssignedClass>({
+    queryKey: ['attendance', 'teacher', 'class'],
+    queryFn: async () => {
+      const res = await apiFetch('/api/attendance/teacher/my-class');
+      return res.data;
+    }
+  });
+};
+
+export const useTeacherStudentMonthlyHistory = (
+  studentId: string | null,
+  year: number,
+  month: number
+) => {
+  return useQuery<StudentSessionItem[]>({
+    queryKey: ['attendance', 'teacher', 'student-monthly', studentId, year, month],
+    queryFn: async () => {
+      const res = await apiFetch(
+        `/api/attendance/teacher/student-monthly-history?studentId=${studentId}&year=${year}&month=${month}`
+      );
+      return res.data;
+    },
+    enabled: Boolean(studentId && year && month)
   });
 };
 
