@@ -330,19 +330,20 @@ export default function TeacherProfilePage() {
   const joinedDate = teacher.createdAt ? formatDate(teacher.createdAt) : "-";
 
   return (
-    <div className="relative bg-gradient-to-br from-purple-50 via-white to-blue-50 dark:from-purple-900 dark:via-gray-900 dark:to-blue-950 overflow-hidden min-h-screen">
+    <div className="relative bg-gradient-to-br from-indigo-50 via-white to-purple-50 dark:from-indigo-950 dark:via-slate-900 dark:to-purple-950 overflow-hidden min-h-screen">
       {/* Header */}
-      <header className="bg-gradient-to-r from-blue-600 via-purple-600 to-indigo-700 dark:from-blue-800 dark:via-purple-800 dark:to-indigo-900 shadow-xl">
+      <header className="bg-gradient-to-r from-indigo-600 via-purple-600 to-indigo-700 dark:from-indigo-900 dark:via-purple-900 dark:to-indigo-950 shadow-xl">
         <div className="max-w-7xl mx-auto py-6 sm:py-8 px-4 sm:px-6 lg:px-8">
           <div className="flex items-center justify-between">
             <div className="flex-1">
               <h1 className="text-2xl sm:text-3xl lg:text-4xl font-bold text-white tracking-tight">
                 My Profile
               </h1>
-              <p className="mt-2 text-sm sm:text-base text-blue-100 font-medium">
+              <p className="mt-2 text-sm sm:text-base text-indigo-100 font-medium">
                 View and manage your profile information
               </p>
             </div>
+
             <div className="flex items-center gap-3">
               <div className="text-right hidden sm:block">
                 <p className="text-sm font-semibold text-white">{personalData.name}</p>
@@ -360,7 +361,7 @@ export default function TeacherProfilePage() {
 
       {/* Profile Header Card */}
       <main className="max-w-7xl mx-auto py-4 sm:py-6 px-4 sm:px-6 lg:px-8">
-        <div className="bg-white/80 dark:bg-gray-800/80 backdrop-blur-sm shadow-xl rounded-2xl border border-gray-200/50 dark:border-gray-700/50 p-6 mb-6">
+        <div className="bg-white/80 dark:bg-slate-900/80 backdrop-blur-sm shadow-xl rounded-2xl border border-indigo-200/50 dark:border-slate-700/50 p-6 mb-6">
           <div className="flex flex-col sm:flex-row items-center gap-6">
             <div className="relative">
               <div className="w-24 h-24 sm:w-32 sm:h-32 bg-gradient-to-br from-blue-600 to-indigo-600 rounded-full flex items-center justify-center shadow-lg">
@@ -404,7 +405,7 @@ export default function TeacherProfilePage() {
           {/* Left Column */}
           <div className="lg:col-span-2 space-y-6">
             {/* Personal Information */}
-            <div className="bg-white/80 dark:bg-gray-800/80 backdrop-blur-sm shadow-xl rounded-2xl border border-gray-200/50 dark:border-gray-700/50 p-6">
+            <div className="bg-white/80 dark:bg-slate-900/80 backdrop-blur-sm shadow-xl rounded-2xl border border-indigo-200/50 dark:border-slate-700/50 p-6">
               <div className="flex items-start justify-between mb-6">
                 <div className="flex items-center gap-3">
                   <div className="p-3 bg-gradient-to-br from-blue-600 to-indigo-600 rounded-xl shadow-lg">
@@ -430,7 +431,7 @@ export default function TeacherProfilePage() {
               </div>
 
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div className="flex items-start gap-3 p-3 rounded-xl bg-gray-50 dark:bg-gray-700/50">
+                <div className="flex items-start gap-3 p-3 rounded-xl bg-gray-50 dark:bg-slate-800/50">
                   <div className="p-2 bg-gradient-to-br from-blue-600 to-indigo-600 rounded-lg shadow-lg mt-1">
                     <User className="w-4 h-4 text-white" />
                   </div>
@@ -444,7 +445,7 @@ export default function TeacherProfilePage() {
                   </div>
                 </div>
 
-                <div className="flex items-start gap-3 p-3 rounded-xl bg-gray-50 dark:bg-gray-700/50">
+                <div className="flex items-start gap-3 p-3 rounded-xl bg-gray-50 dark:bg-slate-800/50">
                   <div className="p-2 bg-gradient-to-br from-purple-600 to-violet-600 rounded-lg shadow-lg mt-1">
                     <Mail className="w-4 h-4 text-white" />
                   </div>
@@ -458,7 +459,7 @@ export default function TeacherProfilePage() {
                   </div>
                 </div>
 
-                <div className="flex items-start gap-3 p-3 rounded-xl bg-gray-50 dark:bg-gray-700/50">
+                <div className="flex items-start gap-3 p-3 rounded-xl bg-gray-50 dark:bg-slate-800/50">
                   <div className="p-2 bg-gradient-to-br from-green-600 to-emerald-600 rounded-lg shadow-lg mt-1">
                     <Phone className="w-4 h-4 text-white" />
                   </div>
@@ -472,7 +473,7 @@ export default function TeacherProfilePage() {
                   </div>
                 </div>
 
-                <div className="flex items-start gap-3 p-3 rounded-xl bg-gray-50 dark:bg-gray-700/50">
+                <div className="flex items-start gap-3 p-3 rounded-xl bg-gray-50 dark:bg-slate-800/50">
                   <div className="p-2 bg-gradient-to-br from-orange-600 to-amber-600 rounded-lg shadow-lg mt-1">
                     <Calendar className="w-4 h-4 text-white" />
                   </div>
@@ -486,7 +487,7 @@ export default function TeacherProfilePage() {
                   </div>
                 </div>
 
-                <div className="flex items-start gap-3 p-3 rounded-xl bg-gray-50 dark:bg-gray-700/50">
+                <div className="flex items-start gap-3 p-3 rounded-xl bg-gray-50 dark:bg-slate-800/50">
                   <div className="p-2 bg-gradient-to-br from-pink-600 to-rose-600 rounded-lg shadow-lg mt-1">
                     <Shield className="w-4 h-4 text-white" />
                   </div>
@@ -500,7 +501,7 @@ export default function TeacherProfilePage() {
                   </div>
                 </div>
 
-                <div className="flex items-start gap-3 p-3 rounded-xl bg-gray-50 dark:bg-gray-700/50">
+                <div className="flex items-start gap-3 p-3 rounded-xl bg-gray-50 dark:bg-slate-800/50">
                   <div className="p-2 bg-gradient-to-br from-teal-600 to-cyan-600 rounded-lg shadow-lg mt-1">
                     <Calendar className="w-4 h-4 text-white" />
                   </div>
@@ -517,7 +518,7 @@ export default function TeacherProfilePage() {
             </div>
 
             {/* Professional Details */}
-            <div className="bg-white/80 dark:bg-gray-800/80 backdrop-blur-sm shadow-xl rounded-2xl border border-gray-200/50 dark:border-gray-700/50 p-6">
+            <div className="bg-white/80 dark:bg-slate-900/80 backdrop-blur-sm shadow-xl rounded-2xl border border-indigo-200/50 dark:border-slate-700/50 p-6">
               <div className="flex items-start justify-between mb-6">
                 <div className="flex items-center gap-3">
                   <div className="p-3 bg-gradient-to-br from-purple-600 to-violet-600 rounded-xl shadow-lg">
@@ -543,7 +544,7 @@ export default function TeacherProfilePage() {
               </div>
 
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div className="flex items-start gap-3 p-3 rounded-xl bg-gray-50 dark:bg-gray-700/50">
+                <div className="flex items-start gap-3 p-3 rounded-xl bg-gray-50 dark:bg-slate-800/50">
                   <div className="p-2 bg-gradient-to-br from-purple-600 to-violet-600 rounded-lg shadow-lg mt-1">
                     <Award className="w-4 h-4 text-white" />
                   </div>
@@ -557,7 +558,7 @@ export default function TeacherProfilePage() {
                   </div>
                 </div>
 
-                <div className="flex items-start gap-3 p-3 rounded-xl bg-gray-50 dark:bg-gray-700/50">
+                <div className="flex items-start gap-3 p-3 rounded-xl bg-gray-50 dark:bg-slate-800/50">
                   <div className="p-2 bg-gradient-to-br from-blue-600 to-indigo-600 rounded-lg shadow-lg mt-1">
                     <Clock className="w-4 h-4 text-white" />
                   </div>
@@ -566,15 +567,15 @@ export default function TeacherProfilePage() {
                       Teaching Experience
                     </p>
                     <p className="text-sm text-gray-900 dark:text-white font-medium">
-                      {professionalData.experienceYears 
-                        ? `${professionalData.experienceYears} Years` 
+                      {professionalData.experienceYears
+                        ? `${professionalData.experienceYears} Years`
                         : "N/A"}
                     </p>
                   </div>
                 </div>
 
                 {professionalData.address && (
-                  <div className="md:col-span-2 flex items-start gap-3 p-3 rounded-xl bg-gray-50 dark:bg-gray-700/50">
+                  <div className="md:col-span-2 flex items-start gap-3 p-3 rounded-xl bg-gray-50 dark:bg-slate-800/50">
                     <div className="p-2 bg-gradient-to-br from-green-600 to-emerald-600 rounded-lg shadow-lg mt-1">
                       <MapPin className="w-4 h-4 text-white" />
                     </div>
@@ -595,7 +596,7 @@ export default function TeacherProfilePage() {
           {/* Right Column */}
           <div className="space-y-6">
             {/* Current Assignment */}
-            <div className="bg-white/80 dark:bg-gray-800/80 backdrop-blur-sm shadow-xl rounded-2xl border border-gray-200/50 dark:border-gray-700/50 p-6">
+            <div className="bg-white/80 dark:bg-slate-900/80 backdrop-blur-sm shadow-xl rounded-2xl border border-indigo-200/50 dark:border-slate-700/50 p-6">
               <div className="flex items-center gap-3 mb-6">
                 <div className="p-3 bg-gradient-to-br from-teal-600 to-cyan-600 rounded-xl shadow-lg">
                   <BookOpen className="w-6 h-6 text-white" />
@@ -632,8 +633,8 @@ export default function TeacherProfilePage() {
                       </p>
                     </div>
                     <p className="text-xl font-bold text-gray-900 dark:text-white">
-                      {currentAssignment.className.includes("Mathematics") 
-                        ? "Mathematics" 
+                      {currentAssignment.className.includes("Mathematics")
+                        ? "Mathematics"
                         : "Primary Education"}
                     </p>
                   </div>
@@ -649,7 +650,7 @@ export default function TeacherProfilePage() {
             </div>
 
             {/* School Information */}
-            <div className="bg-white/80 dark:bg-gray-800/80 backdrop-blur-sm shadow-xl rounded-2xl border border-gray-200/50 dark:border-gray-700/50 p-6">
+            <div className="bg-white/80 dark:bg-slate-900/80 backdrop-blur-sm shadow-xl rounded-2xl border border-indigo-200/50 dark:border-slate-700/50 p-6">
               <div className="flex items-center gap-3 mb-6">
                 <div className="p-3 bg-gradient-to-br from-orange-600 to-amber-600 rounded-xl shadow-lg">
                   <Building2 className="w-6 h-6 text-white" />
@@ -665,7 +666,7 @@ export default function TeacherProfilePage() {
               </div>
 
               <div className="space-y-4">
-                <div className="flex items-start gap-3 p-3 rounded-xl bg-gray-50 dark:bg-gray-700/50">
+                <div className="flex items-start gap-3 p-3 rounded-xl bg-gray-50 dark:bg-slate-800/50">
                   <div className="p-2 bg-gradient-to-br from-blue-600 to-indigo-600 rounded-lg shadow-lg mt-1">
                     <Building2 className="w-4 h-4 text-white" />
                   </div>
@@ -680,7 +681,7 @@ export default function TeacherProfilePage() {
                 </div>
 
                 {schoolInfo.board && (
-                  <div className="flex items-start gap-3 p-3 rounded-xl bg-gray-50 dark:bg-gray-700/50">
+                  <div className="flex items-start gap-3 p-3 rounded-xl bg-gray-50 dark:bg-slate-800/50">
                     <div className="p-2 bg-gradient-to-br from-purple-600 to-violet-600 rounded-lg shadow-lg mt-1">
                       <Award className="w-4 h-4 text-white" />
                     </div>
@@ -696,7 +697,7 @@ export default function TeacherProfilePage() {
                 )}
 
                 {schoolInfo.principal && (
-                  <div className="flex items-start gap-3 p-3 rounded-xl bg-gray-50 dark:bg-gray-700/50">
+                  <div className="flex items-start gap-3 p-3 rounded-xl bg-gray-50 dark:bg-slate-800/50">
                     <div className="p-2 bg-gradient-to-br from-green-600 to-emerald-600 rounded-lg shadow-lg mt-1">
                       <User className="w-4 h-4 text-white" />
                     </div>
@@ -712,7 +713,7 @@ export default function TeacherProfilePage() {
                 )}
 
                 {schoolInfo.address && (
-                  <div className="flex items-start gap-3 p-3 rounded-xl bg-gray-50 dark:bg-gray-700/50">
+                  <div className="flex items-start gap-3 p-3 rounded-xl bg-gray-50 dark:bg-slate-800/50">
                     <div className="p-2 bg-gradient-to-br from-orange-600 to-amber-600 rounded-lg shadow-lg mt-1">
                       <MapPin className="w-4 h-4 text-white" />
                     </div>
