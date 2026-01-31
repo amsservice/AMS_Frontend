@@ -1,5 +1,6 @@
 "use client";
 
+import type React from "react";
 import { useMemo, useState } from "react";
 import { motion } from "framer-motion";
 import { Calendar as CalendarIcon, ChevronLeft, ChevronRight, Download, Loader2, Search, Users, User, TrendingUp } from "lucide-react";
@@ -7,7 +8,10 @@ import { Calendar as CalendarIcon, ChevronLeft, ChevronRight, Download, Loader2,
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 
-import { AttendanceStatus, StudentSessionItem, TeacherStudentItem, useTeacherStudentMonthlyHistory } from "@/app/querry/useAttendance";
+import { AttendanceStatus, TeacherStudentItem, useTeacherStudentMonthlyHistory } from "@/app/querry/useAttendance";
+import { useHolidays, type Holiday } from "@/app/querry/useHolidays";
+import { useSessions } from "@/app/querry/useSessions";
+import { apiFetch } from "@/lib/api";
 import { toast } from "sonner";
 
 export default function StudentPersonalAttendanceSection(props: {
@@ -62,6 +66,14 @@ export default function StudentPersonalAttendanceSection(props: {
   const [selectedStudentId, setSelectedStudentId] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState("");
   const [currentMonth, setCurrentMonth] = useState(new Date());
+  const [exportProgress, setExportProgress] = useState<{
+    type: "monthly" | "overall" | null;
+    done: number;
+    total: number;
+  }>({ type: null, done: 0, total: 0 });
+
+  const { data: holidays = [] } = useHolidays();
+  const { data: sessions = [] } = useSessions();
 
   const monthYear = useMemo(
     () => ({ year: currentMonth.getFullYear(), month: currentMonth.getMonth() + 1 }),
@@ -101,6 +113,31 @@ export default function StudentPersonalAttendanceSection(props: {
     return m;
   }, [selectedStudentHistory]);
 
+  const holidayByDateKey = useMemo(() => {
+    const map = new Map<string, { name: string; description: string }>();
+    (holidays as Holiday[]).forEach((h) => {
+      const startKey = toIstDateKey(h?.startDate);
+      const endKey = toIstDateKey(h?.endDate ?? h?.startDate);
+      if (!startKey) return;
+
+      const [sy, sm, sd] = startKey.split("-").map((x) => Number(x));
+      const [ey, em, ed] = (endKey || startKey).split("-").map((x) => Number(x));
+      if (!sy || !sm || !sd || !ey || !em || !ed) return;
+
+      const start = new Date(sy, sm - 1, sd);
+      const end = new Date(ey, em - 1, ed);
+      const cursor = new Date(start);
+      while (cursor.getTime() <= end.getTime()) {
+        const key = `${cursor.getFullYear()}-${String(cursor.getMonth() + 1).padStart(2, "0")}-${String(
+          cursor.getDate()
+        ).padStart(2, "0")}`;
+        map.set(key, { name: h?.name || "Holiday", description: h?.description || "" });
+        cursor.setDate(cursor.getDate() + 1);
+      }
+    });
+    return map;
+  }, [holidays]);
+
   const summary = useMemo(() => {
     const s = { present: 0, absent: 0, late: 0, total: 0 };
     (selectedStudentHistory || []).forEach((i: any) => {
@@ -116,6 +153,18 @@ export default function StudentPersonalAttendanceSection(props: {
     if (summary.total === 0) return 0;
     return Math.round((summary.present / summary.total) * 100);
   }, [summary]);
+
+  const exportPercent = useMemo(() => {
+    if (!exportProgress.type) return 0;
+    if (exportProgress.total <= 0) return 0;
+    return Math.min(100, Math.floor((exportProgress.done / exportProgress.total) * 100));
+  }, [exportProgress]);
+
+  const formatDdMmYy = (dateKey: string) => {
+    const [y, m, d] = dateKey.split("-");
+    if (!y || !m || !d) return dateKey;
+    return `${d}-${m}-${String(y).slice(-2)}`;
+  };
 
   const formatMonthYear = () => {
     return currentMonth.toLocaleDateString("en-US", {
@@ -162,34 +211,7 @@ export default function StudentPersonalAttendanceSection(props: {
     setCurrentMonth(new Date(currentMonth.getFullYear(), currentMonth.getMonth() + 1, 1));
   };
 
-  const exportToCsv = (items: StudentSessionItem[], filename: string) => {
-    const student = students.find((s) => s.studentId === selectedStudentId);
-    
-    const rows = [
-      ["Student Attendance Report"],
-      [""],
-      ["Student Name", student?.name || "N/A"],
-      ["Roll Number", student?.rollNo?.toString() || "N/A"],
-      ["Class", classLabel],
-      ["Month", formatMonthYear()],
-      [""],
-      ["Summary"],
-      ["Total Days", summary.total.toString()],
-      ["Present", summary.present.toString()],
-      ["Absent", summary.absent.toString()],
-      ["Late", summary.late.toString()],
-      ["Attendance %", `${attendancePercentage}%`],
-      [""],
-      ["Daily Attendance Records"],
-      ["Date", "Day", "Status"],
-      ...items.map((i) => {
-        const key = toIstDateKey(i.date);
-        const dateObj = new Date(i.date);
-        const dayName = dateObj.toLocaleDateString('en-US', { weekday: 'long', timeZone: 'Asia/Kolkata' });
-        return [formatDisplayFromDateKey(key, String(i.date)), dayName, String(i.status).toUpperCase()];
-      }),
-    ];
-
+  const downloadCsv = (rows: string[][], filename: string) => {
     const csv = rows
       .map((r) => r.map((c) => `"${String(c).replace(/"/g, '""')}"`).join(","))
       .join("\n");
@@ -203,6 +225,312 @@ export default function StudentPersonalAttendanceSection(props: {
     a.click();
 
     URL.revokeObjectURL(url);
+  };
+
+  const exportSelectedStudentMonthlyReport = async () => {
+    if (!selectedStudentId) {
+      toast.error("Please select a student first");
+      return;
+    }
+
+    const student = students.find((s) => s.studentId === selectedStudentId);
+    const safeName = (student?.name || "student").replace(/[^a-z0-9\-_]+/gi, "_");
+
+    setExportProgress({ type: "monthly", done: 0, total: 1 });
+    const toastId = toast.loading("Generating monthly student report...");
+
+    try {
+      const year = monthYear.year;
+      const month = monthYear.month;
+      const daysInMonth = new Date(year, month, 0).getDate();
+
+      const dateKeys: string[] = [];
+      const dateHeaders: string[] = [];
+      for (let day = 1; day <= daysInMonth; day++) {
+        const key = `${year}-${String(month).padStart(2, "0")}-${String(day).padStart(2, "0")}`;
+        dateKeys.push(key);
+        dateHeaders.push(formatDdMmYy(key));
+      }
+
+      let present = 0;
+      let absent = 0;
+      let late = 0;
+      let markedDays = 0;
+
+      const row: string[] = [student?.name || "N/A", student?.rollNo?.toString() || "N/A"];
+      for (const dateKey of dateKeys) {
+        if (holidayByDateKey.has(dateKey)) {
+          row.push("H");
+          continue;
+        }
+
+        const status = statusByDateKey.get(dateKey);
+        if (status === "present") {
+          row.push("P");
+          present += 1;
+          markedDays += 1;
+        } else if (status === "absent") {
+          row.push("A");
+          absent += 1;
+          markedDays += 1;
+        } else if (status === "late") {
+          row.push("L");
+          late += 1;
+          markedDays += 1;
+        } else {
+          row.push("-");
+        }
+      }
+
+      const percentage = markedDays > 0 ? Math.round((present / markedDays) * 100) : 0;
+
+      const rows: string[][] = [
+        ["Student Attendance Report"],
+        [""],
+        ["Student Name", student?.name || "N/A"],
+        ["Roll Number", student?.rollNo?.toString() || "N/A"],
+        ["Class", classLabel],
+        ["Month", formatMonthYear()],
+        [""],
+        ["Date-wise Report"],
+        ["Student Name", "Roll No", ...dateHeaders, "Present", "Absent", "Late", "Marked Days", "%"],
+        [...row, String(present), String(absent), String(late), String(markedDays), `${percentage}%`],
+        [""],
+        ["Summary"],
+        ["Total Days", summary.total.toString()],
+        ["Present", summary.present.toString()],
+        ["Absent", summary.absent.toString()],
+        ["Late", summary.late.toString()],
+        ["Attendance %", `${attendancePercentage}%`],
+        [""],
+        ["Legend: P = Present, A = Absent, L = Late, H = Holiday, - = Not Marked"],
+      ];
+
+      rows.push([]);
+      rows.push(["Holidays (for this month)"]);
+      rows.push(["Date", "Holiday", "Description"]);
+      const monthHolidayKeys = dateKeys.filter((k) => holidayByDateKey.has(k));
+      if (monthHolidayKeys.length === 0) {
+        rows.push(["-", "-", "-"]);
+      } else {
+        monthHolidayKeys.forEach((key) => {
+          const h = holidayByDateKey.get(key);
+          rows.push([formatDdMmYy(key), h?.name || "Holiday", h?.description || ""]);
+        });
+      }
+
+      setExportProgress({ type: "monthly", done: 1, total: 1 });
+      toast.loading("Generating monthly student report...", { id: toastId });
+      downloadCsv(rows, `${safeName}_monthly_${year}-${String(month).padStart(2, "0")}.csv`);
+      toast.dismiss(toastId);
+      toast.success("Monthly student report exported successfully!");
+    } catch {
+      toast.dismiss(toastId);
+      toast.error("Failed to export monthly student report");
+    } finally {
+      setExportProgress((prev) => (prev.type === "monthly" ? { type: null, done: 0, total: 0 } : prev));
+    }
+  };
+
+  const exportSelectedStudentOverallReport = async () => {
+    if (!selectedStudentId) {
+      toast.error("Please select a student first");
+      return;
+    }
+
+    const activeSession = (sessions as any[]).find((s) => s?.isActive);
+    if (!activeSession?.startDate || !activeSession?.endDate) {
+      toast.error("No active session found. Please ask admin to create/activate a session.");
+      return;
+    }
+
+    const sessionStartKey = toIstDateKey(activeSession.startDate);
+    const sessionEndKey = toIstDateKey(activeSession.endDate);
+    if (!sessionStartKey || !sessionEndKey) {
+      toast.error("Active session dates are invalid.");
+      return;
+    }
+
+    const [ssY, ssM, ssD] = sessionStartKey.split("-").map((x) => Number(x));
+    const [seY, seM, seD] = sessionEndKey.split("-").map((x) => Number(x));
+    if (!ssY || !ssM || !ssD || !seY || !seM || !seD) {
+      toast.error("Active session dates are invalid.");
+      return;
+    }
+
+    const sessionStart = new Date(ssY, ssM - 1, ssD);
+    const sessionEnd = new Date(seY, seM - 1, seD);
+    sessionStart.setHours(0, 0, 0, 0);
+    sessionEnd.setHours(0, 0, 0, 0);
+
+    if (sessionEnd.getTime() < sessionStart.getTime()) {
+      toast.error("Active session end date cannot be before start date.");
+      return;
+    }
+
+    const student = students.find((s) => s.studentId === selectedStudentId);
+    const safeName = (student?.name || "student").replace(/[^a-z0-9\-_]+/gi, "_");
+
+    const monthPairs: Array<{ year: number; month: number }> = [];
+    {
+      const cursor = new Date(sessionStart);
+      cursor.setDate(1);
+      cursor.setHours(0, 0, 0, 0);
+      const last = new Date(sessionEnd);
+      last.setDate(1);
+      last.setHours(0, 0, 0, 0);
+      while (cursor.getTime() <= last.getTime()) {
+        monthPairs.push({ year: cursor.getFullYear(), month: cursor.getMonth() + 1 });
+        cursor.setMonth(cursor.getMonth() + 1);
+      }
+    }
+
+    setExportProgress({ type: "overall", done: 0, total: monthPairs.length });
+    const toastId = toast.loading(`Generating overall student report... (0/${monthPairs.length})`);
+
+    try {
+      const dateKeys: string[] = [];
+      const dateHeaders: string[] = [];
+      {
+        const cursor = new Date(sessionStart);
+        while (cursor.getTime() <= sessionEnd.getTime()) {
+          const key = `${cursor.getFullYear()}-${String(cursor.getMonth() + 1).padStart(2, "0")}-${String(
+            cursor.getDate()
+          ).padStart(2, "0")}`;
+          dateKeys.push(key);
+          dateHeaders.push(formatDdMmYy(key));
+          cursor.setDate(cursor.getDate() + 1);
+        }
+      }
+
+      const statusMap = new Map<string, AttendanceStatus>();
+      const concurrency = 6;
+      let completed = 0;
+      let nextIndex = 0;
+
+      const worker = async () => {
+        while (true) {
+          const idx = nextIndex;
+          nextIndex += 1;
+          if (idx >= monthPairs.length) return;
+
+          const p = monthPairs[idx];
+          try {
+            const res = await apiFetch(
+              `/api/attendance/teacher/student-monthly-history?studentId=${selectedStudentId}&year=${p.year}&month=${p.month}`
+            );
+            const items: Array<{ date: string; status: AttendanceStatus }> = Array.isArray(res?.data)
+              ? (res.data as any[])
+              : [];
+
+            items.forEach((i) => {
+              const key = toIstDateKey(i?.date);
+              if (!key) return;
+              const dt = new Date(key);
+              if (!Number.isFinite(dt.getTime())) return;
+              if (dt.getTime() < sessionStart.getTime() || dt.getTime() > sessionEnd.getTime()) return;
+              const s = i?.status as AttendanceStatus;
+              if (s === "present" || s === "absent" || s === "late") statusMap.set(String(key), s);
+            });
+          } catch {
+            // ignore
+          } finally {
+            completed += 1;
+            setExportProgress((prev) => (prev.type === "overall" ? { ...prev, done: completed } : prev));
+            if (completed % 2 === 0 || completed === monthPairs.length) {
+              toast.loading(`Generating overall student report... (${completed}/${monthPairs.length})`, {
+                id: toastId,
+              });
+            }
+          }
+        }
+      };
+
+      await Promise.all(
+        Array.from({ length: Math.min(concurrency, monthPairs.length) }, () => worker())
+      );
+
+      let present = 0;
+      let absent = 0;
+      let late = 0;
+      let markedDays = 0;
+
+      const row: string[] = [student?.name || "N/A", student?.rollNo?.toString() || "N/A"];
+      for (const dateKey of dateKeys) {
+        if (holidayByDateKey.has(dateKey)) {
+          row.push("H");
+          continue;
+        }
+
+        const status = statusMap.get(dateKey);
+        if (status === "present") {
+          row.push("P");
+          present += 1;
+          markedDays += 1;
+        } else if (status === "absent") {
+          row.push("A");
+          absent += 1;
+          markedDays += 1;
+        } else if (status === "late") {
+          row.push("L");
+          late += 1;
+          markedDays += 1;
+        } else {
+          row.push("-");
+        }
+      }
+
+      const percentage = markedDays > 0 ? Math.round((present / markedDays) * 100) : 0;
+      const statusLabel = percentage >= 75 ? "Good" : percentage >= 60 ? "Average" : "Poor";
+
+      const rows: string[][] = [
+        ["Student Attendance Report"],
+        [""],
+        ["Student Name", student?.name || "N/A"],
+        ["Roll Number", student?.rollNo?.toString() || "N/A"],
+        ["Class", classLabel],
+        ["Session", activeSession?.name || "Active Session"],
+        ["From", formatDisplayFromDateKey(sessionStartKey, String(activeSession.startDate))],
+        ["To", formatDisplayFromDateKey(sessionEndKey, String(activeSession.endDate))],
+        [""],
+        [
+          "Student Name",
+          "Roll No",
+          ...dateHeaders,
+          "Total Present",
+          "Total Absent",
+          "Total Late",
+          "Total Days",
+          "Attendance %",
+          "Status",
+        ],
+        [...row, String(present), String(absent), String(late), String(markedDays), `${percentage}%`, statusLabel],
+        [""],
+        ["Legend: P = Present, A = Absent, L = Late, H = Holiday, - = Not Marked"],
+      ];
+
+      rows.push([]);
+      rows.push(["Holidays (for this session)"]);
+      rows.push(["Date", "Holiday", "Description"]);
+      const sessionHolidayKeys = dateKeys.filter((k) => holidayByDateKey.has(k));
+      if (sessionHolidayKeys.length === 0) {
+        rows.push(["-", "-", "-"]);
+      } else {
+        sessionHolidayKeys.forEach((key) => {
+          const h = holidayByDateKey.get(key);
+          rows.push([formatDdMmYy(key), h?.name || "Holiday", h?.description || ""]);
+        });
+      }
+
+      downloadCsv(rows, `${safeName}_overall_session.csv`);
+      toast.dismiss(toastId);
+      toast.success("Overall student report exported successfully!");
+    } catch {
+      toast.dismiss(toastId);
+      toast.error("Failed to export overall student report");
+    } finally {
+      setExportProgress((prev) => (prev.type === "overall" ? { type: null, done: 0, total: 0 } : prev));
+    }
   };
 
   const getStatusLabel = (status: AttendanceStatus) => {
@@ -220,22 +548,11 @@ export default function StudentPersonalAttendanceSection(props: {
     }
   };
 
-  const handleExport = () => {
-    if (!selectedStudentId) {
-      toast.error("Please select a student first");
-      return;
-    }
-
-    const student = students.find((s) => s.studentId === selectedStudentId);
-    const safeName = (student?.name || "student").replace(/[^a-z0-9\-_]+/gi, "_");
-
-    exportToCsv(
-      selectedStudentHistory as any,
-      `${safeName}_attendance_${monthYear.year}-${String(monthYear.month).padStart(2, "0")}.csv`
-    );
-
-    toast.success("Attendance report exported successfully!");
-  };
+  const exportLabel = useMemo(() => {
+    if (exportProgress.type === "monthly") return "Generating Monthly Report";
+    if (exportProgress.type === "overall") return "Generating Overall Report";
+    return null;
+  }, [exportProgress.type]);
 
   return (
     <div className="mt-6">
@@ -256,16 +573,44 @@ export default function StudentPersonalAttendanceSection(props: {
             </div>
           </div>
 
-          <Button
-            onClick={handleExport}
-            disabled={!selectedStudentId}
-            className="bg-gradient-to-br from-indigo-600 to-purple-600 hover:from-indigo-700 hover:to-purple-700 text-white rounded-xl shadow-lg disabled:opacity-50 disabled:cursor-not-allowed transition-all"
-          >
-            <Download className="w-4 h-4 mr-2" />
-            <span className="hidden sm:inline">Export Report</span>
-            <span className="sm:hidden">Export</span>
-          </Button>
+          <div className="flex flex-col sm:flex-row gap-2">
+            <Button
+              onClick={exportSelectedStudentMonthlyReport}
+              disabled={!selectedStudentId || exportProgress.type !== null}
+              className="bg-gradient-to-br from-indigo-600 to-purple-600 hover:from-indigo-700 hover:to-purple-700 text-white rounded-xl shadow-lg disabled:opacity-50 disabled:cursor-not-allowed transition-all"
+            >
+              <Download className="w-4 h-4 mr-2" />
+              <span className="hidden sm:inline">Monthly Report</span>
+              <span className="sm:hidden">Monthly</span>
+            </Button>
+            <Button
+              onClick={exportSelectedStudentOverallReport}
+              disabled={!selectedStudentId || exportProgress.type !== null}
+              className="bg-gradient-to-br from-purple-600 to-indigo-600 hover:from-purple-700 hover:to-indigo-700 text-white rounded-xl shadow-lg disabled:opacity-50 disabled:cursor-not-allowed transition-all"
+            >
+              <Download className="w-4 h-4 mr-2" />
+              <span className="hidden sm:inline">Overall Report</span>
+              <span className="sm:hidden">Overall</span>
+            </Button>
+          </div>
         </div>
+
+        {exportProgress.type !== null && (
+          <div className="mb-6">
+            <div className="flex items-center justify-between text-xs text-slate-600 dark:text-slate-300 mb-2">
+              <span className="font-medium">{exportLabel}</span>
+              <span className="font-semibold">
+                {exportProgress.done}/{exportProgress.total} ({exportPercent}%)
+              </span>
+            </div>
+            <div className="h-2 w-full bg-slate-200 dark:bg-slate-700 rounded-full overflow-hidden">
+              <div
+                className="h-full bg-gradient-to-r from-indigo-600 to-purple-600"
+                style={{ width: `${exportPercent}%` }}
+              />
+            </div>
+          </div>
+        )}
 
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 md:gap-6">
           {/* Student List */}
@@ -275,7 +620,7 @@ export default function StudentPersonalAttendanceSection(props: {
               <Input
                 placeholder="Search students..."
                 value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
+                onChange={(e: React.ChangeEvent<HTMLInputElement>) => setSearchQuery(e.target.value)}
                 className="pl-10 bg-slate-50 dark:bg-slate-800 border-slate-300 dark:border-slate-600 text-slate-900 dark:text-white placeholder:text-slate-500 dark:placeholder:text-slate-400 rounded-xl focus:ring-2 focus:ring-indigo-500 dark:focus:ring-indigo-400"
               />
             </div>
