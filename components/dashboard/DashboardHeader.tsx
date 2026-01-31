@@ -30,14 +30,16 @@ export default function DashboardHeader({
   setDarkMode,
   onMenuClick,
 }: DashboardHeaderProps) {
-  const { user } = useAuth();
+  const { user, switchRole } = useAuth();
   const router = useRouter();
 
   // --- UI States ---
   const [showSearch, setShowSearch] = useState(false);
   const [showNotifications, setShowNotifications] = useState(false);
+  const [showProfileMenu, setShowProfileMenu] = useState(false);
   const searchRef = useRef<HTMLDivElement>(null);
   const notifRef = useRef<HTMLDivElement>(null);
+  const profileRef = useRef<HTMLDivElement>(null);
 
   // --- Click Outside Logic ---
   useEffect(() => {
@@ -46,6 +48,8 @@ export default function DashboardHeader({
         setShowSearch(false);
       if (notifRef.current && !notifRef.current.contains(event.target as Node))
         setShowNotifications(false);
+      if (profileRef.current && !profileRef.current.contains(event.target as Node))
+        setShowProfileMenu(false);
     };
     document.addEventListener("mousedown", handleClickOutside);
     return () => document.removeEventListener("mousedown", handleClickOutside);
@@ -281,32 +285,130 @@ export default function DashboardHeader({
           <div className="h-8 w-px bg-gray-200 dark:bg-white/10 mx-1 hidden sm:block"></div>
 
           {/* Profile Section */}
-          <div className="flex items-center gap-3 pl-2 group cursor-pointer" onClick={() => router.push('/dashboard/settings')}>
-            <div className="hidden text-right lg:block">
-              <p className="text-sm font-bold text-gray-900 dark:text-white line-clamp-1 group-hover:text-blue-500 transition-colors">
-                {user?.name || "User"}
-              </p>
-              <p className="text-[11px] text-gray-500 dark:text-gray-400 font-medium">
-                {user?.email || "user@email.com"}
-              </p>
-            </div>
-            <div className="relative">
-              <div className="w-10 h-10 rounded-md bg-gradient-to-tr from-blue-600 to-indigo-500 p-0.5 shadow-lg shadow-blue-500/20 group-hover:scale-105 transition-transform">
-                <div className="w-full h-full rounded-xl bg-white dark:bg-[#0B0F1A] flex items-center justify-center">
-                  <span className="text-blue-600 dark:text-blue-400 font-bold uppercase">
-                    {user?.name?.charAt(0) || "U"}
-                  </span>
+          <div className="relative" ref={profileRef}>
+            <button
+              type="button"
+              onClick={() => setShowProfileMenu((v) => !v)}
+              className="flex items-center gap-3 pl-2 group cursor-pointer"
+            >
+              <div className="hidden text-right lg:block">
+                <p className="text-sm font-bold text-gray-900 dark:text-white line-clamp-1 group-hover:text-blue-500 transition-colors">
+                  {user?.name || "User"}
+                </p>
+                <p className="text-[11px] text-gray-500 dark:text-gray-400 font-medium">
+                  {user?.email || "user@email.com"}
+                </p>
+              </div>
+              <div className="relative">
+                <div className="w-10 h-10 rounded-md bg-gradient-to-tr from-blue-600 to-indigo-500 p-0.5 shadow-lg shadow-blue-500/20 group-hover:scale-105 transition-transform">
+                  <div className="w-full h-full rounded-xl bg-white dark:bg-[#0B0F1A] flex items-center justify-center">
+                    <span className="text-blue-600 dark:text-blue-400 font-bold uppercase">
+                      {user?.name?.charAt(0) || "U"}
+                    </span>
+                  </div>
                 </div>
               </div>
-            </div>
+            </button>
+
+            <AnimatePresence>
+              {showProfileMenu && (
+                <motion.div
+                  initial={{ opacity: 0, y: -6 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  exit={{ opacity: 0, y: -6 }}
+                  className="absolute right-0 top-full mt-2 w-64 bg-white dark:bg-[#131926] border border-gray-200 dark:border-white/10 rounded-2xl shadow-2xl z-40 overflow-hidden"
+                >
+                  <div className="p-3 border-b border-gray-100 dark:border-white/5">
+                    <p className="text-sm font-bold text-gray-900 dark:text-white line-clamp-1">
+                      {user?.name || "User"}
+                    </p>
+                    <p className="text-xs text-gray-500 dark:text-gray-400 line-clamp-1">
+                      {user?.email || "user@email.com"}
+                    </p>
+                  </div>
+
+                  <div className="p-2">
+                    {user?.roles?.includes("teacher") && user?.activeRole !== "teacher" && (
+                      <button
+                        onClick={() => {
+                          setShowProfileMenu(false);
+                          switchRole("teacher");
+                        }}
+                        className="w-full flex items-center justify-between gap-3 p-2 rounded-xl hover:bg-blue-50 dark:hover:bg-blue-500/10 transition-all text-left cursor-pointer"
+                      >
+                        <div className="flex items-center gap-3">
+                          <div className="p-2 rounded-lg bg-gray-100 dark:bg-white/5 text-gray-600 dark:text-gray-300">
+                            <ArrowRight className="w-4 h-4" />
+                          </div>
+                          <div>
+                            <p className="text-sm font-semibold text-gray-900 dark:text-gray-100">
+                              Switch to Teacher Dashboard
+                            </p>
+                            <p className="text-[11px] text-gray-500 dark:text-gray-400">
+                              Teacher view & tools
+                            </p>
+                          </div>
+                        </div>
+                      </button>
+                    )}
+
+                    {user?.roles?.includes("coordinator") && user?.activeRole !== "coordinator" && (
+                      <button
+                        onClick={() => {
+                          setShowProfileMenu(false);
+                          switchRole("coordinator");
+                        }}
+                        className="w-full flex items-center justify-between gap-3 p-2 rounded-xl hover:bg-blue-50 dark:hover:bg-blue-500/10 transition-all text-left cursor-pointer"
+                      >
+                        <div className="flex items-center gap-3">
+                          <div className="p-2 rounded-lg bg-gray-100 dark:bg-white/5 text-gray-600 dark:text-gray-300">
+                            <ArrowRight className="w-4 h-4" />
+                          </div>
+                          <div>
+                            <p className="text-sm font-semibold text-gray-900 dark:text-gray-100">
+                              Switch to Coordinator Dashboard
+                            </p>
+                            <p className="text-[11px] text-gray-500 dark:text-gray-400">
+                              Coordinator view & tools
+                            </p>
+                          </div>
+                        </div>
+                      </button>
+                    )}
+
+                    <button
+                      onClick={() => {
+                        setShowProfileMenu(false);
+                        if (user?.activeRole === "teacher") {
+                          router.push("/dashboard/teacher/teacher-profile");
+                          return;
+                        }
+
+                        router.push("/dashboard/settings");
+                      }}
+                      className="w-full flex items-center justify-between gap-3 p-2 rounded-xl hover:bg-blue-50 dark:hover:bg-blue-500/10 transition-all text-left cursor-pointer"
+                    >
+                      <div className="flex items-center gap-3">
+                        <div className="p-2 rounded-lg bg-gray-100 dark:bg-white/5 text-gray-600 dark:text-gray-300">
+                          <Settings className="w-4 h-4" />
+                        </div>
+                        <div>
+                          <p className="text-sm font-semibold text-gray-900 dark:text-gray-100">
+                            My Profile
+                          </p>
+                          <p className="text-[11px] text-gray-500 dark:text-gray-400">
+                            Account & preferences
+                          </p>
+                        </div>
+                      </div>
+                    </button>
+                  </div>
+                </motion.div>
+              )}
+            </AnimatePresence>
           </div>
         </div>
       </div>
     </header>
   );
 }
-
-
-// to make thi more reoponsive
-// To achieve this, I have restructured the header to support a Mobile Drawer (Right Sidebar) that triggers when the user profile circle is clicked on small screens.
-// On desktop, the layout remains expanded and professional. On mobile, the Search and Notifications are tucked away into this right-side drawer to keep the navbar clean: Hamburger > Title > Theme Toggle > Profile Circle.
