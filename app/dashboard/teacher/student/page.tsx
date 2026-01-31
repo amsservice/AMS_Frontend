@@ -723,6 +723,7 @@ export default function TeacherStudentsPage() {
                             <td className="px-6 py-4 whitespace-nowrap">
                               <div className="text-sm dashboard-text">
                                 <div>Father: {s.fatherName}</div>
+                                <div>Mother: {s.motherName}</div>
                                 <div className="flex items-center gap-1 dashboard-text-muted">
                                   <Phone className="w-3 h-3" />
                                   {s.parentsPhone}
