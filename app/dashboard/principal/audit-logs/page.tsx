@@ -8,6 +8,24 @@ import { useInfiniteAuditLogs, type AuditAction } from '@/app/querry/useAuditLog
 export default function AuditLogsPage() {
   const [limit] = useState(25);
 
+  const formatTime = (value: string) => {
+    const d = new Date(value);
+    if (!Number.isFinite(d.getTime())) return value;
+
+    const dd = String(d.getDate()).padStart(2, '0');
+    const mm = String(d.getMonth() + 1).padStart(2, '0');
+    const yyyy = String(d.getFullYear());
+
+    const h24 = d.getHours();
+    const ampm = h24 >= 12 ? 'PM' : 'AM';
+    const h12 = h24 % 12 || 12;
+    const hh = String(h12).padStart(2, '0');
+    const min = String(d.getMinutes()).padStart(2, '0');
+    const ss = String(d.getSeconds()).padStart(2, '0');
+
+    return `${dd}-${mm}-${yyyy}, ${hh}:${min}:${ss} ${ampm}`;
+  };
+
   const [action, setAction] = useState<AuditAction | ''>('');
   const [entityType, setEntityType] = useState('');
   const [from, setFrom] = useState('');
@@ -161,7 +179,7 @@ export default function AuditLogsPage() {
                     className="border-t border-gray-100 dark:border-white/5 hover:bg-gray-50 dark:hover:bg-white/5"
                   >
                     <td className="px-4 py-3 text-gray-600 dark:text-gray-300 whitespace-nowrap">
-                      {new Date(row.createdAt).toLocaleString()}
+                      {formatTime(row.createdAt)}
                     </td>
                     <td className="px-4 py-3 text-gray-700 dark:text-gray-200">
                       <div className="font-medium text-gray-900 dark:text-gray-100">
